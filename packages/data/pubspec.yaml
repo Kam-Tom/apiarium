@@ -1,0 +1,11 @@
+name: data
+description: The data package contains the data sources and interfaces for apiarium.
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.7.0
+
+# dependencies:
+
+# dev_dependencies:
