@@ -1,16 +1,21 @@
-# apiarium
+# Apiarium
+Flutter application for managing beehives.
 
-A new Flutter project.
 
-## Getting Started
+### Environment Setup
+1. Create `.env.dev` file in the root directory
+2. Add your Supabase credentials:
+```
+SUPABASE_URL=your_url_here
+SUPABASE_ANON_KEY=your_key_here
+```
+3. Generate environment configuration:
+```bash
+dart run build_runner build
+```
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Development
+To rebuild generated files:
+```bash
+dart run build_runner build
+```

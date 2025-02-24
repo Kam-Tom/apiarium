@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:apiarium/features/sign_up/sign_up_view.dart';
 import 'package:flutter/material.dart';
 
 class SignUp extends StatelessWidget {
@@ -8,9 +8,7 @@ class SignUp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Sign Up')),
-      body: Center(
-        child: Text('test'.tr(), style: Theme.of(context).textTheme.bodyLarge),
-      ),
+      body: SignUpView(),
     );
   }
 }
