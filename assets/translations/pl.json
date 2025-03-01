@@ -1,3 +1,51 @@
 {
-    "test": "test pl"
+    "test": "test pl",
+    "auth": {
+        "common": {
+            "email": "Email",
+            "password": "Hasło",
+            "or": "LUB",
+            "cancel": "Anuluj",
+            "close": "Zamknij"
+        },
+        "sign_up": {
+            "create_account": "Utwórz konto",
+            "get_started": "Zarejestruj się, aby rozpocząć",
+            "password_hint": "Utwórz hasło",
+            "accept_terms": "Zgadzam się z",
+            "terms_conditions": "Warunkami korzystania",
+            "sign_up_button": "Zarejestruj się",
+            "sign_up_anonymously": "Zarejestruj się anonimowo",
+            "have_account": "Masz już konto?",
+            "sign_in": "Zaloguj się",
+            "terms_title": "Warunki korzystania",
+            "terms_content": "Korzystając z aplikacji, zgadzasz się na następujące warunki:\n\n1. Twoje dane będą przetwarzane zgodnie z naszą Polityką Prywatności.\n\n2. Jesteś odpowiedzialny za zachowanie poufności swojego konta.\n\n3. Zastrzegamy sobie prawo do modyfikowania lub zakończenia usługi z jakiegokolwiek powodu, bez powiadomienia, w dowolnym czasie.",
+            "please_accept_terms": "Proszę zaakceptować Warunki korzystania",
+            "registration_failed": "Rejestracja nie powiodła się",
+            "email_verification": "Sprawdź swój email {email}, aby zweryfikować konto",
+            "registration_successful": "Rejestracja zakończona pomyślnie! Możesz się teraz zalogować.",
+            "sign_up_successful": "Rejestracja zakończona pomyślnie!"
+        },
+        "sign_in": {
+            "welcome_back": "Witaj ponownie",
+            "continue": "Zaloguj się, aby kontynuować",
+            "password_hint": "Wprowadź swoje hasło",
+            "forgot_password": "Zapomniałeś hasła?",
+            "sign_in_button": "Zaloguj się",
+            "no_account": "Nie masz konta?",
+            "sign_up": "Zarejestruj się",
+            "reset_password": "Resetowanie hasła",
+            "reset_instructions": "Wprowadź swój adres email, a wyślemy Ci link do zresetowania hasła.",
+            "send_reset_link": "Wyślij link resetujący",
+            "reset_link_sent": "Link do resetowania hasła został wysłany na {email}",
+            "authentication_failed": "Uwierzytelnianie nie powiodło się",
+            "login_successful": "Logowanie zakończone pomyślnie!"
+        },
+        "validation": {
+            "email_required": "Proszę wprowadzić adres email",
+            "email_invalid": "Proszę wprowadzić poprawny adres email",
+            "password_required": "Proszę wprowadzić hasło",
+            "password_length": "Hasło musi mieć co najmniej 6 znaków"
+        }
+    }
 }

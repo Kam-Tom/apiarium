@@ -18,8 +18,11 @@ dependencies:
   sqflite: ^2.4.2
   path: ^1.9.1
   supabase_flutter: ^2.8.4
+  meta: ^1.16.0
+  bloc: ^9.0.0
+  equatable: ^2.0.7
 
-
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -33,4 +36,4 @@ flutter:
 
   assets:
     - assets/translations/
-
+    - assets/images/

@@ -1,3 +1,51 @@
 {
-    "test": "test en"
+    "test": "test en",
+    "auth": {
+        "common": {
+            "email": "Email",
+            "password": "Password",
+            "or": "OR",
+            "cancel": "Cancel",
+            "close": "Close"
+        },
+        "sign_up": {
+            "create_account": "Create Account",
+            "get_started": "Sign up to get started",
+            "password_hint": "Create a password",
+            "accept_terms": "I agree to the",
+            "terms_conditions": "Terms and Conditions",
+            "sign_up_button": "Sign Up",
+            "sign_up_anonymously": "Sign Up Anonymously",
+            "have_account": "Already have an account?",
+            "sign_in": "Sign In",
+            "terms_title": "Terms and Conditions",
+            "terms_content": "By using this application, you agree to the following terms and conditions:\n\n1. Your data will be processed in accordance with our Privacy Policy.\n\n2. You are responsible for maintaining the confidentiality of your account.\n\n3. We reserve the right to modify or terminate the service for any reason, without notice at any time.",
+            "please_accept_terms": "Please accept the Terms and Conditions",
+            "registration_failed": "Registration failed",
+            "email_verification": "Please check your email {email} to verify your account",
+            "registration_successful": "Registration successful! You can now sign in.",
+            "sign_up_successful": "Sign up successful!"
+        },
+        "sign_in": {
+            "welcome_back": "Welcome Back",
+            "continue": "Sign in to continue",
+            "password_hint": "Enter your password",
+            "forgot_password": "Forgot Password?",
+            "sign_in_button": "Sign In",
+            "no_account": "Don't have an account?",
+            "sign_up": "Sign Up",
+            "reset_password": "Reset Password",
+            "reset_instructions": "Enter your email address and we'll send you a link to reset your password.",
+            "send_reset_link": "Send Reset Link",
+            "reset_link_sent": "Password reset link sent to {email}",
+            "authentication_failed": "Authentication failed",
+            "login_successful": "Login successful!"
+        },
+        "validation": {
+            "email_required": "Please enter your email",
+            "email_invalid": "Please enter a valid email",
+            "password_required": "Please enter a password",
+            "password_length": "Password must be at least 6 characters"
+        }
+    }
 }
