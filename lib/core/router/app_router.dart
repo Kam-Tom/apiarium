@@ -1,11 +1,15 @@
+import 'package:apiarium/core/core.dart';
 import 'package:apiarium/features/auth/auth.dart';
 import 'package:apiarium/features/home/home.dart';
+import 'package:apiarium/shared/layouts/main_layout.dart';
 import 'package:go_router/go_router.dart';
-import 'package:apiarium/core/core.dart';
-
 class AppRouter {
   // Define route paths as constants
   static const String home = '/';
+  static const String social = '/social';
+  static const String shop = '/shop';
+  static const String more = '/more';
+  static const String report = '/report';
   static const String signIn = '/sign-in';
   static const String signUp = '/sign-up';
   
@@ -25,10 +29,51 @@ class AppRouter {
         path: signIn,
         builder: (context, state) => const SignInPage(),
       ),
-      // Protected routes (require authentication)
-      GoRoute(
-        path: home,
-        builder: (context, state) => const HomePage(),
+      
+      // Shell route for home layout with bottom navigation
+      ShellRoute(
+        builder: (context, state, child) {
+          // Determine the current index based on the path
+          int currentIndex = 0;
+          final String path = state.uri.path;
+          
+          if (path.startsWith(social)) {
+            currentIndex = 1;
+          } else if (path.startsWith(shop)) {
+            currentIndex = 2;
+          } else if (path.startsWith(more)) {
+            currentIndex = 3;
+          } else if (path.startsWith(report)) {
+            currentIndex = 4; // Special case for report
+          }
+          
+          return MainLayout(
+            currentIndex: currentIndex,
+            child: child,
+          );
+        },
+        routes: [
+          GoRoute(
+            path: home,
+            builder: (context, state) => const HomePage(),
+          ),
+          // GoRoute(
+          //   path: social,
+          //   builder: (context, state) => const SocialPage(), 
+          // ),
+          // GoRoute(
+          //   path: raport,
+          //   builder: (context, state) => const RaportPage(), 
+          // ),
+          // GoRoute(
+          //   path: shop,
+          //   builder: (context, state) => const ShopPage(), 
+          // ),
+          // GoRoute(
+          //   path: more,
+          //   builder: (context, state) => const MorePage(),
+          //),
+        ],
       ),
     ],
     refreshListenable: StreamToListenable([authBloc.stream]),
@@ -44,8 +89,6 @@ class AppRouter {
       if (isLoading) return null;
       
       // Users who just signed up should be allowed to stay on the sign up page
-      // to see verification instructions, or they might be automatically redirected
-      // to sign in page by the UI
       if (isJustSignedUp) return null;
       
       // Redirect unauthenticated users to auth page
