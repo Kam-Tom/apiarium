@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:apiarium/features/home/models/menu_item.dart';
+import 'package:go_router/go_router.dart';
 
 class QuickAccessMenu extends StatelessWidget {
   const QuickAccessMenu({super.key});
@@ -17,11 +18,11 @@ class QuickAccessMenu extends StatelessWidget {
         crossAxisSpacing: 15,
       ),
       itemCount: menuItems.length,
-      itemBuilder: (context, index) => _buildMenuItem(menuItems[index]),
+      itemBuilder: (context, index) => _buildMenuItem(context, menuItems[index]),
     );
   }
 
-  Widget _buildMenuItem(MenuItem item) {
+  Widget _buildMenuItem(BuildContext context, MenuItem item) {
     // Define accent color (amber/yellow)
     final accentColor = Colors.amber.shade600;
     
@@ -31,7 +32,7 @@ class QuickAccessMenu extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 8,
             offset: const Offset(0, 3),
             spreadRadius: 0,
@@ -43,10 +44,11 @@ class QuickAccessMenu extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          splashColor: accentColor.withOpacity(0.1),
-          highlightColor: accentColor.withOpacity(0.05),
+          splashColor: accentColor.withValues(alpha: 0.1),
+          highlightColor: accentColor.withValues(alpha: 0.05),
           onTap: () {
-            // Handle button tap
+            // Navigate to the route defined in the MenuItem
+            context.push(item.route);
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

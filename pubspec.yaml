@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
 
   go_router: ^14.8.0
-  flutter_bloc: ^9.0.0
+  flutter_bloc: ^9.1.0
   google_fonts: ^6.2.1
   easy_localization: ^3.0.7+1
   envied: ^1.1.1
@@ -21,12 +21,16 @@ dependencies:
   meta: ^1.16.0
   bloc: ^9.0.0
   equatable: ^2.0.7
+  uuid: ^4.5.1
+  dropdown_button2: ^2.3.9
+  flutter_reorderable_grid_view: ^5.5.0
 
   
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.3.5
 
   envied_generator: ^1.1.1
   build_runner: ^2.4.15

@@ -1,3 +1,8 @@
+import 'package:apiarium/shared/repositories/apiary_repository.dart';
+import 'package:apiarium/shared/repositories/hive_repository.dart';
+import 'package:apiarium/shared/repositories/hive_type_repository.dart';
+import 'package:apiarium/shared/repositories/queen_breed_repository.dart';
+import 'package:apiarium/shared/repositories/queen_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -31,7 +36,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider(create: (context) => QueenRepository()),
+        RepositoryProvider(create: (context) => QueenBreedRepository()),
         RepositoryProvider(create: (context) => AuthRepository()),
+        RepositoryProvider(create: (context) => ApiaryRepository()),
+        RepositoryProvider(create: (context) => HiveRepository()),
+        RepositoryProvider(create: (context) => HiveTypeRepository()),
       ],
       child: BlocProvider(
         create: (context) => AuthBloc(

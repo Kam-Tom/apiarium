@@ -1,3 +1,4 @@
+import 'package:apiarium/shared/shared.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -5,11 +6,19 @@ class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
 
+  // Table definitions
+  final queenTable = QueenTable();
+  final queenBreedTable = QueenBreedTable();
+  final apiaryTable = ApiaryTable();
+  final hiveTable = HiveTable();
+  final hiveTypeTable = HiveTypeTable();
+  final historylogTable = HistoryLogTable();
+
   DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
 
   Future<Database> get database async {
-    _database ??= await _initDatabase();
+    _database = _database ?? await _initDatabase();
     return _database!;
   }
 
@@ -24,7 +33,13 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Add table creation here
+    // Create tables in proper order for foreign key constraints
+    await db.execute(apiaryTable.createTableQuery);
+    await db.execute(queenBreedTable.createTableQuery);
+    await db.execute(queenTable.createTableQuery);
+    await db.execute(hiveTypeTable.createTableQuery);
+    await db.execute(hiveTable.createTableQuery);
+    await db.execute(historylogTable.createTableQuery);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -32,7 +47,5 @@ class DatabaseHelper {
     // if (oldVersion < 2) {
     //   await db.execute('ALTER TABLE hive ADD COLUMN hive_type TEXT');
     // }
-
   }
-
 }

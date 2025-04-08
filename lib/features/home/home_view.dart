@@ -5,7 +5,7 @@ import 'package:apiarium/features/home/widgets/quick_access_menu.dart';
 import 'package:apiarium/features/home/widgets/section_header.dart';
 
 class HomeView extends StatelessWidget {
-  const HomeView({Key? key}) : super(key: key);
+  const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {

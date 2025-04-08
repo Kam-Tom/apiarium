@@ -8,6 +8,8 @@ class AppTheme {
   static const Color _secondaryColor = Color(0xFF455A64); // Blue Grey 700
   static final Color _disabledColor = Colors.grey.shade300;
   
+  static const Color primaryColor = Colors.amber;
+  
   static ThemeData get lightTheme {
     return ThemeData(
       primaryColor: _primaryColor,
