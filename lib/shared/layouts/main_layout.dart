@@ -26,14 +26,11 @@ class MainLayout extends StatelessWidget {
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // Main content
             child,
             
-            // Floating navigation bar
             AppBottomNav(
               currentIndex: currentIndex,
               onItemTapped: (index) {
-                // Navigate using GoRouter based on the index
                 switch (index) {
                   case 0:
                     context.go('/');
@@ -47,8 +44,8 @@ class MainLayout extends StatelessWidget {
                   case 3:
                     context.go('/more');
                     break;
-                  case 4: // Report button
-                    context.go('/report');
+                  case 4:
+                    context.push('/raport');
                     break;
                 }
               },

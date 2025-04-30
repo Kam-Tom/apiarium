@@ -15,6 +15,7 @@ class HistoryLogTable extends BaseTable {
   String get timestamp => 'timestamp';
   String get description => 'description';
   String get jsonPayload => 'json_payload';
+  String get groupId => 'group_id';
   String get isDeleted => 'is_deleted';
   String get isSynced => 'is_synced';
 
@@ -28,6 +29,7 @@ class HistoryLogTable extends BaseTable {
     $tableName.$timestamp AS ${alias}_$timestamp,
     $tableName.$description AS ${alias}_$description,
     $tableName.$jsonPayload AS ${alias}_$jsonPayload,
+    $tableName.$groupId AS ${alias}_$groupId,
     $tableName.$isDeleted AS ${alias}_$isDeleted,
     $tableName.$isSynced AS ${alias}_$isSynced
   ''';
@@ -43,6 +45,7 @@ class HistoryLogTable extends BaseTable {
       $timestamp TEXT NOT NULL,
       $description TEXT,
       $jsonPayload TEXT,
+      $groupId TEXT,
       $isDeleted INTEGER NOT NULL DEFAULT 0,
       $isSynced INTEGER NOT NULL DEFAULT 0
     )

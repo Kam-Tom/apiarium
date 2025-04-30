@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:apiarium/shared/repositories/queen_breed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/queens/bloc/queens_event.dart';
 import 'package:apiarium/features/managment/queens/bloc/queens_state.dart';
@@ -8,18 +7,15 @@ import 'package:apiarium/shared/shared.dart';
 import 'package:apiarium/shared/extensions/date_compare.dart';
 
 class QueensBloc extends Bloc<QueensEvent, QueensState> {
-  final QueenRepository _queenRepository;
-  final ApiaryRepository _apiaryRepository;
-  final QueenBreedRepository _breedRepository;
+  final QueenService _queenService;
+  final ApiaryService _apiaryService;
   
   QueensBloc({
-    required QueenRepository queenRepository,
-    required ApiaryRepository apiaryRepository,
-    required QueenBreedRepository breedRepository,
+    required QueenService queenService,
+    required ApiaryService apiaryService,
   }) : 
-    _queenRepository = queenRepository,
-    _apiaryRepository = apiaryRepository,
-    _breedRepository = breedRepository,
+    _queenService = queenService,
+    _apiaryService = apiaryService,
     super(const QueensState()) {
     on<LoadQueens>(_onLoadQueens);
     on<SortQueens>(_onSortQueens);
@@ -40,9 +36,9 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     
     try {
       // Load all necessary data
-      final queens = await _queenRepository.getAllQueens(includeApiary: true, includeHive: true);
-      final breeds = await _breedRepository.getAllBreeds();
-      final apiaries = await _apiaryRepository.getAllApiaries();
+      final queens = await _queenService.getAllQueens(includeApiary: true, includeHive: true);
+      final breeds = await _queenService.getAllBreeds();
+      final apiaries = await _apiaryService.getAllApiaries();
       
       final filteredQueens = _applyFilters(queens);
       final sortedQueens = _applySorting(
@@ -88,7 +84,7 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     Emitter<QueensState> emit,
   ) async {
     try {
-      await _queenRepository.deleteQueen(event.queenId);
+      await _queenService.deleteQueen(queenId: event.queenId);
       
       // Refresh the list
       add(const LoadQueens());
@@ -207,7 +203,7 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     Emitter<QueensState> emit
   ) async {
     try {
-      final newQueen = await _queenRepository.createDefaultQueen();
+      final newQueen = await _queenService.createDefaultQueen();
       
       // Add the new queen to both allQueens and filteredQueens
       final updatedAllQueens = List<Queen>.from(state.allQueens)..add(newQueen);

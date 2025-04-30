@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:apiarium/shared/shared.dart';
 import 'package:bloc/bloc.dart';
@@ -10,18 +9,18 @@ part 'edit_apiary_event.dart';
 part 'edit_apiary_state.dart';
 
 class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
-  final ApiaryRepository _apiaryRepository;
-  final HiveRepository _hiveRepository;
-  final QueenRepository _queenRepository;
+  final ApiaryService _apiaryService;
+  final HiveService _hiveService;
+  final QueenService _queenService;
   
   EditApiaryBloc({
-    ApiaryRepository? apiaryRepository,
-    HiveRepository? hiveRepository,
-    QueenRepository? queenRepository,
+    required ApiaryService apiaryService,
+    required HiveService hiveService,
+    required QueenService queenService,
   }) : 
-    _apiaryRepository = apiaryRepository ?? ApiaryRepository(),
-    _hiveRepository = hiveRepository ?? HiveRepository(),
-    _queenRepository = queenRepository ?? QueenRepository(),
+    _apiaryService = apiaryService,
+    _hiveService = hiveService,
+    _queenService = queenService,
     super(EditApiaryState(createdAt: DateTime.now())) {
       on<EditApiaryLoadData>(_onLoadRequest);
       on<EditApiaryNameChanged>(_onNameChanged);
@@ -47,18 +46,18 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     
     try {
       // Check if we can create default queen and default hive directly
-      final canCreateDefaultQueen = await _queenRepository.canCreateDefaultQueen();
-      final canCreateDefaultHive = await _hiveRepository.canCreateDefaultHive();
+      final canCreateDefaultQueen = await _queenService.canCreateDefaultQueen();
+      final canCreateDefaultHive = await _hiveService.canCreateDefaultHive();
       
       // Get hives without an apiary for adding to this apiary
-      final availableHives = await _hiveRepository.getHivesWithoutApiary(includeQueen: true);
+      final availableHives = await _hiveService.getHivesWithoutApiary(includeQueen: true);
       
       if (event.apiaryId != null) {
         // Load existing apiary data if we're editing
-        final apiary = await _apiaryRepository.getApiaryById(event.apiaryId!);
+        final apiary = await _apiaryService.getApiaryById(event.apiaryId!);
         if (apiary != null) {
           // Get hives for this apiary to show summary
-          final hives = await _hiveRepository.getByApiaryId(event.apiaryId!, includeQueen: true);
+          final hives = await _hiveService.getByApiaryId(event.apiaryId!, includeQueen: true);
           emit(state.copyWith(
             availableHives: () => availableHives,
             apiaryId: () => apiary.id,
@@ -154,6 +153,9 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     emit(state.copyWith(formStatus: () => EditApiaryStatus.submitting));
     
     try {
+      // Create a group ID to link related operations in history
+      final String groupId = _apiaryService.createGroupId();
+      
       final apiary = Apiary(
         id: state.apiaryId ?? '',
         name: state.name,
@@ -177,9 +179,12 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
       
       if (hasApiaryChanged) {
         if (state.apiaryId == null || state.apiaryId?.isEmpty == true) {
-          savedApiary = await _apiaryRepository.insertApiary(apiary);
+          savedApiary = await _apiaryService.insertApiary(apiary, groupId: groupId);
         } else {
-          savedApiary = await _apiaryRepository.updateApiary(apiary);
+          savedApiary = await _apiaryService.updateApiary(
+            apiary: apiary, 
+            groupId: groupId
+          );
         }
       }
       
@@ -189,13 +194,22 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
         for (final originalHive in state.originalHives) {
           if (!state.apiarySummaryHives.any((h) => h.id == originalHive.id)) {
             // This hive was removed, update it to remove apiary reference
-            await _hiveRepository.updateHive(originalHive.copyWith(apiary: null));
+            // Skip history log as it's a bulk operation
+            await _hiveService.updateHive(
+              hive: originalHive.copyWith(apiary: null),
+              skipHistoryLog: true,
+              groupId: groupId
+            );
           }
         }
         
         // Update hives with positions and apiary
         final hives = state.apiarySummaryHives.map((h) => h.copyWith(apiary: () => savedApiary)).toList();
-        await _hiveRepository.updateHivesBatch(hives);
+        await _hiveService.updateHivesBatch(
+          hives,
+          groupId: groupId,
+          skipHistoryLog: false  // Log the batch update
+        );
       }
       
       emit(state.copyWith(formStatus: () => EditApiaryStatus.success));
@@ -208,24 +222,53 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
   }
 
   FutureOr<void> _onAddHive(EditApiaryAddHive event, Emitter<EditApiaryState> emit) async {
-    if(state.addQueensWithHives){
-      final queen = await _queenRepository.createDefaultQueen();
-      final newHive = await _hiveRepository.createDefaultHive(apiaryId: state.apiaryId, queenId: queen.id);
+    if (state.addQueensWithHives) {
+      // Only use groupId when we're creating both a queen and a hive together
+      final String groupId = _apiaryService.createGroupId();
+      
+      // Create a new queen - this should be logged in history
+      final queen = await _queenService.createDefaultQueen(
+        groupId: groupId, 
+        skipHistoryLog: false
+      );
+      
+      // Create a new hive with the queen - this should be logged in history
+      final newHive = await _hiveService.createDefaultHive(
+        apiaryId: state.apiaryId, 
+        queenId: queen.id,
+        name: 'New Hive',
+        groupId: groupId,
+        skipHistoryLog: false
+      );
+      
       emit(state.copyWith(
         apiarySummaryHives: () => [...state.apiarySummaryHives, newHive],
       ));
       return;
     }
     
-    final newHive = await _hiveRepository.createDefaultHive(apiaryId: state.apiaryId);
+    // Creating just a hive - no need for groupId as it's a single operation
+    final newHive = await _hiveService.createDefaultHive(
+      apiaryId: state.apiaryId,
+      name: 'New Hive',
+      skipHistoryLog: false
+    );
+    
     emit(state.copyWith(
       apiarySummaryHives: () => [...state.apiarySummaryHives, newHive],
     ));
   }
   
   FutureOr<void> _onAddHiveWithQueen(EditApiaryAddHiveWithQueen event, Emitter<EditApiaryState> emit) async {
-    // Create a new hive with the specified queen
-    var newHive = await _hiveRepository.createDefaultHive(apiaryId: state.apiaryId, queenId: event.queen.id);
+    // No groupId needed here as we're just creating a single hive
+    // (we're not creating a queen, just associating with an existing one)
+    var newHive = await _hiveService.createDefaultHive(
+      apiaryId: state.apiaryId, 
+      queenId: event.queen.id,
+      name: 'New Hive',
+      skipHistoryLog: false
+    );
+    
     newHive = newHive.copyWith(queen:() => event.queen);
     emit(state.copyWith(
       apiarySummaryHives: () => [...state.apiarySummaryHives, newHive],
@@ -236,29 +279,15 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
   FutureOr<void> _onAddExistingHive(
       EditApiaryAddExistingHive event, Emitter<EditApiaryState> emit) async {
     try {
-      if (state.apiaryId != null) {
-        // Update the hive to assign it to this apiary
-        //final updatedHive = event.hive.copyWith(apiary: () => state.originalApiary);
-        //await _hiveRepository.updateHive(updatedHive);
-        
-        // Add to summary and remove from available hives
-        emit(state.copyWith(
-          apiarySummaryHives: () => [...state.apiarySummaryHives, event.hive],
-          availableHives: () => state.availableHives
-              .where((h) => h.id != event.hive.id)
-              .toList(),
-          canCreateDefaultHive: () => true,
-        ));
-      } else {
-        // For new apiaries, we'll just track it to be assigned when the apiary is created
-        emit(state.copyWith(
-          apiarySummaryHives: () => [...state.apiarySummaryHives, event.hive],
-          availableHives: () => state.availableHives
-              .where((h) => h.id != event.hive.id)
-              .toList(),
-          canCreateDefaultHive: () => true,
-        ));
-      }
+      // Do not perform actual database updates until form submission
+      // Just update the UI state
+      emit(state.copyWith(
+        apiarySummaryHives: () => [...state.apiarySummaryHives, event.hive],
+        availableHives: () => state.availableHives
+            .where((h) => h.id != event.hive.id)
+            .toList(),
+        canCreateDefaultHive: () => true,
+      ));
     } catch (e) {
       emit(state.copyWith(
         errorMessage: () => 'Failed to add existing hive: ${e.toString()}',
@@ -271,8 +300,13 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     try {
       if (state.apiaryId != null) {
         // Only update the hive to unassign it, don't delete it
+        // This is an intermediate operation, so we skip history logging
+        // No groupId needed as it's a single operation
         final updatedHive = event.hive.copyWith(apiary: null);
-        await _hiveRepository.updateHive(updatedHive);
+        await _hiveService.updateHive(
+          hive: updatedHive,
+          skipHistoryLog: true
+        );
       }
       
       // Remove from summary and add to available hives

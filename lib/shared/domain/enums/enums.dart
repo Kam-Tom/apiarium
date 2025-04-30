@@ -6,3 +6,6 @@ export 'queen_status.dart';
 export 'queen_source.dart';
 export 'history_action.dart';
 export 'entity_type.dart';
+export 'field_type.dart';
+export 'report_type.dart';
+export 'attribute.dart';

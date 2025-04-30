@@ -459,21 +459,19 @@ class HiveCard extends StatelessWidget {
   
   int? _calculateMaxFrames() {
     if (hive.hiveType.defaultFrameCount == null) return null;
-    if (hive.currentBroodBoxCount == null && hive.currentHoneySuperBoxCount == null) return null;
     
-    final broodBoxes = hive.currentBroodBoxCount ?? 0;
+    // Only count honey super boxes for normal frames
     final honeyBoxes = hive.currentHoneySuperBoxCount ?? 0;
-    final totalBoxes = broodBoxes + honeyBoxes;
     
-    if (totalBoxes == 0) return null;
+    if (honeyBoxes == 0) return null;
     
-    return hive.hiveType.defaultFrameCount! * totalBoxes;
+    return hive.hiveType.defaultFrameCount! * honeyBoxes;
   }
   
   int? _calculateMaxBroodFrames() {
     if (hive.hiveType.defaultFrameCount == null) return null;
-    if (hive.currentBroodBoxCount == null) return null;
     
+    // Only count brood boxes for brood frames
     final broodBoxes = hive.currentBroodBoxCount ?? 0;
     
     if (broodBoxes == 0) return null;

@@ -9,23 +9,20 @@ part 'edit_queen_event.dart';
 part 'edit_queen_state.dart';
 
 class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
-  final QueenRepository _queenRepository;
-  final QueenBreedRepository _breedRepository;
-  final ApiaryRepository _apiaryRepository;
-  final HiveRepository _hiveRepository;
+  final QueenService _queenService;
+  final ApiaryService _apiaryService;
+  final HiveService _hiveService;
   
   EditQueenBloc({
-    QueenRepository? queenRepository,
-    QueenBreedRepository? breedRepository,
-    ApiaryRepository? apiaryRepository,
-    HiveRepository? hiveRepository,
+    required QueenService queenService,
+    required ApiaryService apiaryService,
+    required HiveService hiveService,
     bool skipSaving = false,
     bool hideLocation = false,
   }) : 
-    _queenRepository = queenRepository ?? QueenRepository(),
-    _breedRepository = breedRepository ?? QueenBreedRepository(),
-    _apiaryRepository = apiaryRepository ?? ApiaryRepository(),
-    _hiveRepository = hiveRepository ?? HiveRepository(),
+    _queenService = queenService,
+    _apiaryService = apiaryService,
+    _hiveService = hiveService,
     super(EditQueenState(birthDate: DateTime.now(), skipSaving: skipSaving, hideLocation: hideLocation)) {
     on<EditQueenLoadData>(_onLoadRequest);
     
@@ -50,27 +47,29 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
   Future<void> _onLoadRequest(EditQueenLoadData event, Emitter<EditQueenState> emit) async {
     emit(state.copyWith(status: () => EditQueenStatus.loading));
 
-    var breeds = await _breedRepository.getAllBreeds();
+    var breeds = await _queenService.getAllBreeds();
 
     //TODO DELETE THIS AFTER TESTING
     if(breeds.isEmpty) {
-      await _breedRepository.insertBreed(QueenBreed(
-        id: '',
-        name: 'Italian',
-        scientificName: 'Apis mellifera ligustica',
-        origin: 'Italy',
-        country: 'Italy',
-        isStarred: true,
-        priority: 1,
-      ));
-      breeds = await _breedRepository.getAllBreeds();
+      await _queenService.insertBreed(
+        breed: QueenBreed(
+          id: '',
+          name: 'Italian',
+          scientificName: 'Apis mellifera ligustica',
+          origin: 'Italy',
+          country: 'Italy',
+          isStarred: true,
+          priority: 1,
+        )
+      );
+      breeds = await _queenService.getAllBreeds();
     }
     //TODO ---
 
-    final apiaries = await _apiaryRepository.getAllApiaries();
+    final apiaries = await _apiaryService.getAllApiaries();
     
     // Load hives with queen information
-    final apiaryHives = await _hiveRepository.getAllHives(includeQueen: true);
+    final apiaryHives = await _hiveService.getAllHives(includeQueen: true);
     
     // Filter hives to show only those without a queen or with the queen being edited
     final availableHives = apiaryHives.where((hive) => 
@@ -78,9 +77,9 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
     ).toList();
         
     if(event.queenId != null) {
-      final queen = await _queenRepository.getQueenById(event.queenId!,includeApiary: true, includeHive: true);
+      final queen = await _queenService.getQueenById(event.queenId!, includeApiary: true, includeHive: true);
       if (queen != null) {
-        // Hive dont equal queen.hive becasue of hive.queen
+        // Hive doesn't equal queen.hive because of hive.queen
         Hive? selectedHive = queen.hive != null ? availableHives.firstWhere((hive) => hive.id == queen.hive!.id) : null; 
         Apiary? selectedApiary = queen.apiary != null ? apiaries.firstWhere((apiary) => apiary.id == queen.apiary!.id) : null;
 
@@ -110,7 +109,7 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
       }
     }
     else {
-      final queenNr = await _queenRepository.getQueensCount();
+      final queenNr = await _queenService.getQueensCount();
       emit(state.copyWith(
         name: () => 'Queen ${queenNr + 1}',
         marked: () => true,
@@ -125,49 +124,8 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
   }
   
   // Individual field handlers
-  void _onNameChanged(EditQueenNameChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(name: () => event.name));
-  }
+  // ...existing code...
 
-  void _onBreedChanged(EditQueenBreedChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(queenBreed: () => event.breed));
-  }
-
-  void _onBirthDateChanged(EditQueenBirthDateChanged event, Emitter<EditQueenState> emit) {
-    if(state.marked) {
-      emit(state.copyWith(
-        birthDate: () => event.birthDate,
-        markColor: () => EditQueenState.getColorForYear(event.birthDate.year)));
-    }
-    else {
-      emit(state.copyWith(birthDate: () => event.birthDate));
-    }
-  }
-
-  void _onSourceChanged(EditQueenSourceChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(source: () => event.source));
-  }
-
-  void _onHiveNameChanged(EditQueenHiveNameChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(hiveName: () => event.hiveName));
-  }
-
-  void _onMarkedChanged(EditQueenMarkedChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(marked: () => event.marked));
-  }
-
-  void _onMarkColorChanged(EditQueenMarkColorChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(markColor: () => event.markColor));
-  }
-
-  void _onStatusChanged(EditQueenStatusChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(queenStatus: () => event.status));
-  }
-
-  void _onOriginChanged(EditQueenOriginChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(origin: () => event.origin));
-  }
-  
   Future<void> _onSubmitted(EditQueenSubmitted event, Emitter<EditQueenState> emit) async {
     // Validate the form first
     final Map<String, String?> validationErrors = {};
@@ -221,31 +179,51 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
     ));
     
     try {
+      // Create a group ID for related operations
+      final String groupId = _queenService.createGroupId();
+      
       final bool hasQueenChanged = state.hasQueenChanged;
       final bool hasLocationChanged = state.hasLocationChanged;
       
       Queen savedQueen = queen;
       if (hasQueenChanged) {
         if (state.id == null) {
-          savedQueen = await _queenRepository.insertQueen(queen);
+          savedQueen = await _queenService.insertQueen(queen, groupId: groupId);
         } else {
-          savedQueen = await _queenRepository.updateQueen(queen);
+          savedQueen = await _queenService.updateQueen(
+            queen: queen, 
+            groupId: groupId
+          );
         }
       }
-      if(hasLocationChanged && savedQueen.id.isNotEmpty) {
+      
+      if (hasLocationChanged && savedQueen.id.isNotEmpty) {
         final newHive = state.selectedHive;
         final oldHive = state.originalQueen?.hive;
-        if(newHive?.id == oldHive?.id) {
+        
+        if (newHive?.id == oldHive?.id) {
+          // No change in hive, no need to update
           return;
         }
-        if(oldHive != null) {
-          await _hiveRepository.updateHive(oldHive.copyWith(queen: () => null));
+        
+        if (oldHive != null) {
+          // Unassign queen from old hive
+          await _hiveService.updateHive(
+            hive: oldHive.copyWith(queen: () => null),
+            skipHistoryLog: true,  // Skip logging this intermediate step
+            groupId: groupId
+          );
         }
-        if(newHive != null) {
-          await _hiveRepository.updateHive(newHive.copyWith(queen: () => savedQueen));
+        
+        if (newHive != null) {
+          // Assign queen to new hive
+          await _hiveService.updateHive(
+            hive: newHive.copyWith(queen: () => savedQueen),
+            skipHistoryLog: false,  // Log this final change
+            groupId: groupId
+          );
         }
       }
-
       
       emit(state.copyWith(
         status: () => EditQueenStatus.success,
@@ -262,7 +240,7 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
   FutureOr<void> _onApiaryChanged(EditQueenApiaryChanged event, Emitter<EditQueenState> emit) async {
     if(event.apiary == null) {
       // Show hives without an apiary
-      final hivesWithoutApiary = await _hiveRepository.getHivesWithoutApiary(includeQueen: true);
+      final hivesWithoutApiary = await _hiveService.getHivesWithoutApiary(includeQueen: true);
       
       // Filter to only show hives without a queen or with the queen being edited
       final availableHives = hivesWithoutApiary.where((hive) => 
@@ -277,7 +255,7 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
     }
     else {
       // Get hives for this apiary with queen information
-      final apiaryHives = await _hiveRepository.getByApiaryId(event.apiary!.id, includeQueen: true);
+      final apiaryHives = await _hiveService.getByApiaryId(event.apiary!.id, includeQueen: true);
       
       // Filter to only show hives without a queen or with the queen being edited
       final availableHives = apiaryHives.where((hive) => 
@@ -294,7 +272,6 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
 
   FutureOr<void> _onCreateBreed(EditQueenCreateBreed event, Emitter<EditQueenState> emit) async {
     try {
-
       final newBreed = QueenBreed(
         id: '', 
         name: event.name,
@@ -305,7 +282,7 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
         priority: event.isStarred ? 1 : 0, 
       );
       
-      final savedBreed = await _breedRepository.insertBreed(newBreed);
+      final savedBreed = await _queenService.insertBreed(breed: newBreed);
       
       final updatedBreeds = [...state.availableBreeds, savedBreed];
       
@@ -337,12 +314,11 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
 
   FutureOr<void> _onToggleBreedStar(EditQueenToggleBreedStar event, Emitter<EditQueenState> emit) async {
     try {
-
       final updatedBreed = event.breed.copyWith(
         isStarred: () => !event.breed.isStarred
       );
       
-      final savedBreed = await _breedRepository.updateBreed(updatedBreed);
+      final savedBreed = await _queenService.updateBreed(breed: updatedBreed);
       
       final updatedBreeds = state.availableBreeds.map((breed) => 
         breed.id == savedBreed.id ? savedBreed : breed
@@ -367,5 +343,49 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
         errorMessage: () => 'Failed to update breed star status: ${e.toString()}',
       ));
     }
+  }
+  
+  // Keep the other field event handlers as they are
+  void _onNameChanged(EditQueenNameChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(name: () => event.name));
+  }
+
+  void _onBreedChanged(EditQueenBreedChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(queenBreed: () => event.breed));
+  }
+
+  void _onBirthDateChanged(EditQueenBirthDateChanged event, Emitter<EditQueenState> emit) {
+    if(state.marked) {
+      emit(state.copyWith(
+        birthDate: () => event.birthDate,
+        markColor: () => EditQueenState.getColorForYear(event.birthDate.year)));
+    }
+    else {
+      emit(state.copyWith(birthDate: () => event.birthDate));
+    }
+  }
+
+  void _onSourceChanged(EditQueenSourceChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(source: () => event.source));
+  }
+
+  void _onHiveNameChanged(EditQueenHiveNameChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(hiveName: () => event.hiveName));
+  }
+
+  void _onMarkedChanged(EditQueenMarkedChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(marked: () => event.marked));
+  }
+
+  void _onMarkColorChanged(EditQueenMarkColorChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(markColor: () => event.markColor));
+  }
+
+  void _onStatusChanged(EditQueenStatusChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(queenStatus: () => event.status));
+  }
+
+  void _onOriginChanged(EditQueenOriginChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(origin: () => event.origin));
   }
 }

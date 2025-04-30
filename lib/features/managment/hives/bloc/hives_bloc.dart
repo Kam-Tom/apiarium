@@ -16,15 +16,15 @@ enum HiveSortOption {
 }
 
 class HivesBloc extends Bloc<HivesEvent, HivesState> {
-  final HiveRepository _hiveRepository;
-  final ApiaryRepository _apiaryRepository;
+  final HiveService _hiveService;
+  final ApiaryService _apiaryService;
 
   HivesBloc({
-    required HiveRepository hiveRepository,
-    required ApiaryRepository apiaryRepository,
+    required HiveService hiveService,
+    required ApiaryService apiaryService,
   }) : 
-    _hiveRepository = hiveRepository,
-    _apiaryRepository = apiaryRepository,
+    _hiveService = hiveService,
+    _apiaryService = apiaryService,
     super(const HivesState()) {
     on<LoadHives>(_onLoadHives);
     on<DeleteHive>(_onDeleteHive);
@@ -46,8 +46,8 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     emit(state.copyWith(status: HivesStatus.loading));
     
     try {
-      final hives = await _hiveRepository.getAllHives(includeApiary: true, includeQueen: true);
-      final apiaries = await _apiaryRepository.getAllApiaries();
+      final hives = await _hiveService.getAllHives(includeApiary: true, includeQueen: true);
+      final apiaries = await _apiaryService.getAllApiaries();
       
       final filteredHives = _applyFilters(hives);
       
@@ -70,7 +70,7 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     Emitter<HivesState> emit,
   ) async {
     try {
-      await _hiveRepository.deleteHive(event.hiveId);
+      await _hiveService.deleteHive(hiveId: event.hiveId);
       
       // Refresh the list
       add(const LoadHives());
@@ -174,62 +174,67 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     ));
   }
 
-void _onReorderHives(
-  ReorderHives event,
-  Emitter<HivesState> emit,
-) async {
-  
-  // Handle the case where newIndex > oldIndex due to how ReorderableListView works
-  final adjustedNewIndex = 
-      event.newIndex > event.oldIndex ? event.newIndex - 1 : event.newIndex;
-  
-  // Create a mutable copy of the filteredHives list
-  final updatedHives = [...state.filteredHives];
-  
-  // Remove item from old position and insert at new position
-  final item = updatedHives.removeAt(event.oldIndex);
-  updatedHives.insert(adjustedNewIndex, item);
-  
-  // Now assign consecutive position values to all hives
-  final hivesWithNewPositions = List<Hive>.generate(
-    updatedHives.length,
-    (index) => updatedHives[index].copyWith(
-      position: () => index,
-    ),
-  );
-  
-  // Create a map of hive IDs to their updated versions for easy lookup
-  final updatedHiveMap = {
-    for (var hive in hivesWithNewPositions) hive.id: hive
-  };
-  
-  // Update the allHives list with the new positions
-  final updatedAllHives = state.allHives.map((hive) {
-    // If this hive was reordered, use the updated version
-    return updatedHiveMap.containsKey(hive.id) 
-        ? updatedHiveMap[hive.id]! 
-        : hive;
-  }).toList();
-
-  // Use the batch update method to efficiently save all changes
-  try {
-    emit(
-      state.copyWith(
-        filteredHives: hivesWithNewPositions,
-        allHives: updatedAllHives,
+  void _onReorderHives(
+    ReorderHives event,
+    Emitter<HivesState> emit,
+  ) async {
+    
+    // Handle the case where newIndex > oldIndex due to how ReorderableListView works
+    final adjustedNewIndex = 
+        event.newIndex > event.oldIndex ? event.newIndex - 1 : event.newIndex;
+    
+    // Create a mutable copy of the filteredHives list
+    final updatedHives = [...state.filteredHives];
+    
+    // Remove item from old position and insert at new position
+    final item = updatedHives.removeAt(event.oldIndex);
+    updatedHives.insert(adjustedNewIndex, item);
+    
+    // Now assign consecutive position values to all hives
+    final hivesWithNewPositions = List<Hive>.generate(
+      updatedHives.length,
+      (index) => updatedHives[index].copyWith(
+        position: () => index,
       ),
     );
-    await _hiveRepository.updateHivesBatch(hivesWithNewPositions);
-
-  } catch (e) {
-    emit(state.copyWith(
-      errorMessage: 'Failed to save the new order: ${e.toString()}',
-    ));
     
-    // Reload the original order on error
-    add(const LoadHives());
+    // Create a map of hive IDs to their updated versions for easy lookup
+    final updatedHiveMap = {
+      for (var hive in hivesWithNewPositions) hive.id: hive
+    };
+    
+    // Update the allHives list with the new positions
+    final updatedAllHives = state.allHives.map((hive) {
+      // If this hive was reordered, use the updated version
+      return updatedHiveMap.containsKey(hive.id) 
+          ? updatedHiveMap[hive.id]! 
+          : hive;
+    }).toList();
+
+    // Use the batch update method to efficiently save all changes
+    try {
+      emit(
+        state.copyWith(
+          filteredHives: hivesWithNewPositions,
+          allHives: updatedAllHives,
+        ),
+      );
+      
+      
+      await _hiveService.updateHivesBatch(
+        hivesWithNewPositions,
+        skipHistoryLog: true  
+      );
+
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: 'Failed to save the new order: ${e.toString()}',
+      ));
+      
+      // Reload the original order on error
+      add(const LoadHives());
+    }
   }
-}
 
   void _onSortHives(SortHives event, Emitter<HivesState> emit) {
     final sortedHives = List<Hive>.from(state.filteredHives);
@@ -361,7 +366,9 @@ void _onReorderHives(
 
   FutureOr<void> _onAddHive(AddHive event, Emitter<HivesState> emit) async {
     try {
-      final newHive = await _hiveRepository.createDefaultHive();
+      final newHive = await _hiveService.createDefaultHive(
+        name: 'New Hive',
+      );
       
       // Add the new hive to both allHives and filteredHives
       final updatedAllHives = List<Hive>.from(state.allHives)..add(newHive);

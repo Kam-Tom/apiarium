@@ -13,7 +13,7 @@ class ApiariesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ApiariesBloc(
-        apiaryRepository: context.read<ApiaryRepository>(),
+        apiaryService: context.read<ApiaryService>(),
       )..add(const LoadApiaries()),
       child: Builder(
         builder: (context) => Scaffold(

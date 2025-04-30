@@ -313,11 +313,14 @@ class QueenCard extends StatelessWidget {
   }
   
   Widget _buildQueenMarking() {
+    // Use gray for unmarked queens, regardless of markColor
+    final circleColor = queen.marked ? (queen.markColor ?? Colors.grey.shade300) : Colors.grey.shade300;
+    
     return Container(
       width: 55,
       height: 55,
       decoration: BoxDecoration(
-        color: queen.markColor ?? Colors.grey.shade300,
+        color: circleColor,
         shape: BoxShape.circle,
         border: Border.all(
           color: Colors.grey.shade400,
@@ -327,7 +330,7 @@ class QueenCard extends StatelessWidget {
       child: Center(
         child: queen.marked
           ? const Icon(Icons.check, color: Colors.white, size: 30)
-          : const Icon(Icons.help_outline, color: Colors.white60, size: 30),
+          : const Icon(Icons.question_mark, color: Colors.white, size: 30),
       ),
     );
   }

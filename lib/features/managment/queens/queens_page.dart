@@ -19,9 +19,8 @@ class QueensPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => QueensBloc(
-        queenRepository: context.read<QueenRepository>(),
-        apiaryRepository: context.read<ApiaryRepository>(),
-        breedRepository: context.read<QueenBreedRepository>()
+        queenService: context.read<QueenService>(),
+        apiaryService: context.read<ApiaryService>(),
       )..add(const LoadQueens()),
       child: Builder(
         builder: (context) => Scaffold(

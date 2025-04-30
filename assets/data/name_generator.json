@@ -1,0 +1,196 @@
+{
+  "adjectives": {
+    "polish": {
+      "masculine": [
+        "Złoty", "Słodki", "Pracowity", "Bzyczący", "Miodowy", 
+        "Kwiatowy", "Leśny", "Polny", "Magiczny", "Radosny",
+        "Wiosenny", "Letni", "Zimowy", "Jesienny", "Pogodny",
+        "Słoneczny", "Ciepły", "Spokojny", "Jasny", "Delikatny",
+        "Przyjazny", "Mądry", "Szybki", "Aksamitny", "Słowiański",
+        "Kolorowy", "Barwny", "Szlachetny", "Wierny", "Wolny",
+        "Niezwykły", "Tajemniczy", "Zagadkowy", "Wyjątkowy", "Kwitnący",
+        "Pachnący", "Srebrzysty", "Zielony", "Czarny", "Biały",
+        "Pszczeli", "Plenny", "Obfity", "Dębowy", "Lipowy",
+        "Akacjowy", "Malinowy", "Spadziowy", "Rzepakowy", "Nektarowy",
+        "Wrzosowy", "Leciutki", "Bursztynowy", "Głęboki", "Intensywny"
+      ],
+      "feminine": [
+        "Złota", "Słodka", "Pracowita", "Bzycząca", "Miodowa", 
+        "Kwiatowa", "Leśna", "Polna", "Magiczna", "Radosna",
+        "Wiosenna", "Letnia", "Zimowa", "Jesienna", "Pogodna",
+        "Słoneczna", "Ciepła", "Spokojna", "Jasna", "Delikatna",
+        "Przyjazna", "Mądra", "Szybka", "Aksamitna", "Słowiańska",
+        "Kolorowa", "Barwna", "Szlachetna", "Wierna", "Wolna",
+        "Niezwykła", "Tajemnicza", "Zagadkowa", "Wyjątkowa", "Kwitnąca",
+        "Pachnąca", "Srebrzysta", "Zielona", "Czarna", "Biała",
+        "Pszczela", "Plenna", "Obfita", "Dębowa", "Lipowa",
+        "Akacjowa", "Malinowa", "Spadziowa", "Rzepakowa", "Nektarowa",
+        "Wrzosowa", "Leciutka", "Bursztynowa", "Głęboka", "Intensywna"
+      ],
+      "neuter": [
+        "Złote", "Słodkie", "Pracowite", "Bzyczące", "Miodowe", 
+        "Kwiatowe", "Leśne", "Polne", "Magiczne", "Radosne",
+        "Wiosenne", "Letnie", "Zimowe", "Jesienne", "Pogodne",
+        "Słoneczne", "Ciepłe", "Spokojne", "Jasne", "Delikatne",
+        "Przyjazne", "Mądre", "Szybkie", "Aksamitne", "Słowiańskie",
+        "Kolorowe", "Barwne", "Szlachetne", "Wierne", "Wolne",
+        "Niezwykłe", "Tajemnicze", "Zagadkowe", "Wyjątkowe", "Kwitnące",
+        "Pachnące", "Srebrzyste", "Zielone", "Czarne", "Białe",
+        "Pszczele", "Plenne", "Obfite", "Dębowe", "Lipowe",
+        "Akacjowe", "Malinowe", "Spadziowe", "Rzepakowe", "Nektarowe",
+        "Wrzosowe", "Leciutkie", "Bursztynowe", "Głębokie", "Intensywne"
+      ]
+    },
+    "english": {
+      "masculine": [
+        "Golden", "Sweet", "Diligent", "Buzzing", "Honey", 
+        "Floral", "Forest", "Field", "Magical", "Joyful",
+        "Spring", "Summer", "Winter", "Autumn", "Sunny",
+        "Warm", "Calm", "Bright", "Gentle", "Friendly",
+        "Wise", "Swift", "Velvet", "Colorful", "Vibrant",
+        "Noble", "Faithful", "Free", "Unusual", "Mysterious",
+        "Enigmatic", "Exceptional", "Blooming", "Fragrant", "Silvery",
+        "Green", "Black", "White", "Bee", "Abundant",
+        "Rich", "Oak", "Linden", "Acacia", "Raspberry",
+        "Honeydew", "Rapeseed", "Nectar", "Heather", "Light",
+        "Amber", "Deep", "Intense"
+      ],
+      "feminine": [],
+      "neuter": []
+    }
+  },
+  "beehive_nouns": {
+    "polish": {
+      "masculine": [
+        "Dom", "Pałac", "Zamek", "Dwór", "Folwark", "Domek", 
+        "Przyczółek", "Zagajnik", "Kryształ", "Bastion", "Azyl",
+        "Ul", "Gmach", "Zakątek", "Plac", "Korytarz", "Wąwóz", 
+        "Zbiornik", "Pokój", "Obszar", "Wątek"
+      ],
+      "feminine": [
+        "Twierdza", "Chata", "Wieża", "Oaza", "Przystań", "Forteca",
+        "Komnata", "Baszta", "Chatka", "Osada", "Rezydencja", 
+        "Posiadłość", "Dolina", "Polana", "Łąka", "Winnica", 
+        "Ostoja", "Arkadia", "Enklawa", "Latarnia", "Brama", 
+        "Świątynia", "Warownia", "Zagroda", "Cytadela", "Stolica", "Wioska",
+        "Siedziba", "Jama", "Katedra", "Mieszalnia"
+      ],
+      "neuter": [
+        "Królestwo", "Gniazdo", "Schronienie", "Wzgórze", "Serce", "Wrota",
+        "Siedlisko", "Miejsce", "Łoże", "Pomieszczenie", "Pole",
+        "Centrum", "Skupisko", "Terytorium", "Sanktuarium", "Jądro",
+        "Jezioro", "Źródło", "Obozowisko", "Przejście", "Wnętrze",
+        "Krążenie", "Kokon"
+      ]
+    },
+    "english": {
+      "masculine": [
+        "Home", "Palace", "Castle", "Manor", "Homestead", "Cottage",
+        "Outpost", "Grove", "Crystal", "Bastion", "Sanctuary",
+        "Fortress", "Tower", "Oasis", "Haven", "Chamber",
+        "Turret", "Settlement", "Residence", "Estate", "Valley",
+        "Meadow", "Vineyard", "Refuge", "Enclave", "Lighthouse",
+        "Gate", "Temple", "Stronghold", "Citadel", "Capital",
+        "Village", "Kingdom", "Nest", "Shelter", "Hill", 
+        "Heart", "Gateway", "Hive", "Edifice", "Nook", "Square",
+        "Corridor", "Ravine", "Reservoir", "Room", "Area", "Core",
+        "Seat", "Den", "Cathedral", "Lake", "Source", "Campsite",
+        "Passage", "Interior", "Cocoon", "Territory", "Cluster", 
+        "Center", "Field"
+      ],
+      "feminine": [],
+      "neuter": []
+    }
+  },
+  "bee_stripe_nouns": {
+    "polish": {
+      "masculine": [
+        "Ogród", "Sad", "Raj", "Majątek", "Zagajnik", "Las", 
+        "Zakątek", "Przyczółek", "Świat", "Rezerwat", "Gaj", "Szlak",
+        "Rój", "Teren", "Młyn", "Ul", "Park", "Skrawek", 
+        "Kompleks", "Warsztat", "Ośrodek"
+      ],
+      "feminine": [
+        "Łąka", "Polana", "Plantacja", "Oaza", "Dolina", "Kraina",
+        "Przystań", "Odskocznia", "Farma", "Ostoja", "Enklawa", 
+        "Harmonia", "Arkadia", "Dziedzina", "Zaciszna", "Obfitość", 
+        "Słodycz", "Spiżarnia", "Promenada", "Stacja", "Kaskada", 
+        "Symfonia", "Melodia", "Wioska", "Wspólnota", "Mieszanka", 
+        "Wyspa", "Społeczność", "Rodzina", "Sieć", "Skrzynia",
+        "Pasieka", "Hodowla", "Klatka", "Strefa", "Mapa"
+      ],
+      "neuter": [
+        "Wzgórze", "Pole", "Ustronie", "Zacisze", "Przytulisko", "Królestwo",
+        "Zgrupowanie", "Obozowisko", "Gniazdo", "Leże", "Skupisko", 
+        "Schronienie", "Siedlisko", "Środowisko", "Źródło", "Pastwisko",
+        "Ranczo", "Centrum"
+      ]
+    },
+    "english": {
+      "masculine": [
+        "Garden", "Orchard", "Paradise", "Estate", "Grove", "Forest",
+        "Corner", "Outpost", "World", "Reserve", "Copse", "Trail",
+        "Meadow", "Clearing", "Plantation", "Oasis", "Valley", "Land",
+        "Harbor", "Farm", "Refuge", "Enclave", "Harmony", "Arcadia",
+        "Domain", "Haven", "Bounty", "Sweetness", "Pantry", "Promenade",
+        "Station", "Cascade", "Symphony", "Melody", "Hill", "Field",
+        "Retreat", "Hideaway", "Shelter", "Kingdom", "Swarm", "Terrain",
+        "Mill", "Hive", "Park", "Complex", "Workshop", "Center", 
+        "Village", "Community", "Mixture", "Island", "Society", "Family",
+        "Network", "Chest", "Apiary", "Breeding", "Cage", "Zone", 
+        "Cluster", "Grouping", "Campsite", "Nest", "Lair", "Habitat",
+        "Environment", "Source", "Pasture", "Ranch"
+      ],
+      "feminine": [],
+      "neuter": []
+    }
+  },
+  "bee_nouns": {
+    "polish": {
+      "masculine": [
+        "Zwiadowca", "Promyczek", "Strażnik", "Tropiciel", 
+        "Budowniczy", "Posłaniec", "Zbieracz", "Pyłek"
+      ],
+      "feminine": [
+        "Robotnica", "Królowa", "Strażniczka", "Zbieraczka", "Tancerka",
+        "Poszukiwaczka", "Karmicielka", "Opiekunka", "Budowniczka",
+        "Wojowniczka", "Lotniczka", "Ogrodniczka", "Piastunka", "Miodarka",
+        "Nektarka", "Pszczółka", "Mioduszka", "Słodyczka", "Stróżka", 
+        "Obrończyni", "Badaczka", "Odkrywczyni", "Pani", "Madam", 
+        "Księżna", "Iskierka", "Dama", "Matka", "Przewodniczka", 
+        "Szukaczka", "Pracowniczka", "Nosicielka", "Wędrowniczka", 
+        "Członkini", "Zwiastunka", "Nosicielka pyłku", "Przodowniczka", 
+        "Iskra", "Majówka", "Akacjuszka", "Monarchini", "Władczyni", 
+        "Pani ula", "Rządząca", "Matka roju", "Piastunka ula", 
+        "Lipeczka", "Wrzosówka"
+      ],
+      "neuter": [
+        "Światło", "Echo", "Brzęczenie", "Migotanie", "Skrzydło", 
+        "Światełko", "Lśnienie", "Berło", "Korona"
+      ]
+    },
+    "english": {
+      "masculine": [
+        "Scout", "Ray", "Guardian", "Tracker", "Builder", "Messenger",
+        "Collector", "Caretaker", "Warrior", "Flyer", "Gardener", 
+        "Custodian", "Honey-maker", "Nectar-seeker", "Nimble-one",
+        "Wise-one", "Buzzer", "Winged-one", "Clever-one", "Swift-one", 
+        "Golden-one", "Honey-lover", "Drone", "Defender", "Explorer", 
+        "Discoverer", "Spark", "Pollen"
+      ],
+      "feminine": [
+        "Worker", "Queen", "Guard", "Dancer", "Seeker", "Feeder",
+        "Lady", "Dame", "Mother", "Princess", "Guide", "Diligent",
+        "Bee", "Sweetie", "Bearer", "Wanderer", "Member", "Herald",
+        "Pollen Bearer", "Leader", "Spark", "May Bee", "Acacia Friend", 
+        "Monarch", "Ruler", "Lady of the Hive", "Governess", 
+        "Mother of the Swarm", "Hive Keeper", "Linden Friend", 
+        "Heather Friend"
+      ],
+      "neuter": [
+        "Light", "Echo", "Buzzing", "Flicker", "Wing", "Glow", "Shimmer",
+        "Scepter", "Crown"
+      ]
+    }
+  }
+}

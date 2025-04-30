@@ -3,6 +3,7 @@ import 'package:apiarium/features/managment/edit_hive/edit_hive_view.dart';
 import 'package:apiarium/shared/repositories/apiary_repository.dart';
 import 'package:apiarium/shared/repositories/hive_repository.dart';
 import 'package:apiarium/shared/repositories/queen_repository.dart';
+import 'package:apiarium/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -22,9 +23,9 @@ class EditHivePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => EditHiveBloc(
-        queenRepository: context.read<QueenRepository>(),
-        apiaryRepository: context.read<ApiaryRepository>(),
-        hiveRepository: context.read<HiveRepository>(),
+        queenService: context.read<QueenService>(),
+        apiaryService: context.read<ApiaryService>(),
+        hiveService: context.read<HiveService>(),
         skipSaving: skipSaving,
         hideLocation: hideLocation,
       )..add(EditHiveLoadData(hiveId: hiveId)),

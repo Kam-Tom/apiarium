@@ -1,3 +1,4 @@
+import 'package:apiarium/shared/shared.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:apiarium/shared/domain/enums/apiary_status.dart';
@@ -90,4 +91,22 @@ class Apiary extends Equatable {
     status,
     _hiveCount
   ];
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'location': location,
+      'position': position,
+      'createdAt': createdAt.toIso8601String(),
+      'imageUrl': imageUrl,
+      'latitude': latitude,
+      'longitude': longitude,
+      'isMigratory': isMigratory ? 1 : 0,
+      'color': color?.toHex(),
+      'status': status.name,
+      'hiveCount': _hiveCount,
+    };
+  }
 }

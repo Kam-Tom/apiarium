@@ -14,8 +14,8 @@ class HiveTypeDto extends BaseDto {
   final double? broodFrameWidth;
   final double? broodFrameHeight;
   final String? frameStandard;
-  final String? broodBoxCount;
-  final String? honeySuperBoxCount;
+  final int? broodBoxCount;
+  final int? honeySuperBoxCount;
   
   // Cost information
   final double? hiveCost;
@@ -161,8 +161,10 @@ class HiveTypeDto extends BaseDto {
     broodFrameWidth: map['${prefix}brood_frame_width'],
     broodFrameHeight: map['${prefix}brood_frame_height'],
     frameStandard: map['${prefix}frame_standard'],
-    broodBoxCount: map['${prefix}brood_box_count'],
-    honeySuperBoxCount: map['${prefix}honey_super_box_count'],
+    broodBoxCount: map['${prefix}brood_box_count'] != null ? 
+        int.tryParse(map['${prefix}brood_box_count'].toString()) : null,
+    honeySuperBoxCount: map['${prefix}honey_super_box_count'] != null ? 
+        int.tryParse(map['${prefix}honey_super_box_count'].toString()) : null,
     hiveCost: map['${prefix}hive_cost'],
     currency: Currency.values.byNameOrNull(map['${prefix}currency']),
     frameUnitCost: map['${prefix}frame_unit_cost'],

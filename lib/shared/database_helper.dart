@@ -13,6 +13,8 @@ class DatabaseHelper {
   final hiveTable = HiveTable();
   final hiveTypeTable = HiveTypeTable();
   final historylogTable = HistoryLogTable();
+  final reportTable = ReportTable();
+  final fieldTable = FieldTable();
 
   DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
@@ -34,12 +36,15 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     // Create tables in proper order for foreign key constraints
+    // The order of table creation matters due to foreign key constraints
     await db.execute(apiaryTable.createTableQuery);
     await db.execute(queenBreedTable.createTableQuery);
     await db.execute(queenTable.createTableQuery);
     await db.execute(hiveTypeTable.createTableQuery);
     await db.execute(hiveTable.createTableQuery);
     await db.execute(historylogTable.createTableQuery);
+    await db.execute(reportTable.createTableQuery);
+    await db.execute(fieldTable.createTableQuery);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {

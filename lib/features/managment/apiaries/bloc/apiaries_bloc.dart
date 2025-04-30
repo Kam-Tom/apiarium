@@ -14,12 +14,12 @@ enum ApiarySortOption {
 }
 
 class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
-  final ApiaryRepository _apiaryRepository;
+  final ApiaryService _apiaryService;
 
   ApiariesBloc({
-    required ApiaryRepository apiaryRepository,
+    required ApiaryService apiaryService,
   }) : 
-    _apiaryRepository = apiaryRepository,
+    _apiaryService = apiaryService,
     super(const ApiariesState()) {
     on<LoadApiaries>(_onLoadApiaries);
     on<DeleteApiary>(_onDeleteApiary);
@@ -38,7 +38,7 @@ class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
     emit(state.copyWith(status: ApiariesStatus.loading));
     
     try {
-      final apiaries = await _apiaryRepository.getAllApiaries();
+      final apiaries = await _apiaryService.getAllApiaries();
       
       final filteredApiaries = _applyFilters(apiaries);
       
@@ -60,8 +60,7 @@ class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
     Emitter<ApiariesState> emit,
   ) async {
     try {
-      // In real implementation:
-      await _apiaryRepository.deleteApiary(event.apiaryId);
+      await _apiaryService.deleteApiary(apiaryId: event.apiaryId);
       
       // Refresh the list
       add(const LoadApiaries());
@@ -177,7 +176,11 @@ class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
         ),
       );
       
-      await _apiaryRepository.updateApiariesBatch(apiariesWithNewPositions);
+
+      await _apiaryService.updateApiariesBatch(
+        apiariesWithNewPositions,
+        skipHistoryLog: true,
+      );
     } catch (e) {
       emit(state.copyWith(
         errorMessage: 'Failed to save the new order: ${e.toString()}',
@@ -240,7 +243,7 @@ class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
     return apiaries.where((apiary) {
       // Filter by location
       if (filter!.location != null && 
-          (apiary.location == null || apiary.location!.toLowerCase().contains(filter.location!.toLowerCase()))) {
+          (apiary.location == null || !apiary.location!.toLowerCase().contains(filter.location!.toLowerCase()))) {
         return false;
       }
       

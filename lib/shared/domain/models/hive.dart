@@ -86,4 +86,23 @@ class Hive extends Equatable {
     currentBroodBoxCount,
     currentHoneySuperBoxCount,
   ];
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'apiary_id': apiary?.id,
+      'hiveType_id': hiveType.id,
+      'queen_id': queen?.id,
+      'status': status.name,
+      'acquisitionDate': acquisitionDate.toIso8601String(),
+      'imageUrl': imageUrl,
+      'position': position,
+      'color': color?.toHex(),
+      'currentFrameCount': currentFrameCount,
+      'currentBroodFrameCount': currentBroodFrameCount,
+      'currentBroodBoxCount': currentBroodBoxCount,
+      'currentHoneySuperBoxCount': currentHoneySuperBoxCount,
+    };
+  }
 }

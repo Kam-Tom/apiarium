@@ -1,5 +1,6 @@
 enum HistoryAction {
-  created,
-  updated,
-  deleted,
+  create,
+  update,
+  updateBatch,
+  delete,
 }

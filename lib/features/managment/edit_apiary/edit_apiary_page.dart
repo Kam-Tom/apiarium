@@ -2,6 +2,7 @@ import 'package:apiarium/features/managment/edit_apiary/bloc/edit_apiary_bloc.da
 import 'package:apiarium/features/managment/edit_apiary/edit_apiary_view.dart';
 import 'package:apiarium/shared/repositories/apiary_repository.dart';
 import 'package:apiarium/shared/repositories/hive_repository.dart';
+import 'package:apiarium/shared/services/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -14,8 +15,9 @@ class EditApiaryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => EditApiaryBloc(
-        apiaryRepository: context.read<ApiaryRepository>(),
-        hiveRepository: context.read<HiveRepository>(),
+        apiaryService: context.read<ApiaryService>(),
+        hiveService: context.read<HiveService>(),
+        queenService: context.read<QueenService>(),
       )..add(EditApiaryLoadData(apiaryId: apiaryId)),
       child: Scaffold(
         appBar: AppBar(

@@ -9,24 +9,21 @@ part 'edit_hive_event.dart';
 part 'edit_hive_state.dart';
 
 class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
-  final QueenRepository _queenRepository;
-  final ApiaryRepository _apiaryRepository;
-  final HiveRepository _hiveRepository;
-  final HiveTypeRepository _hiveTypeRepository;
+  final QueenService _queenService;
+  final ApiaryService _apiaryService;
+  final HiveService _hiveService;
   
   EditHiveBloc({
-    QueenRepository? queenRepository,
-    ApiaryRepository? apiaryRepository,
-    HiveRepository? hiveRepository,
-    HiveTypeRepository? hiveTypeRepository,
+    required QueenService queenService,
+    required ApiaryService apiaryService,
+    required HiveService hiveService,
     bool skipSaving = false,
     bool hideLocation = false,
   }) : 
-    _queenRepository = queenRepository ?? QueenRepository(),
-    _apiaryRepository = apiaryRepository ?? ApiaryRepository(),
-    _hiveRepository = hiveRepository ?? HiveRepository(),
-    _hiveTypeRepository = hiveTypeRepository ?? HiveTypeRepository(),
-    super(EditHiveState(acquisitionDate: DateTime.now(), skipSaving: skipSaving, hideLocation: hideLocation)) {  // Pass to state
+    _queenService = queenService,
+    _apiaryService = apiaryService,
+    _hiveService = hiveService,
+    super(EditHiveState(acquisitionDate: DateTime.now(), skipSaving: skipSaving, hideLocation: hideLocation)) {
       on<EditHiveLoadData>(_onLoadRequest);
       on<EditHiveNameChanged>(_onNameChanged);
       on<EditHiveApiaryChanged>(_onApiaryChanged);
@@ -45,7 +42,6 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
       on<EditHiveCreateDefaultQueen>(_onEditHiveCreateDefaultQueen);
       on<EditHiveUpdateQueen>(_onUpdateQueen);
       on<EditHiveCreateQueen>(_onEditHiveCreateQueen);
-
     }
 
   FutureOr<void> _onLoadRequest(EditHiveLoadData event, Emitter<EditHiveState> emit) async {
@@ -54,45 +50,49 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
     ));
     
     try {
-      
       // Load available hive types
-      var hiveTypes = await _hiveTypeRepository.getAllTypes();
+      var hiveTypes = await _hiveService.getAllTypes();
 
       //TODO REMOVE AFTER TESTING
-      
       if(hiveTypes.isEmpty) {
-        _hiveTypeRepository.insertType(HiveType(
-          id:'',
-          name: 'Langstroth',
-          defaultFrameCount: 10,
-          mainMaterial: HiveMaterial.wood,
-          hasFrames: true,
-          frameStandard: 'Hoffmann',
-          broodBoxCount: '1-2',
-          honeySuperBoxCount: '1-3',
-          hiveCost: 250.0,
-          currency: Currency.usd,
-          frameUnitCost: 5.0,
-          broodFrameUnitCost: 6.0,
-          broodBoxUnitCost: 45.0,
-          honeySuperBoxUnitCost: 35.0,
-        ));
-        hiveTypes = await _hiveTypeRepository.getAllTypes();
+        await _hiveService.insertType(
+          type: HiveType(
+            id:'',
+            name: 'Langstroth',
+            defaultFrameCount: 10,
+            mainMaterial: HiveMaterial.wood,
+            hasFrames: true,
+            frameStandard: 'Hoffmann',
+            broodBoxCount: 2,
+            honeySuperBoxCount: 3,
+            hiveCost: 250.0,
+            currency: Currency.usd,
+            frameUnitCost: 5.0,
+            broodFrameUnitCost: 6.0,
+            broodBoxUnitCost: 45.0,
+            honeySuperBoxUnitCost: 35.0,
+          )
+        );
+        hiveTypes = await _hiveService.getAllTypes();
       }
       //TODO REMOVE AFTER TESTING
 
       // Load available queens that are not already assigned
-      final queens = await _queenRepository.getUnassignedQueens();
-      final canCreateDefaultQueen = await _queenRepository.canCreateDefaultQueen();
+      final queens = await _queenService.getUnassignedQueens();
+      final canCreateDefaultQueen = await _queenService.canCreateDefaultQueen();
       
       // Load available apiaries
-      final apiaries = await _apiaryRepository.getAllApiaries();
+      final apiaries = await _apiaryService.getAllApiaries();
 
       if (event.hiveId != null) {
         // Load existing hive data if we're editing
-        final dbHive = await _hiveRepository.getHiveById(event.hiveId!, includeApiary: true, includeQueen: true);
+        final dbHive = await _hiveService.getHiveById(
+          event.hiveId!,
+          includeApiary: true,
+          includeQueen: true
+        );
         
-        // hive.Apiary and Apiares dont equal beacuse of hive count that is not loaded from getHiveById
+        // hive.Apiary and Apiares dont equal because of hive count that is not loaded from getHiveById
         Apiary? selectedApiary;
         for (var apiary in apiaries) {
           if (apiary.id == dbHive?.apiary?.id) {
@@ -121,6 +121,8 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
             color: () => hive.color,
             currentFrameCount: () => hive.currentFrameCount,
             currentBroodFrameCount: () => hive.currentBroodFrameCount,
+            currentBroodBoxCount: () => hive.currentBroodBoxCount,
+            currentHoneySuperBoxCount: () => hive.currentHoneySuperBoxCount,
             formStatus: () => EditHiveStatus.loaded,
             availableHiveTypes: () => hiveTypes,
             availableApiaries: () => apiaries,
@@ -237,10 +239,13 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
     emit(state.copyWith(formStatus: () => EditHiveStatus.submitting));
     
     try {
+      
       if (state.hiveId == null || state.hiveId?.isEmpty == true) {
-        await _hiveRepository.insertHive(hive);
+        await _hiveService.insertHive(hive);
       } else {
-        await _hiveRepository.updateHive(hive);
+        await _hiveService.updateHive(
+          hive: hive,
+        );
       }
       
       emit(state.copyWith(
@@ -259,7 +264,7 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
     try {
       emit(state.copyWith(formStatus: () => EditHiveStatus.loading));
       
-      final savedHiveType = await _hiveTypeRepository.insertType(event.hiveType);
+      final savedHiveType = await _hiveService.insertType(type: event.hiveType);
       
       final updatedTypes = [...state.availableHiveTypes, savedHiveType];
       
@@ -278,7 +283,7 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
 
   FutureOr<void> _onToggleStarHiveType(EditHiveToggleStarHiveType event, Emitter<EditHiveState> emit) async {
     final updateType = event.hiveType.copyWith(isStarred: () => !event.hiveType.isStarred);
-    await _hiveTypeRepository.updateType(updateType);
+    await _hiveService.updateType(type: updateType);
 
     final availableTypes = state.availableHiveTypes.map((type) => 
       type.id == updateType.id ? updateType : type).toList();
@@ -294,22 +299,26 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
   }
 
   FutureOr<void> _onEditHiveCreateDefaultQueen(EditHiveCreateDefaultQueen event, Emitter<EditHiveState> emit) async {
-    final newQueen = await _queenRepository.createDefaultQueen();
+    final newQueen = await _queenService.createDefaultQueen();
     emit(state.copyWith(queen: () => newQueen));
     emit(state.copyWith(availableQueens: () => [...state.availableQueens, newQueen]));
   }
 
   FutureOr<void> _onEditHiveCreateQueen(EditHiveCreateQueen event, Emitter<EditHiveState> emit) async {
-    final newQueen = await _queenRepository.insertQueen(event.queen);
-    emit(state.copyWith(queen: () => newQueen,
-      availableQueens: () => [...state.availableQueens, newQueen]));
+    final newQueen = await _queenService.insertQueen(event.queen);
+    emit(state.copyWith(
+      queen: () => newQueen,
+      availableQueens: () => [...state.availableQueens, newQueen]
+    ));
   }
 
   FutureOr<void> _onUpdateQueen(EditHiveUpdateQueen event, Emitter<EditHiveState> emit) async {
+    await _queenService.updateQueen(queen: event.queen);
+    
     emit(state.copyWith(
       queen: () => event.queen,
       availableQueens: () => state.availableQueens.map((queen) => 
         queen.id == event.queen.id ? event.queen : queen).toList(),
-      ));
+    ));
   }
 }

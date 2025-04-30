@@ -38,13 +38,13 @@ class ApiaryRepository {
   }
 
   /// Retrieves all apiaries from the database with their hives
-  Future<List<Apiary>> getAllApiariesWithHives() async {
+  Future<List<Apiary>> getAllApiariesWithHives({bool includeQueen = false}) async {
     final apiaries = await getAllApiaries();
     
     // Load hives for each apiary
     final List<Apiary> apiariesWithHives = [];
     for (final apiary in apiaries) {
-      final hives = await getHivesByApiaryId(apiary.id);
+      final hives = await getHivesByApiaryId(apiary.id, includeQueen: includeQueen);
       apiariesWithHives.add(apiary.copyWith(hives: () => hives));
     }
     
@@ -54,9 +54,13 @@ class ApiaryRepository {
   /// Unified method to get all apiaries with optional hive inclusion
   ///
   /// If [includeHives] is true, hives will be loaded for each apiary
-  Future<List<Apiary>> getApiaries({bool includeHives = false}) async {
+  /// If [includeQueen] is true, queen information will be loaded for each hive
+  Future<List<Apiary>> getApiaries({
+    bool includeHives = false,
+    bool includeQueen = false
+  }) async {
     if (includeHives) {
-      return getAllApiariesWithHives();
+      return getAllApiariesWithHives(includeQueen: includeQueen);
     } else {
       return getAllApiaries();
     }
@@ -93,11 +97,11 @@ class ApiaryRepository {
   }
 
   /// Retrieves a specific apiary by ID with its hives
-  Future<Apiary?> getApiaryWithHives(String id) async {
+  Future<Apiary?> getApiaryWithHives(String id, {bool includeQueen = false}) async {
     final apiary = await getApiaryById(id);
     if (apiary == null) return null;
     
-    final hives = await getHivesByApiaryId(id);
+    final hives = await getHivesByApiaryId(id, includeQueen: includeQueen);
     return apiary.copyWith(
       hives: () => hives,
     );
@@ -106,22 +110,26 @@ class ApiaryRepository {
   /// Unified method to get a specific apiary with optional hive inclusion
   ///
   /// If [includeHives] is true, hives will be loaded for the apiary
-  Future<Apiary?> getApiary(String id, {bool includeHives = false}) async {
+  /// If [includeQueen] is true, queen information will be loaded for each hive
+  Future<Apiary?> getApiary(String id, {
+    bool includeHives = false,
+    bool includeQueen = false
+  }) async {
     if (includeHives) {
-      return getApiaryWithHives(id);
+      return getApiaryWithHives(id, includeQueen: includeQueen);
     } else {
       return getApiaryById(id);
     }
   }
 
   /// Retrieves all hives for a specific apiary
-  Future<List<Hive>> getHivesByApiaryId(String apiaryId) async {
+  Future<List<Hive>> getHivesByApiaryId(String apiaryId, {bool includeQueen = false}) async {
     final db = await _databaseHelper.database;
     final hiveTable = _databaseHelper.hiveTable;
     final hiveTypeTable = _databaseHelper.hiveTypeTable;
     
-    // Join with hive_type to get the necessary data for building Hive objects
-    final query = '''
+    // Build SELECT clause
+    String selectClause = '''
       SELECT h.* 
       FROM ${hiveTable.tableName} h
       WHERE h.${hiveTable.apiaryId} = ?
@@ -129,14 +137,14 @@ class ApiaryRepository {
       ORDER BY h.${hiveTable.position} ASC
     ''';
     
-    final results = await db.rawQuery(query, [apiaryId]);
+    final results = await db.rawQuery(selectClause, [apiaryId]);
     
     // We'll need to fetch the hive type for each hive
     List<Hive> hives = [];
     for (final map in results) {
       final hiveDto = HiveDto.fromMap(map);
       
-      // Get hive type (simplified - you might need to implement a getHiveTypeById method)
+      // Get hive type
       final hiveTypeQuery = '''
         SELECT * FROM ${hiveTypeTable.tableName} 
         WHERE id = ? AND is_deleted = 0
@@ -150,13 +158,34 @@ class ApiaryRepository {
         final hiveTypeDto = HiveTypeDto.fromMap(hiveTypeResults.first);
         final hiveType = hiveTypeDto.toModel();
         
+        Queen? queen = null;
+        // If includeQueen is true, get queen data
+        if (includeQueen && hiveDto.queenId != null) {
+          final queenTable = _databaseHelper.queenTable;
+          final queenBreedTable = _databaseHelper.queenBreedTable;
+          
+          final queenQuery = '''
+            SELECT q.*, b.*
+            FROM ${queenTable.tableName} q
+            LEFT JOIN ${queenBreedTable.tableName} b ON q.${queenTable.breedId} = b.id
+            WHERE q.id = ? AND q.is_deleted = 0
+          ''';
+          
+          final queenResults = await db.rawQuery(queenQuery, [hiveDto.queenId]);
+          
+          if (queenResults.isNotEmpty) {
+            final queenMap = queenResults.first;
+            final queenDto = QueenDto.fromMap(queenMap);
+            final queenBreedDto = QueenBreedDto.fromMap(queenMap);
+            queen = queenDto.toModel(breed: queenBreedDto.toModel());
+          }
+        }
+        
         // Create the hive model
         hives.add(hiveDto.toModel(
           hiveType: hiveType,
-          // We pass null for apiary to avoid circular references
-          // The apiary can be set later if needed
           apiary: null,
-          queen: null, // Queen would need to be loaded separately if needed
+          queen: queen,
         ));
       }
     }

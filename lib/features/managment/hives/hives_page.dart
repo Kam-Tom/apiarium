@@ -15,8 +15,8 @@ class HivesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => HivesBloc(
-        hiveRepository: context.read<HiveRepository>(),
-        apiaryRepository: context.read<ApiaryRepository>(),
+        hiveService: context.read<HiveService>(),
+        apiaryService: context.read<ApiaryService>(),
       )..add(const LoadHives()),
       child: Builder(
         builder: (context) => Scaffold(

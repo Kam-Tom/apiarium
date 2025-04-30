@@ -15,8 +15,8 @@ class HiveType extends Equatable {
   final double? broodFrameWidth;
   final double? broodFrameHeight;
   final String? frameStandard;
-  final String? broodBoxCount;
-  final String? honeySuperBoxCount;
+  final int? broodBoxCount;
+  final int? honeySuperBoxCount;
   
   // Cost information
   final double? hiveCost;
@@ -68,8 +68,8 @@ class HiveType extends Equatable {
     double? Function()? broodFrameWidth,
     double? Function()? broodFrameHeight,
     String? Function()? frameStandard,
-    String? Function()? broodBoxCount,
-    String? Function()? honeySuperBoxCount,
+    int? Function()? broodBoxCount,
+    int? Function()? honeySuperBoxCount,
     double? Function()? hiveCost,
     Currency? Function()? currency,
     double? Function()? frameUnitCost,
@@ -131,4 +131,31 @@ class HiveType extends Equatable {
     country,
     isStarred,
   ];
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'manufacturer': manufacturer,
+      'mainMaterial': mainMaterial.name,
+      'hasFrames': hasFrames ? 1 : 0,
+      'defaultFrameCount': defaultFrameCount,
+      'frameWidth': frameWidth,
+      'frameHeight': frameHeight,
+      'broodFrameWidth': broodFrameWidth,
+      'broodFrameHeight': broodFrameHeight,
+      'frameStandard': frameStandard,
+      'broodBoxCount': broodBoxCount,
+      'honeySuperBoxCount': honeySuperBoxCount,
+      'hiveCost': hiveCost,
+      'currency': currency?.name,
+      'frameUnitCost': frameUnitCost,
+      'broodFrameUnitCost': broodFrameUnitCost,
+      'broodBoxUnitCost': broodBoxUnitCost,
+      'honeySuperBoxUnitCost': honeySuperBoxUnitCost,
+      'priority': priority,
+      'country': country,
+      'isStarred': isStarred ? 1 : 0,
+    };
+  }
 }

@@ -151,16 +151,18 @@ class _AddHiveTypeModalState extends State<AddHiveTypeModal> {
                   ),
                   
                   // Box counts
-                  _buildTextField(
+                  _buildNumberField(
                     controller: _broodBoxCountController,
                     label: 'Brood Box Count'.tr(),
-                    hint: 'E.g. 1-2'.tr(),
+                    hint: 'E.g. 2'.tr(),
+                    isInteger: true,
                   ),
                   
-                  _buildTextField(
+                  _buildNumberField(
                     controller: _honeySuperBoxCountController,
                     label: 'Honey Super Box Count'.tr(),
-                    hint: 'E.g. 1-3'.tr(),
+                    hint: 'E.g. 2'.tr(),
+                    isInteger: true,
                   ),
                   
                   // Frame dimensions - restructured
@@ -518,10 +520,10 @@ class _AddHiveTypeModalState extends State<AddHiveTypeModal> {
             ? _frameStandardController.text.trim() 
             : null,
         broodBoxCount: _hasFrames && _broodBoxCountController.text.isNotEmpty
-            ? _broodBoxCountController.text.trim()
+            ? int.tryParse(_broodBoxCountController.text)
             : null,
         honeySuperBoxCount: _hasFrames && _honeySuperBoxCountController.text.isNotEmpty
-            ? _honeySuperBoxCountController.text.trim()
+            ? int.tryParse(_honeySuperBoxCountController.text)
             : null,
         hiveCost: _hiveCostController.text.isNotEmpty 
             ? double.tryParse(_hiveCostController.text) 

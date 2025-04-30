@@ -22,10 +22,9 @@ class EditQueenPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => EditQueenBloc(
-        queenRepository: context.read<QueenRepository>(),
-        breedRepository: context.read<QueenBreedRepository>(),
-        apiaryRepository: context.read<ApiaryRepository>(),
-        hiveRepository: context.read<HiveRepository>(),
+        queenService: context.read<QueenService>(),
+        apiaryService: context.read<ApiaryService>(),
+        hiveService: context.read<HiveService>(),
         skipSaving: skipSaving,
         hideLocation: hideLocation,
       )..add(EditQueenLoadData(queenId: queenId)),
