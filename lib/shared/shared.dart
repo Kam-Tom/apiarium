@@ -5,3 +5,4 @@ export 'repositories/repositories.dart';
 export 'tables/tables.dart';
 export 'widgets/widgets.dart';
 export 'services/services.dart';
+export 'utils/utils.dart';

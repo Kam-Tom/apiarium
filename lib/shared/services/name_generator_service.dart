@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-import '../repositories/user_repository.dart';
+import 'package:apiarium/shared/services/services.dart';
+import 'package:flutter/services.dart';
 
 class NameGeneratorService {
   final Random _random = Random();
-  final UserRepository _userRepository;
+  final UserService _userRepository;
   bool _isInitialized = false;
   
   late Map<String, dynamic> _nameData;

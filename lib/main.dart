@@ -43,7 +43,23 @@ class MyApp extends StatelessWidget {
       RepositoryProvider(create: (context) => HistoryLogRepository()),
       
       // Services
+      RepositoryProvider(create: (context) => UserService()),
       RepositoryProvider(create: (context) => SyncService()),
+      RepositoryProvider(create: (context) => NameGeneratorService(
+        context.read<UserService>(),
+      )),
+
+      // Voice services
+      RepositoryProvider(create: (context) => TtsService()),
+      RepositoryProvider(create: (context) => VoskService()),
+      RepositoryProvider(
+        create: (context) => VcService(
+          ttsService: context.read<TtsService>(),
+          voskService: context.read<VoskService>(),
+          userService: context.read<UserService>(),
+        )
+      ),
+      
       RepositoryProvider(
         create: (context) => ReportService(
           reportRepository: context.read<ReportRepository>(),

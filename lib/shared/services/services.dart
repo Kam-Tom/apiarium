@@ -3,3 +3,8 @@ export 'sync_service.dart';
 export 'apiary_service.dart';
 export 'hive_service.dart';
 export 'queen_service.dart';
+export 'vosk_service.dart';
+export 'tts_service.dart';
+export 'name_generator_service.dart';
+export 'vc_service.dart';
+export 'user_service.dart';

@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart';
-
-class UserRepository {
-  // This is a dummy/placeholder implementation
+class UserService {
+    // This is a dummy/placeholder implementation
   String _language = 'polish';
   
   // Getter for the user's language
