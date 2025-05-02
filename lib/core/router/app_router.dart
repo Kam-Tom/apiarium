@@ -9,6 +9,7 @@ import 'package:apiarium/features/managment/edit_queen/edit_queen_page.dart';
 import 'package:apiarium/features/managment/hives/hives_page.dart';
 import 'package:apiarium/features/managment/managment_page.dart';
 import 'package:apiarium/features/managment/queens/queens_page.dart';
+import 'package:apiarium/features/vc/vc_page.dart';
 import 'package:apiarium/shared/layouts/main_layout.dart';
 import 'package:go_router/go_router.dart';
 
@@ -73,6 +74,11 @@ class AppRouter {
           ),
           // Other routes inside shell...
         ],
+      ),
+
+      GoRoute(
+        path: voiceControl,
+        builder: (context, state) => const VCPage(),
       ),
 
       GoRoute(
