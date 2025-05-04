@@ -4,11 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/core.dart';
 import 'features/auth/auth.dart';
+import 'features/home/settings/bloc/preferences_bloc.dart';
 import 'shared/shared.dart';
+import 'shared/utils/shared_prefs_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await SharedPrefsHelper.init();
 
   await Supabase.initialize(
     url: EnvDev.supabaseUrl,
@@ -30,86 +33,103 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Create repositories
+    final queenRepository = QueenRepository();
+    final queenBreedRepository = QueenBreedRepository();
+    final authRepository = AuthRepository();
+    final apiaryRepository = ApiaryRepository();
+    final hiveRepository = HiveRepository();
+    final hiveTypeRepository = HiveTypeRepository();
+    final reportRepository = ReportRepository();
+    final historyLogRepository = HistoryLogRepository();
+    
     return MultiRepositoryProvider(
-    providers: [
-      // Existing repositories
-      RepositoryProvider(create: (context) => QueenRepository()),
-      RepositoryProvider(create: (context) => QueenBreedRepository()),
-      RepositoryProvider(create: (context) => AuthRepository()),
-      RepositoryProvider(create: (context) => ApiaryRepository()),
-      RepositoryProvider(create: (context) => HiveRepository()),
-      RepositoryProvider(create: (context) => HiveTypeRepository()),
-      RepositoryProvider(create: (context) => ReportRepository()),
-      RepositoryProvider(create: (context) => HistoryLogRepository()),
-      
-      // Services
-      RepositoryProvider(create: (context) => UserService()),
-      RepositoryProvider(create: (context) => SyncService()),
-      RepositoryProvider(create: (context) => NameGeneratorService(
-        context.read<UserService>(),
-      )),
+      providers: [
+        // Services
+        RepositoryProvider(create: (context) => UserService()),
+        RepositoryProvider(create: (context) => SyncService()),
+        RepositoryProvider(create: (context) => NameGeneratorService(
+          context.read<UserService>(),
+        )),
 
-      // Voice services
-      RepositoryProvider(create: (context) => TtsService()),
-      RepositoryProvider(create: (context) => VoskService()),
-      RepositoryProvider(
-        create: (context) => VcService(
-          ttsService: context.read<TtsService>(),
-          voskService: context.read<VoskService>(),
-          userService: context.read<UserService>(),
-        )
-      ),
-      
-      RepositoryProvider(
-        create: (context) => ReportService(
-          reportRepository: context.read<ReportRepository>(),
-          historyLogRepository: context.read<HistoryLogRepository>(),
-          syncService: context.read<SyncService>(),
-        )
-      ),
-      
-      RepositoryProvider(
-        create: (context) => ApiaryService(
-          apiaryRepository: context.read<ApiaryRepository>(),
-          historyLogRepository: context.read<HistoryLogRepository>(),
-        )
-      ),
+        // Voice services
+        RepositoryProvider(create: (context) => TtsService()),
+        RepositoryProvider(create: (context) => VoskService()),
+        RepositoryProvider(
+          create: (context) => VcService(
+            ttsService: context.read<TtsService>(),
+            voskService: context.read<VoskService>(),
+            userService: context.read<UserService>(),
+          )
+        ),
+        
+        RepositoryProvider(
+          create: (context) => ReportService(
+            reportRepository: reportRepository,
+            historyLogRepository: historyLogRepository,
+            syncService: context.read<SyncService>(),
+          )
+        ),
+        
+        RepositoryProvider(
+          create: (context) => ApiaryService(
+            apiaryRepository: apiaryRepository,
+            historyLogRepository: historyLogRepository,
+          )
+        ),
 
-      RepositoryProvider(
-        create: (context) => HiveService(
-          hiveRepository: context.read<HiveRepository>(),
-          hiveTypeRepository: context.read<HiveTypeRepository>(),
-          historyLogRepository: context.read<HistoryLogRepository>(),
-        )
-      ),
+        RepositoryProvider(
+          create: (context) => HiveService(
+            hiveRepository: hiveRepository,
+            hiveTypeRepository: hiveTypeRepository,
+            historyLogRepository: historyLogRepository,
+          )
+        ),
 
-      RepositoryProvider(
-        create: (context) => QueenService(
-          queenRepository: context.read<QueenRepository>(),
-          queenBreedRepository: context.read<QueenBreedRepository>(),
-          historyLogRepository: context.read<HistoryLogRepository>(),
-        )
-      ),
-    ],
-      child: BlocProvider(
-        create: (context) => AuthBloc(
-          authRepository: context.read<AuthRepository>(),
-        )..add(CheckAuthStatus()),
-        child: Builder(
-          builder: (context) {
-            final authBloc = context.read<AuthBloc>();
-            final appRouter = AppRouter(authBloc: authBloc);
-            
-            return MaterialApp.router(
-              title: 'Apiarium',
-              theme: AppTheme.lightTheme,
-              debugShowCheckedModeBanner: false,
-              localizationsDelegates: context.localizationDelegates,
-              supportedLocales: context.supportedLocales,
-              locale: context.locale,
-              routerConfig: appRouter.router,
-            );
+        RepositoryProvider(
+          create: (context) => QueenService(
+            queenRepository: queenRepository,
+            queenBreedRepository: queenBreedRepository,
+            historyLogRepository: historyLogRepository,
+          )
+        ),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => AuthBloc(
+              authRepository: authRepository,
+            )..add(CheckAuthStatus()),
+          ),
+          BlocProvider(
+            create: (context) => PreferencesBloc(
+              userService: context.read<UserService>(),
+            )..add(LoadPreferences()),
+          ),
+        ],
+        child: BlocListener<PreferencesBloc, PreferencesState>(
+          listenWhen: (previous, current) => previous.language != current.language,
+          listener: (context, state) {
+            if (state.language.isNotEmpty) {
+              context.setLocale(Locale(state.language));
+            }
           },
+          child: Builder(
+            builder: (context) {
+              final authBloc = context.read<AuthBloc>();
+              final appRouter = AppRouter(authBloc: authBloc);
+              
+              return MaterialApp.router(
+                title: 'Apiarium',
+                theme: AppTheme.lightTheme,
+                debugShowCheckedModeBanner: false,
+                localizationsDelegates: context.localizationDelegates,
+                supportedLocales: context.supportedLocales,
+                locale: context.locale,
+                routerConfig: appRouter.router,
+              );
+            },
+          ),
         ),
       ),
     );

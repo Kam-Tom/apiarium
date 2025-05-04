@@ -10,7 +10,9 @@ import 'package:apiarium/features/managment/hives/hives_page.dart';
 import 'package:apiarium/features/managment/managment_page.dart';
 import 'package:apiarium/features/managment/queens/queens_page.dart';
 import 'package:apiarium/features/vc/vc_page.dart';
+import 'package:apiarium/features/vc/vc_inspection/vc_inspection_page.dart';
 import 'package:apiarium/shared/layouts/main_layout.dart';
+import 'package:apiarium/shared/utils/shared_prefs_helper.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
@@ -23,7 +25,8 @@ class AppRouter {
   static const String signUp = '/sign-up';
   static const String managment = '/managment';
   static const String statistics = '/statistics';
-  static const String voiceControl = '/voice-control';
+  static const String voiceControl = '/vc';
+  static const String voiceControlInspection = '/vc-inspection';
   static const String storage = '/storage';
   static const String calendar = '/calendar';
   static const String history = '/history';
@@ -78,7 +81,19 @@ class AppRouter {
 
       GoRoute(
         path: voiceControl,
-        builder: (context, state) => const VCPage(),
+        builder: (context, state) {
+          // Check if model is set - if yes, redirect to inspection
+          final vcModel = SharedPrefsHelper.getVcModel();
+          if (vcModel.isNotEmpty) {
+            return const VcInspectionPage();
+          }
+          return const VCPage();
+        },
+      ),
+      
+      GoRoute(
+        path: voiceControlInspection,
+        builder: (context, state) => const VcInspectionPage(),
       ),
 
       GoRoute(

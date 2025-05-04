@@ -1,5 +1,7 @@
 import '../utils/logger.dart';
 import '../services/services.dart';
+import '../utils/shared_prefs_helper.dart';
+import '../utils/language_models.dart';
 
 /// Service for voice control functionality, combining speech recognition and text-to-speech
 class VcService {
@@ -26,18 +28,42 @@ class VcService {
        _userService = userService;
 
   /// Initialize both TTS and VOSK services
+  /// If modelUrl, modelId, or language are not provided, they will be retrieved from SharedPreferences
   Future<bool> initialize({
-    required String modelUrl,
-    required String modelId,
+    String? modelUrl,
+    String? modelId,
+    String? language,
     Function(String status)? onModelStatusChange,
-    String language = 'pl-PL',
   }) async {
     if (_isInitialized) return true;
     
     try {
+      // If model details aren't provided, get them from SharedPreferences
+      String finalModelId = modelId ?? SharedPrefsHelper.getVcModel();
+      String finalModelUrl = modelUrl ?? '';
+      String finalLanguage = language ?? 'en-US';
+      
+      // If we only have the modelId but not the URL or language, look up the complete model info
+      if (finalModelId.isNotEmpty && (finalModelUrl.isEmpty || language == null)) {
+        final models = langaugeModels();
+        for (final model in models) {
+          if (model['id'] == finalModelId) {
+            finalModelUrl = modelUrl ?? model['url'] ?? '';
+            finalLanguage = language ?? model['ttsLanguage'] ?? 'en-US';
+            break;
+          }
+        }
+      }
+      
+      // Check if we have the required information
+      if (finalModelId.isEmpty || finalModelUrl.isEmpty) {
+        Logger.e('Model ID or URL not found', tag: _tag);
+        return false;
+      }
+      
       // Initialize TTS
       final ttsInitialized = await _ttsService.initialize(
-        language: language,
+        language: finalLanguage,
       );
       
       if (!ttsInitialized) {
@@ -47,11 +73,15 @@ class VcService {
       
       // Initialize VOSK
       await _voskService.initialize(
-        modelUrl: modelUrl,
-        modelId: modelId,
+        modelUrl: finalModelUrl,
+        modelId: finalModelId,
         onModelStatusChange: onModelStatusChange,
         enablePartialResults: true,
       );
+      
+      // Save model ID to shared preferences
+      await SharedPrefsHelper.setVcModel(finalModelId);
+      Logger.d('Voice model ID saved to preferences: $finalModelId', tag: _tag);
       
       // Setup command handler to repeat speech
       _voskService.setResultHandler(_handleRecognitionResult);
@@ -69,6 +99,16 @@ class VcService {
   void _handleRecognitionResult(String resultText) {
     Logger.d('Recognition result: $resultText', tag: _tag);
     // Further processing can be added here
+  }
+
+  /// Set a custom result handler
+  void setResultHandler(Function(String result) handler) {
+    _voskService.setResultHandler(handler);
+  }
+
+  /// Reset to default result handler
+  void resetResultHandler() {
+    _voskService.setResultHandler(_handleRecognitionResult);
   }
 
   /// Start listening for voice commands
