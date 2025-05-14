@@ -9,7 +9,12 @@ sealed class InspectionEvent extends Equatable {
 
 // MARK: - Apiary & Hive Selection Events
 final class LoadApiariesEvent extends InspectionEvent {
-  const LoadApiariesEvent();
+  final bool autoSelectApiary;
+  
+  const LoadApiariesEvent({this.autoSelectApiary = true});
+  
+  @override
+  List<Object?> get props => [autoSelectApiary];
 }
 
 final class SelectApiaryEvent extends InspectionEvent {

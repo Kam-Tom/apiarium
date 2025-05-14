@@ -26,7 +26,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
     on<ResetAllFieldsEvent>(_onResetAllFields);
     on<ToggleSectionEvent>(_onToggleSection);
     on<SaveInspectionReport>(_onSaveReport);
-    on<UpdateBoxCountEvent>(_onUpdateBoxCount); // Add the new event handler
+    on<UpdateBoxCountEvent>(_onUpdateBoxCount);
   }
 
   final ApiaryService _apiaryService;
@@ -40,7 +40,10 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
         includeHives: true,
         includeQueen: true
       );
-      final String? selectedApiaryId = apiaries.isNotEmpty ? apiaries.first.id : null;
+      
+      final String? selectedApiaryId = 
+          (event.autoSelectApiary && apiaries.isNotEmpty) ? apiaries.first.id : null;
+      
       Map<String, List<Field>>? newCache;
       if (selectedApiaryId != null) {
         newCache = await _prefetchHiveData(selectedApiaryId, apiaries);
@@ -53,8 +56,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
         isLoading: () => false,
       ));
 
-      // Select the first hive
-      if(selectedApiaryId != null && state.selectedHiveId == null) {
+      if(selectedApiaryId != null && state.selectedHiveId == null && event.autoSelectApiary) {
         final firstApiary = apiaries.first;
         if (firstApiary.hives != null && firstApiary.hives!.isNotEmpty) {
           add(SelectHiveEvent(firstApiary.hives!.first.id));
@@ -69,9 +71,13 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
   }
 
   void _onSelectApiary(SelectApiaryEvent event, Emitter<InspectionState> emit) async {
+    final selectedApiary = state.apiaries.firstWhere((apiary) => apiary.id == event.apiaryId);
+    final selectedHiveId = (selectedApiary.hives != null && selectedApiary.hives!.isNotEmpty)
+        ? selectedApiary.hives!.first.id
+        : null;
     emit(state.copyWith(
       selectedApiaryId: () => event.apiaryId,
-      selectedHiveId: () => state.apiaries.where((apiary) => apiary.id == event.apiaryId).first.hives?.first.id,
+      selectedHiveId: () => selectedHiveId,
       fields: () => [],
       previousFields: () => [],
       isLoading: () => true, // Show loading until prefetch is done

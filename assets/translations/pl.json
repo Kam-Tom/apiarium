@@ -47,5 +47,47 @@
             "password_required": "Proszę wprowadzić hasło",
             "password_length": "Hasło musi mieć co najmniej 6 znaków"
         }
+    },
+    "vc": {
+        "initializing": "Inicjalizacja sterowania głosowego...",
+        "init_failed": "Nie udało się zainicjalizować sterowania głosowego. Wybierz model w ustawieniach.",
+        "retry": "Ponów",
+        "select_apiary": "Wybierz Pasiekę",
+        "selected": "wybrana",
+        "speak_number": "Powiedz numer, aby wybrać pasiekę",
+        "hive": "ul",
+        "hives": "ule",
+        "commands": {
+            "back": "wróć",
+            "exit": "wyjdź",
+            "return": "powrót"
+        },
+        "numbers": {
+            "one": "jeden",
+            "two": "dwa",
+            "three": "trzy",
+            "four": "cztery",
+            "five": "pięć",
+            "six": "sześć",
+            "seven": "siedem",
+            "eight": "osiem",
+            "nine": "dziewięć",
+            "ten": "dziesięć",
+            "eleven": "jedenaście",
+            "twelve": "dwanaście",
+            "thirteen": "trzynaście",
+            "fourteen": "czternaście",
+            "fifteen": "piętnaście",
+            "sixteen": "szesnaście",
+            "seventeen": "siedemnaście",
+            "eighteen": "osiemnaście",
+            "nineteen": "dziewiętnaście",
+            "twenty": "dwadzieścia",
+            "twentyone": "dwadzieścia jeden",
+            "twentytwo": "dwadzieścia dwa",
+            "twentythree": "dwadzieścia trzy",
+            "twentyfour": "dwadzieścia cztery",
+            "twentyfive": "dwadzieścia pięć"
+        }
     }
 }

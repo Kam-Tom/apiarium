@@ -18,15 +18,11 @@ class VoskService {
   bool get isListening => _isListening;
   bool _isListening = false;
   
-  // Callbacks
-  Function(String command)? _onCommand;
-  Function(String partialText)? _onPartialResult;
-  Function(String resultText)? _onResult;
+  Function(String text)? _onResult;
   
-  // Set handlers
-  void setCommandHandler(Function(String command) onCommand) => _onCommand = onCommand;
-  void setPartialResultHandler(Function(String partialText) onPartialResult) => _onPartialResult = onPartialResult;
-  void setResultHandler(Function(String resultText) onResult) => _onResult = onResult;
+  void setResultHandler(Function(String text) onResult) => _onResult = onResult;
+
+  final List<String> _grammar = [];
 
   Future<bool> initialize({
     required String modelUrl, 
@@ -76,7 +72,6 @@ class VoskService {
           onRecognizerStatusChange('Speech service initialized');
         }
         
-        // Result listener
         _speechService!.onResult().listen((result) {
           final jsonResult = result.toString();
           final resultText = _extractCommand(jsonResult);
@@ -84,27 +79,7 @@ class VoskService {
           if (_onResult != null && resultText.isNotEmpty) {
             _onResult!(resultText);
           }
-          
-          if (_onCommand != null && resultText.isNotEmpty) {
-            _onCommand!(resultText);
-          }
         });
-        
-        // Partial result listener
-        if(enablePartialResults) {
-          _speechService!.onPartial().listen((result) {
-            final jsonResult = result.toString();
-            final partialText = _extractPartialText(jsonResult);
-            
-            if (partialText.isNotEmpty) {
-              Logger.d("Partial: $partialText", tag: _tag);
-              
-              if (_onPartialResult != null) {
-                _onPartialResult!(partialText);
-              }
-            }
-          });
-        }
       } else {
         throw Exception('Voice control is currently only available on Android');
       }
@@ -128,33 +103,26 @@ class VoskService {
     return '';
   }
   
-  String _extractPartialText(String jsonResult) {
-    try {
-      final Map<String, dynamic> result = json.decode(jsonResult);
-      if (result.containsKey('partial')) {
-        return result['partial'].toString().trim();
-      }
-    } catch (e) {
-      Logger.e("Error extracting partial text", tag: _tag, error: e);
-    }
-    return '';
-  }
 
-  Future<void> setCommands(List<String> commands, {bool enableGrammar = true}) async {
+  Future<void> setGrammar(List<String> commands, {bool enableGrammar = true}) async {
     if (_recognizer == null) {
       throw Exception('Recognizer not initialized');
     }
     
     try {
-      if (commands.isEmpty || !enableGrammar) {
-        await _recognizer!.setGrammar([]);
-        return;
+      await stopListening();
+      
+      _grammar.clear();
+      if (commands.isNotEmpty && enableGrammar) {
+        _grammar.addAll(commands);
+        await _recognizer!.setGrammar(_grammar);
       }
       
-      await _recognizer!.setGrammar(commands);
-      Logger.i("Grammar set with ${commands.length} words", tag: _tag);
+      await startListening();
+      Logger.i("Grammar set with ${_grammar.length} words", tag: _tag);
     } catch (e) {
-      Logger.e("Error in setCommands", tag: _tag, error: e);
+      Logger.e("Error in setGrammar", tag: _tag, error: e);
+      throw Exception('Failed to set grammar: $e');
     }
   }
 

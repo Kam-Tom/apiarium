@@ -1,136 +1,64 @@
-import 'package:apiarium/shared/utils/language_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../features/raport/inspection/bloc/inspection_bloc.dart';
 import '../../../shared/services/services.dart';
-import '../../../shared/utils/shared_prefs_helper.dart';
+import 'cubit/vc_inspection_cubit.dart';
 import 'vc_inspection_view.dart';
+import 'widgets/vc_initializing_screen.dart';
+import 'widgets/vc_error_screen.dart';
 
-class VcInspectionPage extends StatefulWidget {
+class VcInspectionPage extends StatelessWidget {
   const VcInspectionPage({super.key});
 
   @override
-  State<VcInspectionPage> createState() => _VcInspectionPageState();
-}
-
-class _VcInspectionPageState extends State<VcInspectionPage> {
-  bool _isInitializing = true;
-  String _initStatus = 'Initializing voice control...';
-  bool _initError = false;
-  late final VcService _vcService;
-  
-  @override
-  void initState() {
-    super.initState();
-    _initializeVoiceControl();
-    _vcService = context.read<VcService>();
-  }
-  
-  @override
-  void dispose() {
-    _vcService.stopListening();
-    _vcService.dispose();
-    super.dispose();
-  }
-  
-  Future<void> _initializeVoiceControl() async {
-    final vcService = context.read<VcService>();
-    
-    try {
-      // Initialize the voice control service with simpler approach
-      final success = await vcService.initialize(
-        onModelStatusChange: (status) {
-          setState(() {
-            _initStatus = status;
-          });
-        },
-      );
-      
-      if (success) {
-        vcService.startListening();
-        setState(() {
-          _isInitializing = false;
-        });
-      } else {
-        setState(() {
-          _isInitializing = false;
-          _initError = true;
-          _initStatus = 'Failed to initialize voice control. Please select a model in Voice Control settings.';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isInitializing = false;
-        _initError = true;
-        _initStatus = 'Error: $e';
-      });
-    }
-  }
-  
-  @override
   Widget build(BuildContext context) {
-    if (_isInitializing) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Voice Inspection'),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 24),
-              Text(_initStatus),
-            ],
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => VcInspectionCubit(
+            vcService: context.read<VcService>(),
+            context: context,
           ),
         ),
-      );
-    }
-    
-    if (_initError) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Voice Inspection'),
+        BlocProvider(
+          create: (context) => InspectionBloc(
+            apiaryService: context.read<ApiaryService>(),
+            reportService: context.read<ReportService>(),
+          )..add(const LoadApiariesEvent(autoSelectApiary: false)),
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                _initStatus,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
+      ],
+      child: BlocBuilder<VcInspectionCubit, VcInspectionState>(
+        builder: (context, state) {
+          if (state.status == VcInspectionStatus.initializing) {
+            return VcInitializingScreen(statusMessage: state.statusMessage);
+          }
+
+          if (state.status == VcInspectionStatus.error) {
+            return VcErrorScreen(
+              errorMessage: state.statusMessage,
+              onRetry: () => context.read<VcInspectionCubit>().retry(),
+            );
+          }
+
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _isInitializing = true;
-                    _initError = false;
-                    _initStatus = 'Initializing voice control...';
-                  });
-                  _initializeVoiceControl();
-                },
-                child: const Text('Retry'),
+              title: Row(
+                children: [
+                  const Text('vc.commands.back', style: TextStyle(color: Colors.white)).tr(),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.mic, color: Colors.blue, size: 16),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
-    
-    return BlocProvider(
-      create: (context) => InspectionBloc(
-        apiaryService: context.read<ApiaryService>(),
-        reportService: context.read<ReportService>(),
-      )..add(LoadApiariesEvent()),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Voice Inspection'),
-        ),
-        body: VcInspectionView(vcService: _vcService),
+            ),
+            body: VcInspectionView(),
+          );
+        },
       ),
     );
   }

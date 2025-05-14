@@ -47,5 +47,47 @@
             "password_required": "Please enter a password",
             "password_length": "Password must be at least 6 characters"
         }
+    },
+    "vc": {
+        "initializing": "Initializing voice control...",
+        "init_failed": "Failed to initialize voice control. Please select a model in Voice Control settings.",
+        "retry": "Retry",
+        "select_apiary": "Select Apiary",
+        "selected": "selected",
+        "speak_number": "Say a number to select an apiary",
+        "hive": "hive",
+        "hives": "hives",
+        "commands": {
+            "back": "back",
+            "exit": "exit",
+            "return": "return"
+        },
+        "numbers": {
+            "one": "one",
+            "two": "two",
+            "three": "three",
+            "four": "four",
+            "five": "five",
+            "six": "six",
+            "seven": "seven",
+            "eight": "eight",
+            "nine": "nine",
+            "ten": "ten",
+            "eleven": "eleven",
+            "twelve": "twelve",
+            "thirteen": "thirteen",
+            "fourteen": "fourteen",
+            "fifteen": "fifteen",
+            "sixteen": "sixteen",
+            "seventeen": "seventeen",
+            "eighteen": "eighteen",
+            "nineteen": "nineteen",
+            "twenty": "twenty",
+            "twentyone": "twenty one",
+            "twentytwo": "twenty two",
+            "twentythree": "twenty three",
+            "twentyfour": "twenty four",
+            "twentyfive": "twenty five"
+        }
     }
 }

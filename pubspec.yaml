@@ -27,6 +27,7 @@ dependencies:
   shared_preferences: ^2.5.3
   logger: ^2.5.0
   flutter_tts: ^4.2.2
+  fluttertoast: ^8.2.12
   vosk_flutter:
     git:
       url: https://github.com/alphacep/vosk-flutter.git
@@ -47,4 +48,5 @@ flutter:
   assets:
     - assets/translations/
     - assets/images/
-    - assets/data/name_generator.json
+    - assets/text_data/name_generator.json
+    - assets/text_data/voice_grammar.json

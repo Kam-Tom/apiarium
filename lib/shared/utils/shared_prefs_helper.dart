@@ -33,7 +33,7 @@ class SharedPrefsHelper {
   
   // Convenience methods
   static String getLanguage() {
-    return getString(keyLanguage, defaultValue: 'en');
+    return getString(keyLanguage);
   }
   
   static Future<bool> setLanguage(String language) async {
