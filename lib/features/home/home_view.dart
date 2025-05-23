@@ -9,69 +9,67 @@ class HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false, // Important: don't apply safe area at the bottom
-      child: Column(
-        children: [
-          // Top space for the task card
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 25.0),
-              child: TaskCarousel(),
-            ),
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    
+    return Column(
+      children: [
+        // Top space for the task card - now includes status bar height
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16.0, statusBarHeight + 12.0, 16.0, 25.0),
+            child: TaskCarousel(),
           ),
-          // Bottom part with white background
-          Expanded(
-            flex: 8,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
+        ),
+        // Bottom part with white background
+        Expanded(
+          flex: 8,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, -3),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, -3),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(15, 25, 15, 110),
+              child: Column(
+                children: [
+                  // Featured section
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionHeader(title: 'Featured'),
+                      SizedBox(
+                        height: 100,
+                        child: FeaturedCarousel(),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Quick Access section
+                  const SectionHeader(title: 'Quick Access'),
+                  
+                  // Menu buttons - take remaining space
+                  const Expanded(
+                    child: QuickAccessMenu(),
                   ),
                 ],
               ),
-              // Added padding at the bottom to make room for navigation bar
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(15, 25, 15, 110), // Increased bottom padding
-                child: Column(
-                  children: [
-                    // Featured section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionHeader(title: 'Featured'),
-                        SizedBox(
-                          height: 100,
-                          child: FeaturedCarousel(),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Quick Access section
-                    const SectionHeader(title: 'Quick Access'),
-                    
-                    // Menu buttons - take remaining space
-                    const Expanded(
-                      child: QuickAccessMenu(),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

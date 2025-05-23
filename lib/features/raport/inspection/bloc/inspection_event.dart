@@ -26,6 +26,10 @@ final class SelectApiaryEvent extends InspectionEvent {
   List<Object?> get props => [apiaryId];
 }
 
+final class ResetApiaryEvent extends InspectionEvent {
+  const ResetApiaryEvent();
+}
+
 final class SelectHiveEvent extends InspectionEvent {
   final String hiveId;
   
@@ -33,6 +37,10 @@ final class SelectHiveEvent extends InspectionEvent {
   
   @override
   List<Object?> get props => [hiveId];
+}
+
+final class ResetHiveEvent extends InspectionEvent {
+  const ResetHiveEvent();
 }
 
 // MARK: - Field Management Events

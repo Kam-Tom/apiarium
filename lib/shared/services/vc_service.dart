@@ -75,7 +75,9 @@ class VcService {
       try {
         final String jsonString = await rootBundle.loadString('assets/text_data/voice_grammar.json');
         var grammarJson = json.decode(jsonString);
-        //await _voskService.setGrammar(grammarJson[finalLanguage]);
+        List<dynamic> dynamicList = grammarJson[finalLanguage];
+        List<String> stringList = dynamicList.map((item) => item.toString()).toList();
+        await _voskService.setGrammar(stringList);
         Logger.i('Voice grammar loaded from JSON', tag: _tag);
       } catch (e) {
         Logger.e('Error loading grammar from JSON', tag: _tag, error: e);

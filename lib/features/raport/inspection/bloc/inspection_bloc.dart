@@ -20,7 +20,9 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       
     on<LoadApiariesEvent>(_onLoadApiaries);
     on<SelectApiaryEvent>(_onSelectApiary);
+    on<ResetApiaryEvent>(_onResetApiary);
     on<SelectHiveEvent>(_onSelectHive);
+    on<ResetHiveEvent>(_onResetHive);
     on<UpdateFieldEvent>(_onUpdateField);
     on<ResetFieldEvent>(_onResetField);
     on<ResetAllFieldsEvent>(_onResetAllFields);
@@ -91,6 +93,27 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
     ));
   }
 
+  void _onResetApiary(ResetApiaryEvent event, Emitter<InspectionState> emit) {
+      emit(state.copyWith(
+      selectedApiaryId: () => null,
+      selectedHiveId: () => null,
+      fields: () => [],
+      previousFields: () => [],
+      isLoading: () => false,
+    ));
+  }
+
+
+
+  void _onResetHive(ResetHiveEvent event, Emitter<InspectionState> emit) {
+    emit(state.copyWith(
+      selectedHiveId: () => null,
+      fields: () => [],
+      previousFields: () => [],
+      savedFields: () => [],
+      isLoading: () => false,
+    ));
+  }
   // Cache recent fields for all hives in the selected apiary
   Future<Map<String, List<Field>>?> _prefetchHiveData(String apiaryId, List<Apiary> apiaries) async {
       final batchResult = await _reportService.getRecentFieldsForApiary(
@@ -381,4 +404,5 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       }
     }
   }
+
 }

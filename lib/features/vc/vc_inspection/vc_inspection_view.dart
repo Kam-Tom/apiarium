@@ -1,8 +1,8 @@
 import 'package:apiarium/features/raport/inspection/inspection.dart';
 import 'package:apiarium/features/vc/vc_inspection/cubit/vc_inspection_cubit.dart';
 import 'package:apiarium/features/vc/vc_inspection/sections/vc_apiary_section.dart';
-import 'package:apiarium/features/vc/vc_inspection/sections/vc_inspection_main_view.dart';
-import 'package:apiarium/shared/services/vc_service.dart';
+import 'package:apiarium/features/vc/vc_inspection/sections/vc_form_section.dart';
+import 'package:apiarium/features/vc/vc_inspection/sections/vc_hive_section.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -62,10 +62,22 @@ class _VcInspectionViewState extends State<VcInspectionView> {
       child: BlocBuilder<InspectionBloc, InspectionState>(
         builder: (context, state) {
           if (state.selectedApiaryId != null && state.selectedApiary != null) {
-            return const VcInspectionMainView();
-          } else 
-          if(state.apiaries.isNotEmpty) {
-            return VcApiarySection();
+            if (state.selectedHiveId != null && state.selectedHive != null) {
+              // Simpler approach - let VcHiveSection take only what it needs
+              return Column(
+                children: [
+                  // VcHiveSection will size itself based on its content
+                  const VcHiveSection(),
+                  Divider(height: 1, thickness: 1, color: Colors.grey.shade900),
+                  // VcFormSection gets all remaining space
+                  const Expanded(child: VcFormSection()),
+                ],
+              );
+            } else {
+              return const VcHiveSection();
+            }
+          } else if (state.apiaries.isNotEmpty) {
+            return const VcApiarySection();
           } else {
             return const Center(
               child: CircularProgressIndicator(color: Colors.blue),
