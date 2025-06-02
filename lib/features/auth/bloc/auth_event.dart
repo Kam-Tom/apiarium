@@ -19,14 +19,30 @@ class SignIn extends AuthEvent {
 class SignUp extends AuthEvent {
   final String email;
   final String password;
+  final String? name;
+  final String country;
+  final bool consentAccepted;
 
-  SignUp({required this.email, required this.password});
+  SignUp({
+    required this.email, 
+    required this.password,
+    this.name,
+    required this.country,
+    required this.consentAccepted,
+  });
   
   @override
-  List<Object> get props => [email, password];
+  List<Object?> get props => [email, password, name, country, consentAccepted];
 }
 
-class SignInAnonymously extends AuthEvent {}
+class SignInAnonymously extends AuthEvent {
+  final String? country;
+
+  SignInAnonymously({this.country});
+  
+  @override
+  List<Object?> get props => [country];
+}
 
 class SignOut extends AuthEvent {}
 
@@ -39,13 +55,4 @@ class ResetPassword extends AuthEvent {
   
   @override
   List<Object> get props => [email];
-}
-
-class AuthStateChanged extends AuthEvent {
-  final supabase.AuthState authState;
-
-  AuthStateChanged(this.authState);
-  
-  @override
-  List<Object> get props => [authState];
 }

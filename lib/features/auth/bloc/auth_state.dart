@@ -11,7 +11,7 @@ class AuthInitial extends AuthState {}
 class AuthLoading extends AuthState {}
 
 class Authenticated extends AuthState {
-  final supabase.User? user;
+  final User? user;
   
   Authenticated({this.user});
   
@@ -21,24 +21,6 @@ class Authenticated extends AuthState {
 
 class Unauthenticated extends AuthState {}
 
-/// State representing a user who has successfully registered but may need
-/// to complete additional steps like email verification
-class SignedUp extends AuthState {
-  final bool requiresEmailVerification;
-  final String? email;
-  final String? message;
-  
-  SignedUp({
-    this.requiresEmailVerification = false,
-    this.email,
-    this.message,
-  });
-  
-  @override
-  List<Object?> get props => [requiresEmailVerification, email, message];
-}
-
-/// State indicating that a password reset email has been sent
 class PasswordResetSent extends AuthState {
   final String email;
   

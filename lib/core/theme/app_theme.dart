@@ -19,7 +19,7 @@ class AppTheme {
         onPrimary: Colors.white,
         onSecondary: Colors.white,
       ),
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: Colors.transparent,
       
       // Button styling
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -95,7 +95,7 @@ class AppTheme {
       ),
       
       // Dialog theme
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         elevation: 5,
         shape: RoundedRectangleBorder(
@@ -162,7 +162,7 @@ class AppTheme {
       ),
 
       // Card theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

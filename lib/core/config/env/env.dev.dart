@@ -3,16 +3,15 @@ import 'package:envied/envied.dart';
 part 'env.dev.g.dart';
 
 /// {@template env}
-/// Dev Environment variables. Used to access environment variables in the app.
+/// Dev Environment variables for backend services
 /// {@endtemplate}
 @Envied(path: '.env.dev', obfuscate: true)
 abstract class EnvDev {
-  /// Supabase url secret.
-  @EnviedField(varName: 'SUPABASE_URL', obfuscate: true)
-  static String supabaseUrl = _EnvDev.supabaseUrl;
+  /// Your backend API base URL
+  @EnviedField(varName: 'API_BASE_URL', obfuscate: true)
+  static String apiBaseUrl = _EnvDev.apiBaseUrl;
 
-  /// Supabase anon key secret.
-  @EnviedField(varName: 'SUPABASE_ANON_KEY', obfuscate: true)
-  static String supabaseAnonKey = _EnvDev.supabaseAnonKey;
-
+  /// API key for endpoint protection
+  @EnviedField(varName: 'API_KEY', obfuscate: true)
+  static String apiKey = _EnvDev.apiKey;
 }
