@@ -1,111 +1,235 @@
 import 'dart:async';
 
-import 'package:apiarium/features/auth/auth_repository.dart';
-import 'package:apiarium/features/auth/repositories/auth_repository.dart';
-import 'package:apiarium/shared/models/user_model.dart';
+import 'package:apiarium/shared/models/user.dart';
+import 'package:apiarium/shared/services/auth_service.dart';
+import 'package:apiarium/shared/services/user_repository.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:meta/meta.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository _authRepository;
+  final AuthService _authService;
+  final UserRepository _userRepository;
+  late StreamSubscription<firebase_auth.User?> _authSubscription;
 
-  AuthBloc({required AuthRepository authRepository})
-      : _authRepository = authRepository,
+  AuthBloc({
+    required AuthService authService,
+    required UserRepository userRepository,
+  })  : _authService = authService,
+        _userRepository = userRepository,
         super(AuthInitial()) {
-    
-    on<SignIn>(_onSignIn);
+    _authSubscription = _authService.authStateChanges.listen((firebaseUser) {
+      if (firebaseUser != null) {
+        add(AuthCheckRequested());
+      } else {
+        emit(Unauthenticated());
+      }
+    });
+
+    on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignUp>(_onSignUp);
+    on<SignIn>(_onSignIn);
     on<SignInAnonymously>(_onSignInAnonymously);
-    on<SignOut>(_onSignOut);
-    on<CheckAuthStatus>(_onCheckAuthStatus);
+    on<ConvertAnonymousUser>(_onConvertAnonymousUser);
     on<ResetPassword>(_onResetPassword);
+    on<SignOut>(_onSignOut);
   }
 
-  Future<void> _onSignIn(SignIn event, Emitter<AuthState> emit) async {
+  Future<void> _onAuthCheckRequested(
+    AuthCheckRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
+
     try {
-      final success = await _authRepository.signInWithEmailAndPassword(
-        email: event.email,
-        password: event.password,
-      );
-      
-      if (success) {
-        emit(Authenticated(user: _authRepository.currentUser));
+      final firebaseUser = _authService.currentUser;
+      if (firebaseUser != null) {
+        final user = await _userRepository.loginUser(firebaseUser.uid);
+        if (user != null) {
+          emit(Authenticated(user: user));
+        } else {
+          emit(Unauthenticated());
+        }
       } else {
-        emit(AuthError(message: 'Invalid email or password'));
+        emit(Unauthenticated());
       }
     } catch (e) {
-      emit(AuthError(message: e.toString()));
+      emit(AuthError(
+          message: 'Failed to check authentication status',
+          exception: e is Exception ? e : Exception(e.toString())));
     }
   }
-  
-  Future<void> _onSignUp(SignUp event, Emitter<AuthState> emit) async {
+
+  Future<void> _onSignUp(
+    SignUp event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
+
     try {
-      final success = await _authRepository.signUp(
-        email: event.email,
-        password: event.password,
-        name: event.name,
-        country: event.country,
-        consentAccepted: event.consentAccepted,
-      );
-      
-      if (success) {
-        emit(Authenticated(user: _authRepository.currentUser));
+      final credential =
+          await _authService.signUpWithEmail(event.email, event.password);
+      if (credential?.user != null) {
+        final user = await _userRepository.registerUser(
+          credential!.user!,
+          event.country,
+          displayName: event.displayName,
+        );
+        emit(Authenticated(user: user));
       } else {
-        emit(AuthError(message: 'Registration failed'));
+        emit(const AuthError(message: 'Failed to create account'));
       }
     } catch (e) {
-      emit(AuthError(message: e.toString()));
+      emit(AuthError(
+          message: _getErrorMessage(e),
+          exception: e is Exception ? e : Exception(e.toString())));
     }
   }
-  
-  Future<void> _onSignInAnonymously(SignInAnonymously event, Emitter<AuthState> emit) async {
+
+  Future<void> _onSignIn(
+    SignIn event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
+
     try {
-      final success = await _authRepository.signInAnonymously(
-        country: event.country,
-      );
-      
-      if (success) {
-        emit(Authenticated(user: _authRepository.currentUser));
+      final credential =
+          await _authService.signInWithEmail(event.email, event.password);
+      if (credential?.user != null) {
+        final user = await _userRepository.loginUser(credential!.user!.uid);
+        if (user != null) {
+          emit(Authenticated(user: user));
+        } else {
+          emit(const AuthError(message: 'User profile not found'));
+        }
       } else {
-        emit(AuthError(message: 'Anonymous login failed'));
+        emit(const AuthError(message: 'Failed to sign in'));
       }
     } catch (e) {
-      emit(AuthError(message: e.toString()));
+      emit(AuthError(
+          message: _getErrorMessage(e),
+          exception: e is Exception ? e : Exception(e.toString())));
     }
   }
 
-  Future<void> _onSignOut(SignOut event, Emitter<AuthState> emit) async {
+  Future<void> _onSignInAnonymously(
+    SignInAnonymously event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
+
     try {
-      await _authRepository.signOut();
-      emit(Unauthenticated());
+      final credential = await _authService.signInAnonymously();
+      if (credential?.user != null) {
+        final user = await _userRepository.createAnonymousUser(
+          credential!.user!,
+          event.country,
+        );
+        emit(Authenticated(user: user));
+      } else {
+        emit(const AuthError(message: 'Failed to create anonymous account'));
+      }
     } catch (e) {
-      emit(AuthError(message: e.toString()));
+      emit(AuthError(
+          message: _getErrorMessage(e),
+          exception: e is Exception ? e : Exception(e.toString())));
     }
   }
 
-  void _onCheckAuthStatus(CheckAuthStatus event, Emitter<AuthState> emit) {
-    if (_authRepository.isLoggedIn) {
-      emit(Authenticated(user: _authRepository.currentUser));
-    } else {
-      emit(Unauthenticated());
-    }
-  }
-
-  Future<void> _onResetPassword(ResetPassword event, Emitter<AuthState> emit) async {
+  Future<void> _onConvertAnonymousUser(
+    ConvertAnonymousUser event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
+
     try {
-      await _authRepository.resetPasswordForEmail(event.email);
+      final credential =
+          await _authService.linkAnonymousWithEmail(event.email, event.password);
+      if (credential?.user != null) {
+        final currentUser = _userRepository.currentUser;
+        if (currentUser != null) {
+          final updatedUser = currentUser.copyWith(
+            isAnonymous: false,
+            displayName: event.displayName ?? currentUser.displayName,
+            updatedAt: DateTime.now(),
+          );
+          await _userRepository.updateUser(updatedUser);
+          emit(Authenticated(user: updatedUser));
+        } else {
+          emit(const AuthError(message: 'Failed to update user profile'));
+        }
+      } else {
+        emit(const AuthError(message: 'Failed to convert anonymous account'));
+      }
+    } catch (e) {
+      emit(AuthError(
+          message: _getErrorMessage(e),
+          exception: e is Exception ? e : Exception(e.toString())));
+    }
+  }
+
+  Future<void> _onResetPassword(
+    ResetPassword event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      await firebase_auth.FirebaseAuth.instance
+          .sendPasswordResetEmail(email: event.email);
       emit(PasswordResetSent(email: event.email));
     } catch (e) {
-      emit(AuthError(message: e.toString()));
+      emit(AuthError(
+          message: _getErrorMessage(e),
+          exception: e is Exception ? e : Exception(e.toString())));
     }
   }
+
+  Future<void> _onSignOut(
+    SignOut event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      await _authService.signOut();
+      await _userRepository.clearUserData();
+      emit(Unauthenticated());
+    } catch (e) {
+      emit(AuthError(
+          message: 'Failed to sign out',
+          exception: e is Exception ? e : Exception(e.toString())));
+    }
+  }
+
+  String _getErrorMessage(dynamic error) {
+    if (error is firebase_auth.FirebaseAuthException) {
+      switch (error.code) {
+        case 'user-not-found':
+          return 'No user found with this email address.';
+        case 'wrong-password':
+          return 'Incorrect password.';
+        case 'email-already-in-use':
+          return 'An account already exists with this email address.';
+        case 'weak-password':
+          return 'Password is too weak.';
+        case 'invalid-email':
+          return 'Email address is invalid.';
+        case 'user-disabled':
+          return 'This account has been disabled.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
+        default:
+          return error.message ?? 'An authentication error occurred.';
+      }
+    }
+    return error.toString();
+  }
+
+  @override
+  Future<void> close() {
+    _authSubscription.cancel();
+    return super.close();
+  }
 }
+

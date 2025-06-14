@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'dart:io';
 import '../bloc/auth_bloc.dart';
 
-/// SignUpView handles the UI presentation and user interactions for registration
 class SignUpView extends StatefulWidget {
   const SignUpView({super.key});
 
@@ -28,49 +28,57 @@ class _SignUpViewState extends State<SignUpView> {
     super.dispose();
   }
 
+  String _getDeviceCountry() {
+    final locale = context.locale;
+    return locale.countryCode ?? Platform.localeName.split('_').last.substring(0, 2).toUpperCase();
+  }
+
   void _handleSignUp() {
-    if (_formKey.currentState!.validate() && _acceptTerms) {
-      // You need to provide country and consent data for the new signup flow
+    if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(SignUp(
-        email: _emailController.text,
+        email: _emailController.text.trim(),
         password: _passwordController.text,
-        country: 'US', // TODO: Get user's country - maybe from device locale
+        country: _getDeviceCountry(),
         consentAccepted: _acceptTerms,
       ));
-    } else if (!_acceptTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('auth.sign_up.please_accept_terms'.tr()),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
   void _handleAnonymousSignUp() {
-    if (_acceptTerms) {
-      context.read<AuthBloc>().add(SignInAnonymously(
-        country: 'US', // TODO: Get user's country
-      ));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('auth.sign_up.please_accept_terms'.tr()),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    // No form validation needed for anonymous sign-up
+    context.read<AuthBloc>().add(SignInAnonymously(
+      country: _getDeviceCountry(),
+    ));
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
   void _showTermsAndConditions() {
-    // Show a more compact terms dialog
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'auth.sign_up.terms_title'.tr(),
             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -78,7 +86,6 @@ class _SignUpViewState extends State<SignUpView> {
           content: SingleChildScrollView(
             child: Text(
               'auth.sign_up.terms_content'.tr(),
-              style: const TextStyle(fontSize: 14),
             ),
           ),
           actions: [
@@ -95,458 +102,223 @@ class _SignUpViewState extends State<SignUpView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    // Responsive calculations
-    final isSmallDevice = screenHeight < 700; // Small phones
-    final isVerySmallDevice = screenHeight < 600; // Very small phones
-    final isTablet = screenWidth > 600;
-    
-    // Dynamic container height based on device size
-    final containerHeight = isVerySmallDevice 
-        ? screenHeight * 0.85  // Take more space on tiny devices
-        : isSmallDevice 
-            ? screenHeight * 0.82  // Take more space on small devices
-            : screenHeight * 0.75; // Original for normal devices
-    
-    // Dynamic padding based on device size
-    final horizontalPadding = isTablet ? 48.0 : (isSmallDevice ? 16.0 : 24.0);
-    final verticalSpacing = isVerySmallDevice ? 8.0 : (isSmallDevice ? 12.0 : 16.0);
-    final headerSpacing = isVerySmallDevice ? 12.0 : (isSmallDevice ? 16.0 : 24.0);
-    
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.height < 700;
+    final containerHeight = isSmallScreen ? size.height * 0.9 : size.height * 0.8;
+
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message ?? 'auth.sign_up.registration_failed'.tr()),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showError(state.message ?? 'auth.sign_up.registration_failed'.tr());
         } else if (state is Authenticated) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('auth.sign_up.sign_up_successful'.tr()),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // User is authenticated, router will handle navigation automatically
+          _showSuccess('auth.sign_up.sign_up_successful'.tr());
         }
       },
       builder: (context, state) {
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(26),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                )
-              ],
-            ),
-            height: containerHeight,
-            child: Column(
-              children: [
-                // Drag handle - smaller on small devices
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: isSmallDevice ? 8.0 : 12.0, 
-                    bottom: 4.0
-                  ),
-                  child: const DragHandle(),
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: containerHeight,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
-                
-                // Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Drag handle
+                  Container(
+                    margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12, bottom: isSmallScreen ? 4 : 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  
+                  // Scrollable content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 20 : 24,
+                        vertical: isSmallScreen ? 4 : 8,
+                      ),
                       child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header - responsive text sizes
-                            Padding(
-                              padding: EdgeInsets.only(
-                                top: isSmallDevice ? 8.0 : 16.0, 
-                                bottom: 4.0,
-                              ),
-                              child: Text(
-                                'auth.sign_up.create_account'.tr(),
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontSize: isVerySmallDevice ? 20 : (isSmallDevice ? 22 : null),
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
+                            // Header
+                            Text(
+                              'auth.sign_up.create_account'.tr(),
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
                               ),
                             ),
-                            
+                            SizedBox(height: isSmallScreen ? 2 : 4),
                             Text(
                               'auth.sign_up.get_started'.tr(),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontSize: isSmallDevice ? 13 : null,
-                                color: Colors.black54,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: Colors.grey.shade600,
                               ),
                             ),
                             
-                            SizedBox(height: headerSpacing),
+                            SizedBox(height: isSmallScreen ? 16 : 32),
                             
-                            // Email Field
-                            _ResponsiveEmailField(
-                              controller: _emailController,
-                              isSmallDevice: isSmallDevice,
-                            ),
-                            SizedBox(height: verticalSpacing),
+                            // Email field
+                            EmailFormField(controller: _emailController),
+                            SizedBox(height: isSmallScreen ? 12 : 16),
                             
-                            // Password Field
-                            _ResponsivePasswordField(
+                            // Password field
+                            PasswordFormField(
                               controller: _passwordController,
-                              isSmallDevice: isSmallDevice,
+                              labelText: 'auth.common.password'.tr(),
+                              hintText: 'auth.sign_up.password_hint'.tr(),
                             ),
                             
-                            SizedBox(height: verticalSpacing * 0.5),
+                            SizedBox(height: isSmallScreen ? 8 : 12),
                             
-                            // Terms Checkbox - responsive
-                            _ResponsiveTermsCheckbox(
-                              acceptTerms: _acceptTerms,
-                              onChanged: (value) => setState(() => _acceptTerms = value ?? false),
+                            // Terms form field
+                            TermsFormField(
+                              value: _acceptTerms,
+                              onChanged: (value) => setState(() => _acceptTerms = value),
                               onTermsTap: _showTermsAndConditions,
-                              isSmallDevice: isSmallDevice,
                             ),
                             
-                            SizedBox(height: verticalSpacing + 4),
+                            SizedBox(height: isSmallScreen ? 16 : 24),
                             
-                            // Sign Up Button
-                            state is AuthLoading
-                              ? const Center(child: CircularProgressIndicator())
-                              : _ResponsivePrimaryButton(
-                                  text: 'auth.sign_up.sign_up_button'.tr(),
-                                  onPressed: _handleSignUp,
-                                  isSmallDevice: isSmallDevice,
+                            // Sign up button
+                            SizedBox(
+                              width: double.infinity,
+                              height: isSmallScreen ? 48 : 50,
+                              child: ElevatedButton(
+                                onPressed: state is AuthLoading ? null : _handleSignUp,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  disabledBackgroundColor: theme.primaryColor.withOpacity(0.6),
+                                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
                                 ),
-                            
-                            SizedBox(height: verticalSpacing),
-                            
-                            // OR Divider - responsive
-                            _ResponsiveDivider(isSmallDevice: isSmallDevice),
-                            
-                            SizedBox(height: verticalSpacing),
-                            
-                            // Anonymous Button
-                            _ResponsiveOutlinedButton(
-                              text: 'auth.sign_up.sign_up_anonymously'.tr(),
-                              onPressed: state is AuthLoading ? null : _handleAnonymousSignUp,
-                              isSmallDevice: isSmallDevice,
+                                child: state is AuthLoading
+                                    ? SizedBox(
+                                        height: isSmallScreen ? 18 : 20,
+                                        width: isSmallScreen ? 18 : 20,
+                                        child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Text(
+                                        'auth.sign_up.sign_up_button'.tr(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
                             ),
                             
-                            SizedBox(height: verticalSpacing + 4),
+                            SizedBox(height: isSmallScreen ? 12 : 20),
                             
-                            // Sign in link - responsive
-                            _ResponsiveSignInLink(isSmallDevice: isSmallDevice),
+                            // OR divider
+                            Row(
+                              children: [
+                                Expanded(child: Divider(color: Colors.grey.shade300)),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16),
+                                  child: Text(
+                                    'auth.common.or'.tr(),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(child: Divider(color: Colors.grey.shade300)),
+                              ],
+                            ),
                             
-                            SizedBox(height: isSmallDevice ? 8.0 : 16.0),
+                            SizedBox(height: isSmallScreen ? 12 : 20),
+                            
+                            // Anonymous sign up button
+                            SizedBox(
+                              width: double.infinity,
+                              height: isSmallScreen ? 48 : 50,
+                              child: OutlinedButton(
+                                onPressed: state is AuthLoading ? null : _handleAnonymousSignUp,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: theme.primaryColor),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                                ),
+                                child: Text(
+                                  'auth.sign_up.sign_up_anonymously'.tr(),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            
+                            SizedBox(height: isSmallScreen ? 16 : 24),
+                            
+                            // Sign in link
+                            Center(
+                              child: RichText(
+                                text: TextSpan(
+                                  text: '${('auth.sign_up.have_account').tr()} ',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: 'auth.sign_up.sign_in'.tr(),
+                                      style: TextStyle(
+                                        color: theme.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () => context.push(AppRouter.signIn),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                            SizedBox(height: isSmallScreen ? 8 : 16),
                           ],
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-// Responsive Widget Components
-class _ResponsiveEmailField extends StatelessWidget {
-  final TextEditingController controller;
-  final bool isSmallDevice;
-
-  const _ResponsiveEmailField({
-    required this.controller,
-    required this.isSmallDevice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InputLabel('auth.common.email'.tr()),
-        TextFormField(
-          controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          style: TextStyle(fontSize: isSmallDevice ? 14 : 16),
-          decoration: InputDecoration(
-            hintText: 'auth.common.email'.tr(),
-            hintStyle: TextStyle(fontSize: isSmallDevice ? 13 : null),
-            prefixIcon: Icon(Icons.email_outlined, size: isSmallDevice ? 20 : 24),
-            contentPadding: EdgeInsets.symmetric(
-              vertical: isSmallDevice ? 8 : 12,
-              horizontal: 12,
-            ),
-            // ...existing decoration...
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'auth.validation.email_required'.tr();
-            } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-              return 'auth.validation.email_invalid'.tr();
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ResponsivePasswordField extends StatefulWidget {
-  final TextEditingController controller;
-  final bool isSmallDevice;
-
-  const _ResponsivePasswordField({
-    required this.controller,
-    required this.isSmallDevice,
-  });
-
-  @override
-  State<_ResponsivePasswordField> createState() => _ResponsivePasswordFieldState();
-}
-
-class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
-  bool _isPasswordVisible = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InputLabel('auth.common.password'.tr()),
-        TextFormField(
-          controller: widget.controller,
-          obscureText: !_isPasswordVisible,
-          style: TextStyle(fontSize: widget.isSmallDevice ? 14 : 16),
-          decoration: InputDecoration(
-            hintText: 'auth.sign_up.password_hint'.tr(),
-            hintStyle: TextStyle(fontSize: widget.isSmallDevice ? 13 : null),
-            prefixIcon: Icon(Icons.lock_outline, size: widget.isSmallDevice ? 20 : 24),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                size: widget.isSmallDevice ? 18 : 20,
-              ),
-              onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              vertical: widget.isSmallDevice ? 8 : 12,
-              horizontal: 12,
-            ),
-            // ...existing decoration...
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'auth.validation.password_required'.tr();
-            } else if (value.length < 6) {
-              return 'auth.validation.password_length'.tr();
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ResponsiveTermsCheckbox extends StatelessWidget {
-  final bool acceptTerms;
-  final ValueChanged<bool?> onChanged;
-  final VoidCallback onTermsTap;
-  final bool isSmallDevice;
-
-  const _ResponsiveTermsCheckbox({
-    required this.acceptTerms,
-    required this.onChanged,
-    required this.onTermsTap,
-    required this.isSmallDevice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Row(
-      children: [
-        Transform.scale(
-          scale: isSmallDevice ? 0.9 : 1.0,
-          child: Checkbox(
-            value: acceptTerms,
-            onChanged: onChanged,
-            activeColor: theme.primaryColor,
-            visualDensity: VisualDensity.compact,
-          ),
-        ),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              text: '${('auth.sign_up.accept_terms').tr()} ',
-              style: TextStyle(
-                fontSize: isSmallDevice ? 12 : 14,
-                color: Colors.grey.shade700,
-              ),
-              children: [
-                TextSpan(
-                  text: 'auth.sign_up.terms_conditions'.tr(),
-                  style: TextStyle(
-                    color: theme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: isSmallDevice ? 12 : 14,
-                  ),
-                  recognizer: TapGestureRecognizer()..onTap = onTermsTap,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ResponsivePrimaryButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onPressed;
-  final bool isSmallDevice;
-
-  const _ResponsivePrimaryButton({
-    required this.text,
-    required this.onPressed,
-    required this.isSmallDevice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: isSmallDevice ? 44 : 50,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: isSmallDevice ? 14 : 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ResponsiveOutlinedButton extends StatelessWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final bool isSmallDevice;
-
-  const _ResponsiveOutlinedButton({
-    required this.text,
-    this.onPressed,
-    required this.isSmallDevice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return SizedBox(
-      width: double.infinity,
-      height: isSmallDevice ? 44 : 50,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          side: BorderSide(color: theme.primaryColor),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(fontSize: isSmallDevice ? 14 : 16),
-        ),
-      ),
-    );
-  }
-}
-
-class _ResponsiveDivider extends StatelessWidget {
-  final bool isSmallDevice;
-
-  const _ResponsiveDivider({required this.isSmallDevice});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider(thickness: 1, color: Colors.grey)),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: isSmallDevice ? 12.0 : 16.0),
-          child: Text(
-            'auth.common.or'.tr(),
-            style: TextStyle(
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
-              fontSize: isSmallDevice ? 12 : 14,
-            ),
-          ),
-        ),
-        const Expanded(child: Divider(thickness: 1, color: Colors.grey)),
-      ],
-    );
-  }
-}
-
-class _ResponsiveSignInLink extends StatelessWidget {
-  final bool isSmallDevice;
-
-  const _ResponsiveSignInLink({required this.isSmallDevice});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Center(
-      child: RichText(
-        text: TextSpan(
-          text: '${('auth.sign_up.have_account').tr()} ',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.black54,
-            fontSize: isSmallDevice ? 13 : null,
-          ),
-          children: [
-            TextSpan(
-              text: 'auth.sign_up.sign_in'.tr(),
-              style: TextStyle(
-                color: theme.primaryColor,
-                fontWeight: FontWeight.bold,
-                fontSize: isSmallDevice ? 13 : null,
-              ),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () => context.push(AppRouter.signIn),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

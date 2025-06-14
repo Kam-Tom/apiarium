@@ -7,4 +7,4 @@ export 'vosk_service.dart';
 export 'tts_service.dart';
 export 'name_generator_service.dart';
 export 'vc_service.dart';
-export 'user_service.dart';
+export 'user_repository.dart';

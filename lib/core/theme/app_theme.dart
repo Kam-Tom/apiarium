@@ -180,7 +180,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
       
-      textTheme: AppTextTheme.spinnakerTextTheme,
+      textTheme: AppTextTheme.ralewayTextTheme,
     );
   }
 }

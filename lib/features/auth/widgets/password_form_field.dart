@@ -7,14 +7,12 @@ class PasswordFormField extends StatefulWidget {
   final TextEditingController controller;
   final String labelText;
   final String hintText;
-  final VoidCallback? onTap;
   final String? Function(String?)? validator;
   
   const PasswordFormField({
     required this.controller,
     required this.labelText,
     required this.hintText,
-    this.onTap,
     this.validator,
     super.key,
   });
@@ -34,7 +32,6 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
         InputLabel(widget.labelText),
         TextFormField(
           controller: widget.controller,
-          onTap: widget.onTap,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
             hintText: widget.hintText,
@@ -50,21 +47,6 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
                 });
               },
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
-            ),
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
           ),
           validator: widget.validator ?? (value) {
             if (value == null || value.isEmpty) {

@@ -8,12 +8,14 @@ class InputLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
+    
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
+      padding: EdgeInsets.only(bottom: isSmallScreen ? 4.0 : 6.0),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 14,
+        style: TextStyle(
+          fontSize: isSmallScreen ? 13 : 14,
           fontWeight: FontWeight.w500,
           color: Colors.black87,
         ),

@@ -37,6 +37,7 @@
             "reset_password": "Resetowanie hasła",
             "reset_instructions": "Wprowadź swój adres email, a wyślemy Ci link do zresetowania hasła.",
             "send_reset_link": "Wyślij link resetujący",
+            "send": "Wyślij",
             "reset_link_sent": "Link do resetowania hasła został wysłany na {email}",
             "authentication_failed": "Uwierzytelnianie nie powiodło się",
             "login_successful": "Logowanie zakończone pomyślnie!"
