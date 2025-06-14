@@ -48,3 +48,9 @@ app.*.map.json
 *.env*
 .env.*
 env.*.g.dart
+
+# Firebase Generated files 'flutterfire configure' to regenerate them
+firebase_options.dart
+firebase.json
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist

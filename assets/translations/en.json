@@ -37,6 +37,7 @@
             "reset_password": "Reset Password",
             "reset_instructions": "Enter your email address and we'll send you a link to reset your password.",
             "send_reset_link": "Send Reset Link",
+            "send": "Send",
             "reset_link_sent": "Password reset link sent to {email}",
             "authentication_failed": "Authentication failed",
             "login_successful": "Login successful!"

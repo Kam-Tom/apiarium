@@ -1,6 +1,6 @@
 part of 'preferences_bloc.dart';
 
-sealed class PreferencesEvent extends Equatable {
+abstract class PreferencesEvent extends Equatable {
   const PreferencesEvent();
 
   @override
@@ -9,11 +9,31 @@ sealed class PreferencesEvent extends Equatable {
 
 class LoadPreferences extends PreferencesEvent {}
 
-class ChangeLanguage extends PreferencesEvent {
+class UpdateLanguage extends PreferencesEvent {
   final String language;
-  
-  const ChangeLanguage(this.language);
-  
+
+  const UpdateLanguage(this.language);
+
   @override
   List<Object> get props => [language];
 }
+
+class UpdateTheme extends PreferencesEvent {
+  final String theme;
+
+  const UpdateTheme(this.theme);
+
+  @override
+  List<Object> get props => [theme];
+}
+
+class UpdateNotifications extends PreferencesEvent {
+  final bool enabled;
+
+  const UpdateNotifications(this.enabled);
+
+  @override
+  List<Object> get props => [enabled];
+}
+
+class MarkFirstTimeComplete extends PreferencesEvent {}

@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/core/core.dart';
+import 'package:apiarium/core/di/dependency_injection.dart';
+import 'package:apiarium/shared/services/auth_service.dart';
+import 'package:apiarium/shared/services/user_repository.dart';
+import '../bloc/auth_bloc.dart';
 import 'sign_in_view.dart';
 
 class SignInPage extends StatelessWidget {
@@ -7,17 +12,26 @@ class SignInPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return 
-      Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(AppImages.backgroundHoneycomb),
-            fit: BoxFit.cover,
+    return BlocProvider(
+      create: (context) => AuthBloc(
+        authService: getIt<AuthService>(),
+        userRepository: getIt<UserRepository>(),
+      ),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(AppImages.backgroundHoneycomb),
+              fit: BoxFit.cover,
+              ),
+            ),
+            child: const Scaffold(
+              backgroundColor: Colors.transparent,
+              body: SignInView(),
+            ),
           ),
-        ),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: SignInView()),
+      ),
     );
   }
 }

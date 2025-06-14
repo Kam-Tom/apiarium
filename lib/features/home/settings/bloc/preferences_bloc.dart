@@ -1,45 +1,94 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import '../../../../shared/services/user_service.dart';
+import '../../../../shared/services/user_repository.dart';
+import '../../../../shared/services/settings_repository.dart';
+import '../../../../shared/models/settings.dart';
 
 part 'preferences_event.dart';
 part 'preferences_state.dart';
 
 class PreferencesBloc extends Bloc<PreferencesEvent, PreferencesState> {
-  final UserService _userService;
+  final UserRepository _userRepository;
+  final SettingsRepository _settingsRepository;
 
-  PreferencesBloc({required UserService userService})
-    : _userService = userService,
-      super(PreferencesInitial()) {
+  PreferencesBloc({
+    required UserRepository userRepository,
+    required SettingsRepository settingsRepository,
+  }) : _userRepository = userRepository,
+       _settingsRepository = settingsRepository,
+       super(const PreferencesState()) {
+    
     on<LoadPreferences>(_onLoadPreferences);
-    on<ChangeLanguage>(_onChangeLanguage);
+    on<UpdateLanguage>(_onUpdateLanguage);
+    on<UpdateTheme>(_onUpdateTheme);
+    on<UpdateNotifications>(_onUpdateNotifications);
+    on<MarkFirstTimeComplete>(_onMarkFirstTimeComplete);
   }
 
-  void _onLoadPreferences(
+  Future<void> _onLoadPreferences(
     LoadPreferences event,
     Emitter<PreferencesState> emit,
-  ) {
-    String language = _userService.language;
-    if (language.isEmpty) {
-      // Get device locale
-      final deviceLocale =
-          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-      if (['en', 'pl'].contains(deviceLocale)) {
-        language = deviceLocale;
-        // Save this preference for future app launches
-        _userService.language = language;
-      } else {
-        // If device locale is not supported, fallback to English
-        language = 'en';
-        _userService.language = language;
-      }
+  ) async {
+    emit(state.copyWith(isLoading: true));
+
+    try {
+      final settings = _settingsRepository.settings;
+      
+      emit(PreferencesState(
+        language: settings.language,
+        theme: settings.theme,
+        notificationsEnabled: settings.notificationsEnabled,
+        voiceControlModel: settings.voiceControlModel,
+        isFirstTime: settings.isFirstTime,
+        isLoading: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false));
     }
-    emit(PreferencesLoaded(language: language));
   }
 
-  void _onChangeLanguage(ChangeLanguage event, Emitter<PreferencesState> emit) {
-    _userService.language = event.language;
+  Future<void> _onUpdateLanguage(
+    UpdateLanguage event,
+    Emitter<PreferencesState> emit,
+  ) async {
+    final currentSettings = _settingsRepository.settings;
+    final newSettings = currentSettings.copyWith(language: event.language);
+    
+    await _settingsRepository.updateSettings(newSettings);
     emit(state.copyWith(language: event.language));
+  }
+
+  Future<void> _onUpdateTheme(
+    UpdateTheme event,
+    Emitter<PreferencesState> emit,
+  ) async {
+    final currentSettings = _settingsRepository.settings;
+    final newSettings = currentSettings.copyWith(theme: event.theme);
+    
+    await _settingsRepository.updateSettings(newSettings);
+    emit(state.copyWith(theme: event.theme));
+  }
+
+  Future<void> _onUpdateNotifications(
+    UpdateNotifications event,
+    Emitter<PreferencesState> emit,
+  ) async {
+    final currentSettings = _settingsRepository.settings;
+    final newSettings = currentSettings.copyWith(notificationsEnabled: event.enabled);
+    
+    await _settingsRepository.updateSettings(newSettings);
+    emit(state.copyWith(notificationsEnabled: event.enabled));
+  }
+
+  Future<void> _onMarkFirstTimeComplete(
+    MarkFirstTimeComplete event,
+    Emitter<PreferencesState> emit,
+  ) async {
+    final currentSettings = _settingsRepository.settings;
+    final newSettings = currentSettings.copyWith(isFirstTime: false);
+    
+    await _settingsRepository.updateSettings(newSettings);
+    emit(state.copyWith(isFirstTime: false));
   }
 }

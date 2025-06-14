@@ -15,7 +15,7 @@ class MenuItem {
 
 class HomeMenuItems {
   static const List<MenuItem> items = [
-    MenuItem(icon: Icons.home, label: 'Apiary', route: AppRouter.managment),
+    //MenuItem(icon: Icons.home, label: 'Apiary', route: AppRouter.managment),
     // MenuItem(icon: Icons.bar_chart, label: 'Statistics', route: AppRouter.statistics),
     // MenuItem(icon: Icons.mic, label: 'Voice Control', route: AppRouter.voiceControl),
     // MenuItem(icon: Icons.book, label: 'Storage', route: AppRouter.storage),
