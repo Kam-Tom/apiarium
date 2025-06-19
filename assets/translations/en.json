@@ -1,5 +1,17 @@
 {
     "test": "test en",
+    "home": {
+        "featured": "Featured",
+        "quick_access": "Quick Access",
+        "menu": {
+            "apiary": "Apiary",
+            "statistics": "Statistics", 
+            "voice_control": "Voice Control",
+            "storage": "Storage",
+            "calendar": "Calendar",
+            "history": "History"
+        }
+    },
     "auth": {
         "common": {
             "email": "Email",

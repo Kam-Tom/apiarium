@@ -10,38 +10,45 @@ class AppBottomNav extends StatelessWidget {
     required this.onItemTapped,
   });
 
+  static const List<_NavItem> _navItems = [
+    _NavItem(Icons.home, 'Home'),
+    _NavItem(Icons.people, 'Social'),
+    _NavItem(Icons.shopping_bag, 'Shop'),
+    _NavItem(Icons.more_horiz, 'More'),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmall = screenHeight < 700;
+    
     return Positioned(
-      bottom: 20,
-      left: 20,
-      right: 20,
+      bottom: isSmall ? 15 : 20,
+      left: isSmall ? 15 : 20,
+      right: isSmall ? 15 : 20,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          // Navigation bar
-          _buildNavigationBar(),
-          
-          // Floating add button positioned on top
+          _buildNavigationBar(isSmall),
           Positioned(
-            top: -25,
-            child: _buildAddButton(),
+            top: isSmall ? -20 : -25,
+            child: _buildAddButton(isSmall),
           ),
         ],
       ),
     );
   }
   
-  Widget _buildNavigationBar() {
+  Widget _buildNavigationBar(bool isSmall) {
     return Container(
-      height: 70,
+      height: isSmall ? 60 : 70,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(isSmall ? 20 : 25),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color: Colors.black.withOpacity(0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
             spreadRadius: 2,
@@ -50,27 +57,22 @@ class AppBottomNav extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Left side items
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavItem(0, Icons.home, 'Home'),
-                _buildNavItem(1, Icons.people, 'Social'),
+                _buildNavItem(0, _navItems[0], isSmall),
+                _buildNavItem(1, _navItems[1], isSmall),
               ],
             ),
           ),
-          
-          // Center space for add button
-          const SizedBox(width: 60),
-          
-          // Right side items
+          SizedBox(width: isSmall ? 50 : 60),
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavItem(2, Icons.shopping_bag, 'Shop'),
-                _buildNavItem(3, Icons.more_horiz, 'More'),
+                _buildNavItem(2, _navItems[2], isSmall),
+                _buildNavItem(3, _navItems[3], isSmall),
               ],
             ),
           ),
@@ -79,21 +81,22 @@ class AppBottomNav extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(int index, _NavItem item, bool isSmall) {
     final isSelected = currentIndex == index;
+    
     return InkWell(
       onTap: () => onItemTapped(index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            icon,
+            item.icon,
             color: isSelected ? Colors.amber : Colors.grey,
-            size: 26,
+            size: isSmall ? 22 : 26,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: isSmall ? 2 : 4),
           Text(
-            label,
+            item.label,
             style: TextStyle(
               color: isSelected ? Colors.amber : Colors.grey,
               fontSize: 12,
@@ -105,24 +108,21 @@ class AppBottomNav extends StatelessWidget {
     );
   }
 
-  Widget _buildAddButton() {
+  Widget _buildAddButton(bool isSmall) {
     return InkWell(
-      onTap: () {
-        // Handle add button tap
-        onItemTapped(4); // Custom index for the add button
-      },
+      onTap: () => onItemTapped(4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: isSmall ? 50 : 60,
+            height: isSmall ? 50 : 60,
             decoration: BoxDecoration(
               color: Colors.amber,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withValues(alpha: 0.4),
+                  color: Colors.amber.withOpacity(0.4),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                   spreadRadius: 2,
@@ -131,44 +131,50 @@ class AppBottomNav extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                const Center(
+                Center(
                   child: Icon(
                     Icons.add,
                     color: Colors.white,
-                    size: 32,
+                    size: isSmall ? 28 : 32,
                   ),
                 ),
-                // Edit icon in the corner
                 Positioned(
-                  right: 4,
-                  bottom: 4,
+                  right: isSmall ? 2 : 4,
+                  bottom: isSmall ? 2 : 4,
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.edit,
                       color: Colors.amber,
-                      size: 14,
+                      size: isSmall ? 12 : 14,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
+          SizedBox(height: isSmall ? 6 : 10),
+          Text(
             'Report',
             style: TextStyle(
               color: Colors.amber,
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: isSmall ? 11 : 12,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final String label;
+  
+  const _NavItem(this.icon, this.label);
 }

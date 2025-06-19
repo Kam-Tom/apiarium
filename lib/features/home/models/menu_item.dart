@@ -1,25 +1,22 @@
-import 'package:apiarium/core/core.dart';
 import 'package:flutter/material.dart';
 
 class MenuItem {
   final IconData icon;
-  final String label;
+  final String labelKey;
   final String route;
 
   const MenuItem({
     required this.icon,
-    required this.label,
+    required this.labelKey,
     required this.route,
   });
 }
 
-class HomeMenuItems {
-  static const List<MenuItem> items = [
-    //MenuItem(icon: Icons.home, label: 'Apiary', route: AppRouter.managment),
-    // MenuItem(icon: Icons.bar_chart, label: 'Statistics', route: AppRouter.statistics),
-    // MenuItem(icon: Icons.mic, label: 'Voice Control', route: AppRouter.voiceControl),
-    // MenuItem(icon: Icons.book, label: 'Storage', route: AppRouter.storage),
-    // MenuItem(icon: Icons.calendar_today, label: 'Calendar', route: AppRouter.calendar),
-    // MenuItem(icon: Icons.history, label: 'History', route: AppRouter.history),
-  ];
-}
+const List<MenuItem> homeMenuItems = [
+  MenuItem(icon: Icons.home, labelKey: 'home.menu.apiary', route: '/apiary'),
+  MenuItem(icon: Icons.bar_chart, labelKey: 'home.menu.statistics', route: '/statistics'),
+  MenuItem(icon: Icons.mic, labelKey: 'home.menu.voice_control', route: '/voice-control'),
+  MenuItem(icon: Icons.inventory, labelKey: 'home.menu.storage', route: '/storage'),
+  MenuItem(icon: Icons.calendar_today, labelKey: 'home.menu.calendar', route: '/calendar'),
+  MenuItem(icon: Icons.history, labelKey: 'home.menu.history', route: '/history'),
+];

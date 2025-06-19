@@ -7,15 +7,17 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          // Your background image should go here and cover full screen
-          image: DecorationImage(
-            image: AssetImage('assets/images/honeycomb_background.jpg'), // Replace with your image
-            fit: BoxFit.cover,
+      body: SafeArea(
+        top: false,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/honeycomb_background.jpg'),
+              fit: BoxFit.cover,
+            ),
           ),
+          child: const HomeView(),
         ),
-        child: const HomeView(),
       ),
     );
   }

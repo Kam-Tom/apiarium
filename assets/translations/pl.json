@@ -1,5 +1,17 @@
 {
     "test": "test pl",
+    "home": {
+        "featured": "Wyróżnione",
+        "quick_access": "Szybki dostęp",
+        "menu": {
+            "apiary": "Pasieka",
+            "statistics": "Statystyki",
+            "voice_control": "Sterowanie głosowe",
+            "storage": "Magazyn",
+            "calendar": "Kalendarz",
+            "history": "Historia"
+        }
+    },
     "auth": {
         "common": {
             "email": "Email",

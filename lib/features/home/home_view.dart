@@ -9,65 +9,111 @@ class HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final safeArea = mediaQuery.padding;
+    final isSmall = screenHeight < 700;
     
-    return Column(
-      children: [
-        // Top space for the task card - now includes status bar height
-        Expanded(
-          flex: 3,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16.0, statusBarHeight + 12.0, 16.0, 25.0),
-            child: TaskCarousel(),
-          ),
-        ),
-        // Bottom part with white background
-        Expanded(
-          flex: 8,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
+    // Better responsive calculations
+    final hasNotch = safeArea.top > 30;
+    final availableHeight = screenHeight - safeArea.top - safeArea.bottom;
+    
+    // Dynamic flex ratios based on available space
+    final topFlex = hasNotch 
+        ? (isSmall ? 30 : 29) 
+        : (isSmall ? 28 : 27);
+    final bottomFlex = 100 - topFlex;
+    
+    final horizontalPadding = screenWidth < 350 ? 12.0 : 16.0;
+    
+    return SafeArea(
+      top: false,
+      child: Column(
+        children: [
+          Expanded(
+            flex: topFlex,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                safeArea.top + (hasNotch ? 8 : (isSmall ? 16 : 24)) + 10, // Added 10 pixels
+                horizontalPadding,
+                isSmall ? 8 : 16,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  offset: Offset(0, -3),
-                ),
-              ],
+              child: const TaskCarousel(),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(15, 25, 15, 110),
-              child: Column(
-                children: [
-                  // Featured section
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SectionHeader(title: 'Featured'),
-                      SizedBox(
-                        height: 100,
-                        child: FeaturedCarousel(),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Quick Access section
-                  const SectionHeader(title: 'Quick Access'),
-                  
-                  // Menu buttons - take remaining space
-                  const Expanded(
-                    child: QuickAccessMenu(),
+          ),
+          Expanded(
+            flex: bottomFlex,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, -3),
                   ),
                 ],
               ),
+              child: _buildBottomSection(isSmall, horizontalPadding, hasNotch, availableHeight),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomSection(bool isSmall, double horizontalPadding, bool hasNotch, double availableHeight) {
+    // Adjust padding based on available space
+    double topPadding = hasNotch ? (isSmall ? 16 : 20) : (isSmall ? 12 : 25);
+    
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding - 1,
+        topPadding,
+        horizontalPadding - 1,
+        20,
+      ),
+      child: Column(
+        children: [
+          _buildFeaturedSection(isSmall, hasNotch, availableHeight),
+          SizedBox(height: isSmall ? 10 : 18),
+          SectionHeader(
+            titleKey: 'home.quick_access',
+            isSmall: isSmall,
+          ),
+          Expanded(
+            child: QuickAccessMenu(isSmall: isSmall),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturedSection(bool isSmall, bool hasNotch, double availableHeight) {
+    // Dynamic featured section height based on available space
+    double featuredHeight;
+    if (hasNotch) {
+      featuredHeight = isSmall ? 75 : 90;
+    } else {
+      featuredHeight = availableHeight < 600 ? 78 : (isSmall ? 82 : 103);
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SectionHeader(
+          titleKey: 'home.featured',
+          isSmall: isSmall,
+        ),
+        SizedBox(
+          height: featuredHeight,
+          child: const FeaturedCarousel(),
         ),
       ],
     );

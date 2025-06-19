@@ -1,25 +1,31 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 class SectionHeader extends StatelessWidget {
-  final String title;
+  final String titleKey;
+  final bool isSmall;
   
   const SectionHeader({
     super.key, 
-    required this.title,
+    required this.titleKey,
+    this.isSmall = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 5, bottom: 10),
+      padding: EdgeInsets.only(
+        left: 5, 
+        bottom: isSmall ? 6 : 8,
+      ),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
-          title,
+          titleKey.tr(),
           style: TextStyle(
-            fontSize: 17,
+            fontSize: isSmall ? 16 : 17,
             fontWeight: FontWeight.bold,
-            color: Colors.black.withValues(alpha: 0.8),
+            color: Colors.black87,
           ),
         ),
       ),

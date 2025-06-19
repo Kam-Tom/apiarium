@@ -1,30 +1,34 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:apiarium/features/home/models/menu_item.dart';
 import 'package:go_router/go_router.dart';
 
 class QuickAccessMenu extends StatelessWidget {
-  const QuickAccessMenu({super.key});
+  final bool isSmall;
+  
+  const QuickAccessMenu({super.key, this.isSmall = false});
 
   @override
   Widget build(BuildContext context) {
-    final List<MenuItem> menuItems = HomeMenuItems.items;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 350;
     
     return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.2,
-        mainAxisSpacing: 15,
-        crossAxisSpacing: 15,
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: isNarrow ? 1 : 2,
+        childAspectRatio: isNarrow ? 4.0 : (isSmall ? 2.6 : 2.15),
+        mainAxisSpacing: isSmall ? 8.0 : 10.0, // Reduced spacing
+        crossAxisSpacing: isSmall ? 8.0 : 10.0, // Reduced spacing
       ),
-      itemCount: menuItems.length,
-      itemBuilder: (context, index) => _buildMenuItem(context, menuItems[index]),
+      itemCount: homeMenuItems.length,
+      itemBuilder: (context, index) => _buildMenuItem(context, homeMenuItems[index], isNarrow),
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, MenuItem item) {
-    // Define accent color (amber/yellow)
-    final accentColor = Colors.amber.shade600;
+  Widget _buildMenuItem(BuildContext context, MenuItem item, bool isNarrow) {
+    final theme = Theme.of(context);
+    final itemPadding = isSmall ? (isNarrow ? 10.0 : 12.0) : (isNarrow ? 12.0 : 16.0);
     
     return Container(
       decoration: BoxDecoration(
@@ -32,10 +36,9 @@ class QuickAccessMenu extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
+            color: Colors.black.withOpacity(0.07),
             blurRadius: 8,
             offset: const Offset(0, 3),
-            spreadRadius: 0,
           ),
         ],
       ),
@@ -44,49 +47,29 @@ class QuickAccessMenu extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          splashColor: accentColor.withValues(alpha: 0.1),
-          highlightColor: accentColor.withValues(alpha: 0.05),
-          onTap: () {
-            // Navigate to the route defined in the MenuItem
-            context.push(item.route);
-          },
+          splashColor: theme.primaryColor.withOpacity(0.1),
+          onTap: () => context.push(item.route),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: itemPadding,
+              vertical: isSmall ? 8 : 12,
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Icon with yellow background but no border
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.15),
-                    // Removed the borderRadius here
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    item.icon,
-                    color: accentColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                
-                // Text with bold styling - allowing two lines
+                _buildIcon(item.icon, isNarrow, theme),
+                SizedBox(width: isSmall ? 8 : (isNarrow ? 10 : 14)),
                 Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: _buildTextLines(item.label),
+                  child: Text(
+                    item.labelKey.tr(),
+                    style: (isSmall ? theme.textTheme.bodyMedium?.copyWith(fontSize: 15) : theme.textTheme.bodyMedium?.copyWith(fontSize: 14))?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                
-                // Subtle arrow indicator
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.grey.shade400,
-                  size: 12,
+                  color: Colors.grey[400],
+                  size: isSmall ? 8 : (isNarrow ? 10 : 12),
                 ),
               ],
             ),
@@ -95,54 +78,19 @@ class QuickAccessMenu extends StatelessWidget {
       ),
     );
   }
-  
-  // Helper method to split text into two lines when needed
-  List<Widget> _buildTextLines(String label) {
-    // If the text contains a space, split it at the first space
-    if (label.contains(' ')) {
-      final parts = label.split(' ');
-      final firstPart = parts.first;
-      final secondPart = parts.sublist(1).join(' ');
-      
-      return [
-        Text(
-          firstPart,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.black87,
-            letterSpacing: 0.2,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          secondPart,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.black87,
-            letterSpacing: 0.2,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ];
-    } else {
-      // If there's no space, just return the text in a single line
-      return [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.black87,
-            letterSpacing: 0.2,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ];
-    }
+
+  Widget _buildIcon(IconData icon, bool isNarrow, ThemeData theme) {
+    final iconSize = isSmall ? 30 : (isNarrow ? 32 : 38);
+    final iconInnerSize = isSmall ? 16.0 : (isNarrow ? 18.0 : 20.0);
+    
+    return Container(
+      width: iconSize.toDouble(),
+      height: iconSize.toDouble(),
+      decoration: BoxDecoration(
+        color: theme.primaryColor.withOpacity(0.15),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: theme.primaryColor, size: iconInnerSize),
+    );
   }
 }

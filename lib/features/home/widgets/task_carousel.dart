@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:apiarium/shared/widgets/custom_card.dart';
 
 class TaskCarousel extends StatefulWidget {
   const TaskCarousel({super.key});
@@ -8,7 +9,7 @@ class TaskCarousel extends StatefulWidget {
 }
 
 class _TaskCarouselState extends State<TaskCarousel> {
-  final int totalTasks = 3;
+  static const int totalTasks = 3;
   int currentTaskIndex = 0;
   final PageController _taskController = PageController();
   
@@ -20,178 +21,140 @@ class _TaskCarouselState extends State<TaskCarousel> {
   
   @override
   Widget build(BuildContext context) {
+    final isSmall = MediaQuery.of(context).size.height < 700;
+    
     return Stack(
       children: [
-        // The main PageView
         PageView.builder(
           controller: _taskController,
-          onPageChanged: (index) {
-            setState(() {
-              currentTaskIndex = index;
-            });
-          },
+          onPageChanged: (index) => setState(() => currentTaskIndex = index),
           itemCount: totalTasks,
-          itemBuilder: (context, index) => _buildTaskCard(index),
+          itemBuilder: (context, index) => _buildTaskCard(index, isSmall),
         ),
-        
-        // Left and right gradient indicators for scrolling
-        if (currentTaskIndex > 0)
-          _buildScrollIndicator(true),
-          
-        if (currentTaskIndex < totalTasks - 1)
-          _buildScrollIndicator(false),
+        if (currentTaskIndex > 0) _buildScrollIndicator(true, isSmall),
+        if (currentTaskIndex < totalTasks - 1) _buildScrollIndicator(false, isSmall),
       ],
     );
   }
   
-  Widget _buildTaskCard(int index) {
+  Widget _buildTaskCard(int index, bool isSmall) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
+      child: CustomCard(
+        color: Colors.white.withOpacity(0.95),
+        padding: EdgeInsets.all(isSmall ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row
-            _buildTaskHeader(index),
-            const SizedBox(height: 12),
-            
-            // Middle section with weather and time
-            _buildInfoRow(),
-            const SizedBox(height: 12),
-            
-            // Bottom description with ellipsis
-            _buildTaskDescription(),
+            _buildTaskHeader(index, isSmall),
+            SizedBox(height: isSmall ? 8 : 12),
+            _buildInfoRow(isSmall),
+            SizedBox(height: isSmall ? 8 : 12),
+            Expanded(child: _buildTaskDescription(isSmall)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTaskHeader(int index) {
+  Widget _buildTaskHeader(int index, bool isSmall) {
     return Row(
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.amber.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.task_alt,
-            color: Colors.amber,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
+        _buildTaskIcon(isSmall),
+        SizedBox(width: isSmall ? 8 : 12),
         Expanded(
           child: Row(
             children: [
-              Text(
-                'Check Hive #${index + 1}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Flexible(
+                child: Text(
+                  'Check Hive #${index + 1}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isSmall ? 18 : null,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 8),
-              // Small text showing current/total
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${index + 1}/$totalTasks',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber,
-                  ),
-                ),
-              ),
+              _buildBadge('${index + 1}/$totalTasks', Colors.amber),
             ],
           ),
         ),
-        // Notification icon moved to the right
-        Container(
-          width: 40,
-          height: 40,
-          decoration: const BoxDecoration(
-            color: Colors.amber,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.notifications_active,
-            color: Colors.white,
-            size: 22,
-          ),
-        ),
+        _buildNotificationBadge(isSmall),
       ],
     );
   }
 
-  Widget _buildInfoRow() {
+  Widget _buildTaskIcon(bool isSmall) {
+    final size = isSmall ? 28.0 : 36.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(Icons.task_alt, color: Colors.amber, size: size * 0.6),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationBadge(bool isSmall) {
+    final size = isSmall ? 32.0 : 40.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
+      child: Icon(Icons.notifications_active, color: Colors.white, size: size * 0.55),
+    );
+  }
+
+  Widget _buildInfoRow(bool isSmall) {
     return Row(
       children: [
-        // Weather info
-        _buildInfoBadge(
-          icon: Icons.wb_sunny, 
-          text: '23°C', 
-          color: Colors.blue.withValues(alpha: 0.1),
-          iconColor: Colors.amber,
-        ),
+        _buildInfoBadge(Icons.wb_sunny, '23°C', Colors.blue, isSmall),
         const SizedBox(width: 12),
-        // Time info
-        _buildInfoBadge(
-          icon: Icons.access_time, 
-          text: 'Due today • 2:30 PM',
-          color: Colors.grey.withValues(alpha: 0.1),
-          iconColor: Colors.grey,
-        ),
+        _buildInfoBadge(Icons.access_time, isSmall ? '2:30 PM' : 'Due today • 2:30 PM', Colors.grey, isSmall),
       ],
     );
   }
 
-  Widget _buildInfoBadge({
-    required IconData icon, 
-    required String text,
-    required Color color,
-    required Color iconColor,
-  }) {
+  Widget _buildInfoBadge(IconData icon, String text, Color color, bool isSmall) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmall ? 8 : 10,
+        vertical: isSmall ? 4 : 5,
+      ),
       decoration: BoxDecoration(
-        color: color,
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: iconColor,
-            size: 16,
-          ),
+          Icon(icon, color: color, size: isSmall ? 14 : 16),
           const SizedBox(width: 5),
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 13,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
-              color: Colors.grey,
+              color: Colors.grey[600],
             ),
           ),
         ],
@@ -199,21 +162,22 @@ class _TaskCarouselState extends State<TaskCarousel> {
     );
   }
 
-  Widget _buildTaskDescription() {
-    return const Expanded(
-      child: Text(
-        'Check the health of the hive, ensure proper ventilation and inspect for signs of disease. This is part of the regular maintenance schedule for optimal honey production.',
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.black87,
-        ),
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
+  Widget _buildTaskDescription(bool isSmall) {
+    return Text(
+      'Check the health of the hive, ensure proper ventilation and inspect for signs of disease.',
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        fontSize: isSmall ? 14 : 14,
+        height: isSmall ? 1.1 : 1.1,
       ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
-  Widget _buildScrollIndicator(bool isLeft) {
+  Widget _buildScrollIndicator(bool isLeft, bool isSmall) {
+    final indicatorSize = isSmall ? 25.0 : 30.0;
+    final indicatorHeight = isSmall ? 40.0 : 50.0;
+    
     return Positioned(
       left: isLeft ? 0 : null,
       right: isLeft ? null : 0,
@@ -221,16 +185,14 @@ class _TaskCarouselState extends State<TaskCarousel> {
       bottom: 0,
       child: Center(
         child: Container(
-          width: 30,
-          height: 50,
+          width: indicatorSize,
+          height: indicatorHeight,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                isLeft ? Colors.black.withValues(alpha: 0.15) : Colors.transparent,
-                isLeft ? Colors.transparent : Colors.black.withValues(alpha: 0.15),
+                isLeft ? Colors.black.withOpacity(0.15) : Colors.transparent,
+                isLeft ? Colors.transparent : Colors.black.withOpacity(0.15),
               ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
             ),
             borderRadius: BorderRadius.only(
               topLeft: isLeft ? const Radius.circular(16) : Radius.zero,
@@ -241,8 +203,8 @@ class _TaskCarouselState extends State<TaskCarousel> {
           ),
           child: Icon(
             isLeft ? Icons.chevron_left : Icons.chevron_right,
-            color: Colors.white.withValues(alpha: 0.8),
-            size: 30,
+            color: Colors.white.withOpacity(0.8),
+            size: indicatorSize,
           ),
         ),
       ),
