@@ -14,19 +14,20 @@ class HomeView extends StatelessWidget {
     final screenWidth = mediaQuery.size.width;
     final safeArea = mediaQuery.padding;
     final isSmall = screenHeight < 700;
-    
+    final isLarge = screenHeight > 800; // Example threshold for large screens
+
     // Better responsive calculations
     final hasNotch = safeArea.top > 30;
     final availableHeight = screenHeight - safeArea.top - safeArea.bottom;
-    
+
     // Dynamic flex ratios based on available space
-    final topFlex = hasNotch 
-        ? (isSmall ? 30 : 29) 
+    final topFlex = hasNotch
+        ? (isSmall ? 30 : 29)
         : (isSmall ? 28 : 27);
     final bottomFlex = 100 - topFlex;
-    
+
     final horizontalPadding = screenWidth < 350 ? 12.0 : 16.0;
-    
+
     return SafeArea(
       top: false,
       child: Column(
@@ -60,7 +61,18 @@ class HomeView extends StatelessWidget {
                   ),
                 ],
               ),
-              child: _buildBottomSection(isSmall, horizontalPadding, hasNotch, availableHeight),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: _buildBottomSection(
+                    isSmall,
+                    horizontalPadding,
+                    hasNotch,
+                    availableHeight,
+                    isLarge,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -68,10 +80,16 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomSection(bool isSmall, double horizontalPadding, bool hasNotch, double availableHeight) {
+  Widget _buildBottomSection(
+    bool isSmall,
+    double horizontalPadding,
+    bool hasNotch,
+    double availableHeight,
+    bool isLarge,
+  ) {
     // Adjust padding based on available space
     double topPadding = hasNotch ? (isSmall ? 16 : 20) : (isSmall ? 12 : 25);
-    
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding - 1,
@@ -88,7 +106,10 @@ class HomeView extends StatelessWidget {
             isSmall: isSmall,
           ),
           Expanded(
-            child: QuickAccessMenu(isSmall: isSmall),
+            child: QuickAccessMenu(
+              isSmall: isSmall,
+              isLarge: isLarge,
+            ),
           ),
         ],
       ),
@@ -103,7 +124,7 @@ class HomeView extends StatelessWidget {
     } else {
       featuredHeight = availableHeight < 600 ? 78 : (isSmall ? 82 : 103);
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

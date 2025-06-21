@@ -1,5 +1,5 @@
 import 'package:apiarium/features/auth/bloc/auth_bloc.dart';
-import 'package:apiarium/features/home/settings/bloc/preferences_bloc.dart';
+import 'package:apiarium/features/settings/bloc/preferences_bloc.dart';
 import 'package:apiarium/shared/services/auth_service.dart';
 import 'package:apiarium/shared/services/settings_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

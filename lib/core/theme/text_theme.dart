@@ -4,21 +4,21 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTextTheme {
   static TextTheme get ralewayTextTheme {
     return GoogleFonts.ralewayTextTheme().copyWith(
-      displayLarge: GoogleFonts.raleway(fontSize: 57.0, fontWeight: FontWeight.w700),
-      displayMedium: GoogleFonts.raleway(fontSize: 45.0, fontWeight: FontWeight.w700),
-      displaySmall: GoogleFonts.raleway(fontSize: 36.0, fontWeight: FontWeight.w600),
-      headlineLarge: GoogleFonts.raleway(fontSize: 32.0, fontWeight: FontWeight.w700),
-      headlineMedium: GoogleFonts.raleway(fontSize: 28.0, fontWeight: FontWeight.w700),
-      headlineSmall: GoogleFonts.raleway(fontSize: 24.0, fontWeight: FontWeight.w700),
-      titleLarge: GoogleFonts.raleway(fontSize: 22.0, fontWeight: FontWeight.w600),
-      titleMedium: GoogleFonts.raleway(fontSize: 16.0, fontWeight: FontWeight.w600),
-      titleSmall: GoogleFonts.raleway(fontSize: 14.0, fontWeight: FontWeight.w600),
-      bodyLarge: GoogleFonts.raleway(fontSize: 16.0, fontWeight: FontWeight.w500),
-      bodyMedium: GoogleFonts.raleway(fontSize: 14.0, fontWeight: FontWeight.w500),
-      bodySmall: GoogleFonts.raleway(fontSize: 12.0, fontWeight: FontWeight.w500),
-      labelLarge: GoogleFonts.raleway(fontSize: 14.0, fontWeight: FontWeight.w600),
-      labelMedium: GoogleFonts.raleway(fontSize: 12.0, fontWeight: FontWeight.w600),
-      labelSmall: GoogleFonts.raleway(fontSize: 11.0, fontWeight: FontWeight.w600),
+      displayLarge: GoogleFonts.raleway(fontSize: 57.0, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.liningFigures()],),
+      displayMedium: GoogleFonts.raleway(fontSize: 45.0, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.liningFigures()],),
+      displaySmall: GoogleFonts.raleway(fontSize: 36.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
+      headlineLarge: GoogleFonts.raleway(fontSize: 32.0, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.liningFigures()],),
+      headlineMedium: GoogleFonts.raleway(fontSize: 28.0, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.liningFigures()],),
+      headlineSmall: GoogleFonts.raleway(fontSize: 24.0, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.liningFigures()],),
+      titleLarge: GoogleFonts.raleway(fontSize: 22.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
+      titleMedium: GoogleFonts.raleway(fontSize: 16.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
+      titleSmall: GoogleFonts.raleway(fontSize: 14.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
+      bodyLarge: GoogleFonts.raleway(fontSize: 16.0, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.liningFigures()],),
+      bodyMedium: GoogleFonts.raleway(fontSize: 14.0, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.liningFigures()],),
+      bodySmall: GoogleFonts.raleway(fontSize: 12.0, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.liningFigures()],),
+      labelLarge: GoogleFonts.raleway(fontSize: 14.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
+      labelMedium: GoogleFonts.raleway(fontSize: 12.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
+      labelSmall: GoogleFonts.raleway(fontSize: 11.0, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.liningFigures()],),
     );
   }
   static TextTheme get quicksandTextTheme {

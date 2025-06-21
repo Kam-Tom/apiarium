@@ -1,5 +1,9 @@
 import 'package:apiarium/features/auth/auth.dart';
 import 'package:apiarium/features/home/home.dart';
+import 'package:apiarium/features/managment/managment_page.dart';
+import 'package:apiarium/features/managment/apiaries/apiaries_page.dart';
+import 'package:apiarium/features/managment/hives/hives_page.dart';
+import 'package:apiarium/features/managment/queens/queens_page.dart';
 import 'package:apiarium/shared/layouts/main_layout.dart';
 import 'package:apiarium/shared/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +19,7 @@ class AppRouter {
   static const String apiaries = '/apiaries';
   static const String hives = '/hives';
   static const String queens = '/queens';
+  static const String management = '/management';
 
   final AuthService authService;
 
@@ -30,6 +35,22 @@ class AppRouter {
       GoRoute(
         path: signUp,
         builder: (context, state) => const SignUpPage(),
+      ),
+      GoRoute(
+        path: management,
+        builder: (context, state) => const ManagmentPage(),
+      ),
+      GoRoute(
+        path: apiaries,
+        builder: (context, state) => const ApiariesPage(),
+      ),
+      GoRoute(
+        path: hives,
+        builder: (context, state) => const HivesPage(),
+      ),
+      GoRoute(
+        path: queens,
+        builder: (context, state) => const QueensPage(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainLayout(
@@ -47,8 +68,6 @@ class AppRouter {
     redirect: _handleRedirect,
     refreshListenable: authService,
   );
-
-
 
   String? _handleRedirect(context, state) {
     final currentPath = state.uri.path;

@@ -5,29 +5,58 @@ import 'package:go_router/go_router.dart';
 
 class QuickAccessMenu extends StatelessWidget {
   final bool isSmall;
-  
-  const QuickAccessMenu({super.key, this.isSmall = false});
+  final bool isLarge;
+
+  const QuickAccessMenu({
+    super.key,
+    this.isSmall = false,
+    this.isLarge = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final isNarrow = screenWidth < 350;
+    final shouldPositionBottom = screenHeight > 800 || screenWidth > 400; // Larger devices
     
-    return GridView.builder(
+    Widget gridView = GridView.builder(
       physics: const BouncingScrollPhysics(),
+      shrinkWrap: shouldPositionBottom,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: isNarrow ? 1 : 2,
         childAspectRatio: isNarrow ? 4.0 : (isSmall ? 2.6 : 2.15),
-        mainAxisSpacing: isSmall ? 8.0 : 10.0, // Reduced spacing
-        crossAxisSpacing: isSmall ? 8.0 : 10.0, // Reduced spacing
+        mainAxisSpacing: isSmall ? 8.0 : 10.0,
+        crossAxisSpacing: isSmall ? 8.0 : 10.0,
       ),
       itemCount: homeMenuItems.length,
       itemBuilder: (context, index) => _buildMenuItem(context, homeMenuItems[index], isNarrow),
+    );
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: shouldPositionBottom 
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: gridView,
+                ),
+                SizedBox(height: 120), // Space for bottom navigation
+              ],
+            )
+          : gridView,
+      ),
     );
   }
 
   Widget _buildMenuItem(BuildContext context, MenuItem item, bool isNarrow) {
     final theme = Theme.of(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeDevice = screenHeight > 800 || screenWidth > 400;
+    final double baseFontSize = isLargeDevice ? 18 : (isSmall ? 15 : 14);
     final itemPadding = isSmall ? (isNarrow ? 10.0 : 12.0) : (isNarrow ? 12.0 : 16.0);
     
     return Container(
@@ -61,7 +90,10 @@ class QuickAccessMenu extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item.labelKey.tr(),
-                    style: (isSmall ? theme.textTheme.bodyMedium?.copyWith(fontSize: 15) : theme.textTheme.bodyMedium?.copyWith(fontSize: 14))?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: baseFontSize,
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),

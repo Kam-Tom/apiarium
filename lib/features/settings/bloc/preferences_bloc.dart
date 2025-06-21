@@ -1,9 +1,9 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import '../../../../shared/services/user_repository.dart';
-import '../../../../shared/services/settings_repository.dart';
-import '../../../../shared/models/settings.dart';
+import '../../../shared/services/user_repository.dart';
+import '../../../shared/services/settings_repository.dart';
+import '../../../shared/models/settings.dart';
 
 part 'preferences_event.dart';
 part 'preferences_state.dart';

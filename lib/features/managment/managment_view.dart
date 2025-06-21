@@ -10,21 +10,33 @@ class ManagmentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dynamicSpacing = screenWidth < 400 ? 8.0 : 16.0;
+
     return SafeArea(
       child: Container(
         color: Colors.white,
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(dynamicSpacing),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Map section first
+                const Text(
+                  'Apiary Locations',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: dynamicSpacing),
+                _buildMapCard(),
+                SizedBox(height: dynamicSpacing * 1.5),
+
                 // Management navigation buttons
                 const Text(
                   'Management Options',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: dynamicSpacing),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -49,34 +61,24 @@ class ManagmentView extends StatelessWidget {
                   ],
                 ),
                 
-                const SizedBox(height: 32),
+                SizedBox(height: dynamicSpacing * 2),
                 
                 // Statistics section
                 const Text(
                   'Statistics',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: dynamicSpacing),
                 _buildStatisticsCard(),
                 
-                const SizedBox(height: 24),
-                
-                // Map section
-                const Text(
-                  'Apiary Locations',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                _buildMapCard(),
-                
-                const SizedBox(height: 24),
+                SizedBox(height: dynamicSpacing * 1.5),
                 
                 // Recent activity
                 const Text(
                   'Recent Activity',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: dynamicSpacing),
                 _buildRecentActivityList(),
               ],
             ),

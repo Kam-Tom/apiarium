@@ -1,161 +1,129 @@
-import 'package:equatable/equatable.dart';
 import 'package:apiarium/shared/shared.dart';
 
-class HiveType extends Equatable {
-  final String id;
+class HiveType extends BaseModel {
   final String name;
   final String? manufacturer;
-  final HiveMaterial mainMaterial;
+  final HiveMaterial material;
   final bool hasFrames;
-  
-  // Frame specifications
-  final int? defaultFrameCount;
-  final double? frameWidth;
-  final double? frameHeight;
-  final double? broodFrameWidth;
-  final double? broodFrameHeight;
+  final int? broodFrameCount;
+  final int? honeyFrameCount;
   final String? frameStandard;
-  final int? broodBoxCount;
-  final int? honeySuperBoxCount;
-  
-  // Cost information
-  final double? hiveCost;
-  final Currency? currency;
-  final double? frameUnitCost;
-  final double? broodFrameUnitCost;
-  final double? broodBoxUnitCost;
-  final double? honeySuperBoxUnitCost;
-  
-  // Sorting and filtering fields
-  final int priority;
+  final int? boxCount;
+  final int? superBoxCount;
+  final int? framesPerBox;
+  final int? maxBroodFrameCount;
+  final int? maxHoneyFrameCount;
+  final int? maxBoxCount;
+  final int? maxSuperBoxCount;  final List<String>? accessories;
   final String? country;
+  final bool isLocal;
   final bool isStarred;
+  final double? cost;
 
   const HiveType({
-    required this.id,
+    required super.id,
+    required super.createdAt,
+    required super.updatedAt,
+    super.syncStatus,
+    super.lastSyncedAt,
+    super.deleted = false,
     required this.name,
     this.manufacturer,
-    required this.mainMaterial,
+    required this.material,
     required this.hasFrames,
-    this.defaultFrameCount,
-    this.frameWidth,
-    this.frameHeight,
-    this.broodFrameWidth,
-    this.broodFrameHeight,
+    this.broodFrameCount,
+    this.honeyFrameCount,
     this.frameStandard,
-    this.broodBoxCount,
-    this.honeySuperBoxCount,
-    this.hiveCost,
-    this.currency,
-    this.frameUnitCost,
-    this.broodFrameUnitCost,
-    this.broodBoxUnitCost,
-    this.honeySuperBoxUnitCost,
-    this.priority = 0,
+    this.boxCount,
+    this.superBoxCount,
+    this.framesPerBox,
+    this.maxBroodFrameCount,
+    this.maxHoneyFrameCount,
+    this.maxBoxCount,
+    this.maxSuperBoxCount,    this.accessories,
     this.country,
+    this.isLocal = false,
     this.isStarred = false,
+    this.cost,
   });
-
-  HiveType copyWith({
-    String Function()? id,
-    String Function()? name,
-    String? Function()? manufacturer,
-    HiveMaterial Function()? mainMaterial,
-    bool Function()? hasFrames,
-    int? Function()? defaultFrameCount,
-    double? Function()? frameWidth,
-    double? Function()? frameHeight,
-    double? Function()? broodFrameWidth,
-    double? Function()? broodFrameHeight,
-    String? Function()? frameStandard,
-    int? Function()? broodBoxCount,
-    int? Function()? honeySuperBoxCount,
-    double? Function()? hiveCost,
-    Currency? Function()? currency,
-    double? Function()? frameUnitCost,
-    double? Function()? broodFrameUnitCost,
-    double? Function()? broodBoxUnitCost,
-    double? Function()? honeySuperBoxUnitCost,
-    int Function()? priority,
-    String? Function()? country,
-    bool Function()? isStarred,
-  }) {
-    return HiveType(
-      id: id != null ? id() : this.id,
-      name: name != null ? name() : this.name,
-      manufacturer: manufacturer != null ? manufacturer() : this.manufacturer,
-      mainMaterial: mainMaterial != null ? mainMaterial() : this.mainMaterial,
-      hasFrames: hasFrames != null ? hasFrames() : this.hasFrames,
-      defaultFrameCount: defaultFrameCount != null ? defaultFrameCount() : this.defaultFrameCount,
-      frameWidth: frameWidth != null ? frameWidth() : this.frameWidth,
-      frameHeight: frameHeight != null ? frameHeight() : this.frameHeight,
-      broodFrameWidth: broodFrameWidth != null ? broodFrameWidth() : this.broodFrameWidth,
-      broodFrameHeight: broodFrameHeight != null ? broodFrameHeight() : this.broodFrameHeight,
-      frameStandard: frameStandard != null ? frameStandard() : this.frameStandard,
-      broodBoxCount: broodBoxCount != null ? broodBoxCount() : this.broodBoxCount,
-      honeySuperBoxCount: honeySuperBoxCount != null ? honeySuperBoxCount() : this.honeySuperBoxCount,
-      hiveCost: hiveCost != null ? hiveCost() : this.hiveCost,
-      currency: currency != null ? currency() : this.currency,
-      frameUnitCost: frameUnitCost != null ? frameUnitCost() : this.frameUnitCost,
-      broodFrameUnitCost: broodFrameUnitCost != null ? broodFrameUnitCost() : this.broodFrameUnitCost,
-      broodBoxUnitCost: broodBoxUnitCost != null ? broodBoxUnitCost() : this.broodBoxUnitCost,
-      honeySuperBoxUnitCost: honeySuperBoxUnitCost != null ? honeySuperBoxUnitCost() : this.honeySuperBoxUnitCost,
-      priority: priority != null ? priority() : this.priority,
-      country: country != null ? country() : this.country,
-      isStarred: isStarred != null ? isStarred() : this.isStarred,
-    );
-  }
-
-  @override
+  String get displayName => manufacturer != null 
+    ? '$name ($manufacturer)'
+    : name;@override
   List<Object?> get props => [
-    id,
-    name,
-    manufacturer,
-    mainMaterial,
-    hasFrames,
-    defaultFrameCount,
-    frameWidth,
-    frameHeight,
-    broodFrameWidth,
-    broodFrameHeight,
-    frameStandard,
-    broodBoxCount,
-    honeySuperBoxCount,
-    hiveCost,
-    currency,
-    frameUnitCost,
-    broodFrameUnitCost,
-    broodBoxUnitCost,
-    honeySuperBoxUnitCost,
-    priority,
-    country,
-    isStarred,
-  ];
-  
-  Map<String, dynamic> toMap() {
+    ...baseSyncProps,    name, manufacturer, material, hasFrames, broodFrameCount, honeyFrameCount,
+    frameStandard, boxCount, superBoxCount, framesPerBox, maxBroodFrameCount,
+    maxHoneyFrameCount, maxBoxCount, maxSuperBoxCount, accessories, country, isLocal, isStarred, cost
+  ];  Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...baseSyncFields,
       'name': name,
       'manufacturer': manufacturer,
-      'mainMaterial': mainMaterial.name,
-      'hasFrames': hasFrames ? 1 : 0,
-      'defaultFrameCount': defaultFrameCount,
-      'frameWidth': frameWidth,
-      'frameHeight': frameHeight,
-      'broodFrameWidth': broodFrameWidth,
-      'broodFrameHeight': broodFrameHeight,
+      'material': material.name,
+      'hasFrames': hasFrames,
+      'broodFrameCount': broodFrameCount,
+      'honeyFrameCount': honeyFrameCount,
       'frameStandard': frameStandard,
-      'broodBoxCount': broodBoxCount,
-      'honeySuperBoxCount': honeySuperBoxCount,
-      'hiveCost': hiveCost,
-      'currency': currency?.name,
-      'frameUnitCost': frameUnitCost,
-      'broodFrameUnitCost': broodFrameUnitCost,
-      'broodBoxUnitCost': broodBoxUnitCost,
-      'honeySuperBoxUnitCost': honeySuperBoxUnitCost,
-      'priority': priority,
+      'boxCount': boxCount,
+      'superBoxCount': superBoxCount,
+      'framesPerBox': framesPerBox,
+      'maxBroodFrameCount': maxBroodFrameCount,
+      'maxHoneyFrameCount': maxHoneyFrameCount,
+      'maxBoxCount': maxBoxCount,
+      'maxSuperBoxCount': maxSuperBoxCount,      'accessories': accessories,
       'country': country,
-      'isStarred': isStarred ? 1 : 0,
+      'isLocal': isLocal,
+      'isStarred': isStarred,
+      'cost': cost,
     };
+  }HiveType copyWith({
+    String? name,
+    String? manufacturer,
+    HiveMaterial? material,
+    bool? hasFrames,
+    int? broodFrameCount,
+    int? honeyFrameCount,
+    String? frameStandard,
+    int? boxCount,
+    int? superBoxCount,
+    int? framesPerBox,
+    int? maxBroodFrameCount,
+    int? maxHoneyFrameCount,
+    int? maxBoxCount,
+    int? maxSuperBoxCount,    List<String>? accessories,
+    String? country,
+    bool? isLocal,
+    bool? isStarred,
+    double? cost,
+    DateTime? updatedAt,
+    SyncStatus? syncStatus,
+    DateTime? lastSyncedAt,
+    bool? deleted,
+  }) {
+    return HiveType(
+      id: id,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      syncStatus: syncStatus ?? SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      deleted: deleted ?? this.deleted,
+      name: name ?? this.name,
+      manufacturer: manufacturer ?? this.manufacturer,
+      material: material ?? this.material,
+      hasFrames: hasFrames ?? this.hasFrames,
+      broodFrameCount: broodFrameCount ?? this.broodFrameCount,
+      honeyFrameCount: honeyFrameCount ?? this.honeyFrameCount,
+      frameStandard: frameStandard ?? this.frameStandard,
+      boxCount: boxCount ?? this.boxCount,
+      superBoxCount: superBoxCount ?? this.superBoxCount,
+      framesPerBox: framesPerBox ?? this.framesPerBox,
+      maxBroodFrameCount: maxBroodFrameCount ?? this.maxBroodFrameCount,
+      maxHoneyFrameCount: maxHoneyFrameCount ?? this.maxHoneyFrameCount,
+      maxBoxCount: maxBoxCount ?? this.maxBoxCount,
+      maxSuperBoxCount: maxSuperBoxCount ?? this.maxSuperBoxCount,      accessories: accessories ?? this.accessories,
+      country: country ?? this.country,
+      isLocal: isLocal ?? this.isLocal,
+      isStarred: isStarred ?? this.isStarred,
+      cost: cost ?? this.cost,
+    );
   }
 }

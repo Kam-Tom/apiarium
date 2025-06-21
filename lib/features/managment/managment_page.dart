@@ -9,6 +9,15 @@ class ManagmentPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Management'),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.amber.shade800, Colors.amber.shade500],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),

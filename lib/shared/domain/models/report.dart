@@ -1,3 +1,5 @@
+import 'dart:core';
+
 import 'package:apiarium/shared/shared.dart';
 import 'package:equatable/equatable.dart';
 

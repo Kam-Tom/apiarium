@@ -5,7 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/core.dart';
 import 'core/di/dependency_injection.dart';
-import 'features/home/settings/bloc/preferences_bloc.dart';
+import 'features/settings/bloc/preferences_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 

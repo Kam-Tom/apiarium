@@ -1,60 +1,70 @@
-import 'package:equatable/equatable.dart';
+import 'package:apiarium/shared/shared.dart';
 
-class QueenBreed extends Equatable {
-  final String id;
-  final String name;           // Common name (e.g., "Carniolan")
-  final String? scientificName; // Latin name (optional)
-  final String? origin;         // Region of origin (optional)
-
-  // Sorting and filtering fields
-  final int priority;
+class QueenBreed extends BaseModel {
+  final String name;
+  final String? scientificName;
+  final String? origin;
   final String? country;
   final bool isStarred;
-  
+
   const QueenBreed({
-    required this.id,
+    required super.id,
+    required super.createdAt,
+    required super.updatedAt,
+    super.syncStatus,
+    super.lastSyncedAt,
+    super.deleted = false,
     required this.name,
     this.scientificName,
     this.origin,
-    this.priority = 0,
     this.country,
     this.isStarred = false,
   });
 
+  String get displayName => scientificName != null 
+    ? '$name ($scientificName)'
+    : name;
+
   @override
   List<Object?> get props => [
-    id, name, scientificName, origin, priority, country, isStarred
+    ...baseSyncProps,
+    name, scientificName, origin, country, isStarred
   ];
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...baseSyncFields,
       'name': name,
       'scientificName': scientificName,
       'origin': origin,
-      'priority': priority,
       'country': country,
-      'isStarred': isStarred ? 1 : 0,
+      'isStarred': isStarred,
     };
   }
   
   QueenBreed copyWith({
-    String Function()? id,
-    String Function()? name,
-    String? Function()? scientificName,
-    String? Function()? origin,
-    int Function()? priority,
-    String? Function()? country,
-    bool Function()? isStarred,
+    String? name,
+    String? scientificName,
+    String? origin,
+    String? country,
+    bool? isStarred,
+    DateTime? updatedAt,
+    SyncStatus? syncStatus,
+    DateTime? lastSyncedAt,
+    bool? deleted,
   }) {
     return QueenBreed(
-      id: id != null ? id() : this.id,
-      name: name != null ? name() : this.name,
-      scientificName: scientificName != null ? scientificName() : this.scientificName,
-      origin: origin != null ? origin() : this.origin,
-      priority: priority != null ? priority() : this.priority,
-      country: country != null ? country() : this.country,
-      isStarred: isStarred != null ? isStarred() : this.isStarred,
+      id: id,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      syncStatus: syncStatus ?? SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      deleted: deleted ?? this.deleted,
+      name: name ?? this.name,
+      scientificName: scientificName ?? this.scientificName,
+      origin: origin ?? this.origin,
+      country: country ?? this.country,
+      isStarred: isStarred ?? this.isStarred,
     );
   }
 }

@@ -1,112 +1,106 @@
-import 'package:apiarium/shared/shared.dart';
-import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
-import 'package:apiarium/shared/domain/enums/apiary_status.dart';
-import 'package:apiarium/shared/domain/models/hive.dart';
+import 'dart:core';
 
-class Apiary extends Equatable {
-  final String id;
+import 'package:apiarium/shared/shared.dart';
+import 'package:flutter/material.dart';
+
+class Apiary extends BaseModel {
   final String name;
   final String? description;
   final String? location;
   final int position;
-  final DateTime createdAt;
   final String? imageUrl;
   final double? latitude;
   final double? longitude;
   final bool isMigratory;
   final Color? color;
-  final List<Hive>? hives;
   final ApiaryStatus status;
-  final int? _hiveCount; 
+  final int hiveCount;
+  final int activeHiveCount;
 
   const Apiary({
-    required this.id,
+    required super.id,
+    required super.createdAt,
+    required super.updatedAt,
+    super.syncStatus,
+    super.lastSyncedAt,
+    super.deleted = false,
     required this.name,
     this.description,
-    required this.location,
+    this.location,
     required this.position,
-    required this.createdAt,
     this.imageUrl,
     this.latitude,
     this.longitude,
     this.isMigratory = false,
     this.color,
-    this.hives,
     this.status = ApiaryStatus.active,
-    int? hiveCount,
-  }) : _hiveCount = hiveCount;
-
-  // Get hive count: prefer explicit count if available, otherwise calculate from hives
-  int get hiveCount => _hiveCount ?? hives?.length ?? 0;
-
-  Apiary copyWith({
-    String Function()? id,
-    String Function()? name,
-    String? Function()? description,
-    String? Function()? location,
-    int Function()? position,
-    DateTime Function()? createdAt,
-    String? Function()? imageUrl,
-    double? Function()? latitude,
-    double? Function()? longitude,
-    bool Function()? isMigratory,
-    Color? Function()? color,
-    List<Hive>? Function()? hives,
-    ApiaryStatus Function()? status,
-    int? Function()? hiveCount,
-  }) {
-    return Apiary(
-      id: id != null ? id() : this.id,
-      name: name != null ? name() : this.name,
-      description: description != null ? description() : this.description,
-      location: location != null ? location() : this.location,
-      position: position != null ? position() : this.position,
-      createdAt: createdAt != null ? createdAt() : this.createdAt,
-      imageUrl: imageUrl != null ? imageUrl() : this.imageUrl,
-      latitude: latitude != null ? latitude() : this.latitude,
-      longitude: longitude != null ? longitude() : this.longitude,
-      isMigratory: isMigratory != null ? isMigratory() : this.isMigratory,
-      color: color != null ? color() : this.color,
-      hives: hives != null ? hives() : this.hives,
-      status: status != null ? status() : this.status,
-      hiveCount: hiveCount != null ? hiveCount() : this._hiveCount,
-    );
-  }
+    this.hiveCount = 0,
+    this.activeHiveCount = 0,
+  });
 
   @override
   List<Object?> get props => [
-    id, 
-    name, 
-    description, 
-    location, 
-    position,
-    createdAt,
-    imageUrl, 
-    latitude, 
-    longitude, 
-    isMigratory,
-    color,
-    hives,
-    status,
-    _hiveCount
+    ...baseSyncProps,
+    name, description, location, position, imageUrl, latitude, longitude,
+    isMigratory, color, status, hiveCount, activeHiveCount,
   ];
   
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...baseSyncFields,
       'name': name,
       'description': description,
       'location': location,
       'position': position,
-      'createdAt': createdAt.toIso8601String(),
       'imageUrl': imageUrl,
       'latitude': latitude,
       'longitude': longitude,
-      'isMigratory': isMigratory ? 1 : 0,
-      'color': color?.toHex(),
+      'isMigratory': isMigratory,
+      'color': color?.toARGB32(),
       'status': status.name,
-      'hiveCount': _hiveCount,
+      'hiveCount': hiveCount,
+      'activeHiveCount': activeHiveCount,
     };
+  }
+
+  Apiary copyWith({
+    String? name,
+    String? description,
+    String? location,
+    int? position,
+    String? imageUrl,
+    double? latitude,
+    double? longitude,
+    bool? isMigratory,
+    Color? color,
+    ApiaryStatus? status,
+    int? hiveCount,
+    int? activeHiveCount,
+    int? queenedHiveCount,
+    DateTime? updatedAt,
+    SyncStatus? syncStatus,
+    DateTime? lastSyncedAt,
+    bool? deleted,
+  }) {
+    return Apiary(
+      id: id,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      syncStatus: syncStatus ?? SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      deleted: deleted ?? this.deleted,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      location: location ?? this.location,
+      position: position ?? this.position,
+      imageUrl: imageUrl ?? this.imageUrl,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      isMigratory: isMigratory ?? this.isMigratory,
+      color: color ?? this.color,
+      status: status ?? this.status,
+      hiveCount: hiveCount ?? this.hiveCount,
+      activeHiveCount: activeHiveCount ?? this.activeHiveCount,
+    );
   }
 }

@@ -13,7 +13,7 @@ class MenuItem {
 }
 
 const List<MenuItem> homeMenuItems = [
-  MenuItem(icon: Icons.home, labelKey: 'home.menu.apiary', route: '/apiary'),
+  MenuItem(icon: Icons.home, labelKey: 'home.menu.apiary', route: '/management'),
   MenuItem(icon: Icons.bar_chart, labelKey: 'home.menu.statistics', route: '/statistics'),
   MenuItem(icon: Icons.mic, labelKey: 'home.menu.voice_control', route: '/voice-control'),
   MenuItem(icon: Icons.inventory, labelKey: 'home.menu.storage', route: '/storage'),

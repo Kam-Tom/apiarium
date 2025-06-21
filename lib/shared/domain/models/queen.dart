@@ -1,80 +1,130 @@
+import 'dart:core';
 import 'dart:ui';
 
 import 'package:apiarium/shared/shared.dart';
-import 'package:equatable/equatable.dart';
 
-class Queen extends Equatable {
-  final String id;
-  final String name;  // Name or marking number
-  final QueenBreed breed;
+class Queen extends BaseModel {
+  final String name;
   final DateTime birthDate;
   final QueenSource source;
   final bool marked;
   final Color? markColor;
   final QueenStatus status;
-  final String? origin; // Where the queen comes from
-  final Apiary? apiary;
-  final Hive? hive;
+  final String? origin;
   
+  final String breedId;
+  final String breedName;
+  final String? breedScientificName;
+  final String? breedOrigin;
+  final String? hiveId;
+  final String? hiveName;
+  final String? apiaryId;
+  final String? apiaryName;
+  final String? apiaryLocation;
+
   const Queen({
-    required this.id,
+    required super.id,
+    required super.createdAt,
+    required super.updatedAt,
+    super.syncStatus,
+    super.lastSyncedAt,
+    super.deleted = false,
     required this.name,
-    required this.breed,
     required this.birthDate,
     required this.source,
     required this.marked,
     this.markColor,
     required this.status,
     this.origin,
-    this.apiary,
-    this.hive,
+    required this.breedId,
+    required this.breedName,
+    this.breedScientificName,
+    this.breedOrigin,    
+    this.hiveId,
+    this.hiveName,
+    this.apiaryId,
+    this.apiaryName,
+    this.apiaryLocation,
   });
+
+  int get ageInDays => DateTime.now().difference(birthDate).inDays;
+  int get ageInWeeks => (ageInDays / 7).floor();
 
   @override
   List<Object?> get props => [
-    id, name, breed, birthDate, source,
-    marked, markColor, status, origin, apiary, hive
+    ...baseSyncProps,
+    name, birthDate, source, marked, markColor, status, origin,
+    breedId, breedName, breedScientificName, breedOrigin,
+    hiveId, hiveName, apiaryId, apiaryName, apiaryLocation,
   ];
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...baseSyncFields,
       'name': name,
-      'breed_id': breed.id,
       'birthDate': birthDate.toIso8601String(),
       'source': source.name,
-      'marked': marked ? 1 : 0,
-      'markColor': markColor?.toHex(),
+      'marked': marked,
+      'markColor': markColor?.toARGB32(),
       'status': status.name,
       'origin': origin,
+      'breedId': breedId,
+      'breedName': breedName,
+      'breedScientificName': breedScientificName,
+      'breedOrigin': breedOrigin,      
+      'hiveId': hiveId,
+      'hiveName': hiveName,
+      'apiaryId': apiaryId,
+      'apiaryName': apiaryName,
+      'apiaryLocation': apiaryLocation,
     };
   }
   
   Queen copyWith({
-    String Function()? id,
-    String Function()? name,
-    QueenBreed Function()? breed,
-    DateTime Function()? birthDate,
-    QueenSource Function()? source,
-    bool Function()? marked,
-    Color? Function()? markColor,
-    QueenStatus Function()? status,
-    String? Function()? origin,
-    Apiary? Function()? apiary,
-    Hive? Function()? hive,
+    String? name,
+    DateTime? birthDate,
+    QueenSource? source,
+    bool? marked,
+    Color? markColor,
+    QueenStatus? status,
+    String? origin,
+    String? breedId,
+    String? breedName,
+    String? breedScientificName,
+    String? breedOrigin,    
+    String? hiveId,
+    String? hiveName,
+    String? apiaryId,
+    String? apiaryName,
+    String? apiaryLocation,
+    DateTime? updatedAt,
+    SyncStatus? syncStatus,
+    DateTime? lastSyncedAt,
+    bool? deleted,
   }) {
     return Queen(
-      id: id != null ? id() : this.id,
-      name: name != null ? name() : this.name,
-      breed: breed != null ? breed() : this.breed,
-      birthDate: birthDate != null ? birthDate() : this.birthDate,
-      source: source != null ? source() : this.source,
-      marked: marked != null ? marked() : this.marked,
-      markColor: markColor != null ? markColor() : this.markColor,
-      status: status != null ? status() : this.status,
-      origin: origin != null ? origin() : this.origin,
-      apiary: apiary != null ? apiary() : this.apiary,
-      hive: hive != null ? hive() : this.hive,
+      id: id,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      syncStatus: syncStatus ?? SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      deleted: deleted ?? this.deleted,
+      name: name ?? this.name,
+      birthDate: birthDate ?? this.birthDate,
+      source: source ?? this.source,
+      marked: marked ?? this.marked,
+      markColor: markColor ?? this.markColor,
+      status: status ?? this.status,
+      origin: origin ?? this.origin,
+      breedId: breedId ?? this.breedId,
+      breedName: breedName ?? this.breedName,
+      breedScientificName: breedScientificName ?? this.breedScientificName,
+      breedOrigin: breedOrigin ?? this.breedOrigin,      
+      hiveId: hiveId ?? this.hiveId,
+      hiveName: hiveName ?? this.hiveName,
+      apiaryId: apiaryId ?? this.apiaryId,
+      apiaryName: apiaryName ?? this.apiaryName,
+      apiaryLocation: apiaryLocation ?? this.apiaryLocation,
     );
   }
 }
