@@ -20,10 +20,13 @@ class EditHiveState extends Equatable {
   final String? imageUrl;
   final int position;
   final Color? color;
-  final int? currentFrameCount;
-  final int? currentBroodFrameCount;
-  final int? currentBroodBoxCount;
-  final int? currentHoneySuperBoxCount;
+  final int? broodFrameCount;
+  final int? honeyFrameCount;
+  final int? boxCount;
+  final int? superBoxCount;
+  final bool? hasFrames;
+  final int? framesPerBox;
+  final String? frameStandard;
   
   // UI state
   final EditHiveStatus formStatus;
@@ -35,9 +38,7 @@ class EditHiveState extends Equatable {
 
   //Helper state
   final bool canCreateDefaultQueen;
-  final bool skipSaving;
-  final Hive? createdHive;
-  final bool hideLocation;
+  final Hive? savedHive;
   
   const EditHiveState({
     this.hiveId,
@@ -50,10 +51,13 @@ class EditHiveState extends Equatable {
     this.imageUrl,
     this.position = 0,
     this.color,
-    this.currentFrameCount,
-    this.currentBroodFrameCount,
-    this.currentBroodBoxCount,
-    this.currentHoneySuperBoxCount,
+    this.broodFrameCount,
+    this.honeyFrameCount,
+    this.boxCount,
+    this.superBoxCount,
+    this.hasFrames,
+    this.framesPerBox,
+    this.frameStandard,
     this.formStatus = EditHiveStatus.initial,
     this.availableHiveTypes = const [],
     this.availableApiaries = const [],
@@ -61,9 +65,7 @@ class EditHiveState extends Equatable {
     this.showValidationErrors = false,
     this.errorMessage,
     this.canCreateDefaultQueen = false,
-    this.skipSaving = false,
-    this.createdHive,
-    this.hideLocation = false,
+    this.savedHive,
   });
   
   EditHiveState copyWith({
@@ -77,10 +79,13 @@ class EditHiveState extends Equatable {
     String? Function()? imageUrl,
     int Function()? position,
     Color? Function()? color,
-    int? Function()? currentFrameCount,
-    int? Function()? currentBroodFrameCount,
-    int? Function()? currentBroodBoxCount,
-    int? Function()? currentHoneySuperBoxCount,
+    int? Function()? broodFrameCount,
+    int? Function()? honeyFrameCount,
+    int? Function()? boxCount,
+    int? Function()? superBoxCount,
+    bool? Function()? hasFrames,
+    int? Function()? framesPerBox,
+    String? Function()? frameStandard,
     EditHiveStatus Function()? formStatus,
     List<HiveType> Function()? availableHiveTypes,
     List<Apiary> Function()? availableApiaries,
@@ -88,9 +93,7 @@ class EditHiveState extends Equatable {
     bool Function()? showValidationErrors,
     String? Function()? errorMessage,
     bool Function()? canCreateDefaultQueen,
-    bool Function()? skipSaving,
-    Hive? Function()? createdHive,
-    bool Function()? hideLocation,
+    Hive? Function()? savedHive,
   }) {
     return EditHiveState(
       hiveId: hiveId != null ? hiveId() : this.hiveId,
@@ -103,10 +106,13 @@ class EditHiveState extends Equatable {
       imageUrl: imageUrl != null ? imageUrl() : this.imageUrl,
       position: position != null ? position() : this.position,
       color: color != null ? color() : this.color,
-      currentFrameCount: currentFrameCount != null ? currentFrameCount() : this.currentFrameCount,
-      currentBroodFrameCount: currentBroodFrameCount != null ? currentBroodFrameCount() : this.currentBroodFrameCount,
-      currentBroodBoxCount: currentBroodBoxCount != null ? currentBroodBoxCount() : this.currentBroodBoxCount,
-      currentHoneySuperBoxCount: currentHoneySuperBoxCount != null ? currentHoneySuperBoxCount() : this.currentHoneySuperBoxCount,
+      broodFrameCount: broodFrameCount != null ? broodFrameCount() : this.broodFrameCount,
+      honeyFrameCount: honeyFrameCount != null ? honeyFrameCount() : this.honeyFrameCount,
+      boxCount: boxCount != null ? boxCount() : this.boxCount,
+      superBoxCount: superBoxCount != null ? superBoxCount() : this.superBoxCount,
+      hasFrames: hasFrames != null ? hasFrames() : this.hasFrames,
+      framesPerBox: framesPerBox != null ? framesPerBox() : this.framesPerBox,
+      frameStandard: frameStandard != null ? frameStandard() : this.frameStandard,
       formStatus: formStatus != null ? formStatus() : this.formStatus,
       availableHiveTypes: availableHiveTypes != null ? availableHiveTypes() : this.availableHiveTypes,
       availableApiaries: availableApiaries != null ? availableApiaries() : this.availableApiaries,
@@ -114,9 +120,7 @@ class EditHiveState extends Equatable {
       showValidationErrors: showValidationErrors != null ? showValidationErrors() : this.showValidationErrors,
       errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
       canCreateDefaultQueen: canCreateDefaultQueen != null ? canCreateDefaultQueen() : this.canCreateDefaultQueen,
-      skipSaving: skipSaving != null ? skipSaving() : this.skipSaving,
-      createdHive: createdHive != null ? createdHive() : this.createdHive,
-      hideLocation: hideLocation != null ? hideLocation() : this.hideLocation,
+      savedHive: savedHive != null ? savedHive() : this.savedHive,
     );
   }
   
@@ -124,9 +128,6 @@ class EditHiveState extends Equatable {
     final errors = <String>[];
     if (name.trim().isEmpty) {
       errors.add('Hive name is required');
-    }
-    if (hiveType == null) {
-      errors.add('Hive type is required');
     }
     return errors;
   }
@@ -145,19 +146,19 @@ class EditHiveState extends Equatable {
     imageUrl,
     position,
     color,
-    currentFrameCount,
-    currentBroodFrameCount,
-    currentBroodBoxCount,
-    currentHoneySuperBoxCount,
+    broodFrameCount,
+    honeyFrameCount,
+    boxCount,
+    superBoxCount,
+    hasFrames,
+    framesPerBox,
+    frameStandard,
     formStatus,
     availableHiveTypes,
-    availableApiaries,
     availableQueens,
     showValidationErrors,
     errorMessage,
     canCreateDefaultQueen,
-    skipSaving,
-    createdHive,
-    hideLocation,
+    savedHive,
   ];
 }

@@ -9,11 +9,12 @@ abstract class EditHiveEvent extends Equatable {
 
 class EditHiveLoadData extends EditHiveEvent {
   final String? hiveId;
+  final String? queenId;
 
-  const EditHiveLoadData({this.hiveId});
+  const EditHiveLoadData({this.hiveId, this.queenId});
   
   @override
-  List<Object?> get props => [hiveId];
+  List<Object?> get props => [hiveId, queenId];
 }
 
 class EditHiveNameChanged extends EditHiveEvent {
@@ -87,7 +88,7 @@ class EditHiveFrameCountChanged extends EditHiveEvent {
   final int? count;
 
   const EditHiveFrameCountChanged(this.count);
-  
+
   @override
   List<Object?> get props => [count];
 }
@@ -96,7 +97,7 @@ class EditHiveBroodFrameCountChanged extends EditHiveEvent {
   final int? count;
 
   const EditHiveBroodFrameCountChanged(this.count);
-  
+
   @override
   List<Object?> get props => [count];
 }
@@ -156,3 +157,24 @@ class EditHiveUpdateQueen extends EditHiveEvent {
 }
 
 class EditHiveSubmitted extends EditHiveEvent {}
+
+class EditHiveGenerateName extends EditHiveEvent {
+  const EditHiveGenerateName();
+}
+
+class EditHiveAddSpending extends EditHiveEvent {
+  final double amount;
+  final DateTime date;
+  final Apiary? apiary;
+  final String itemName;
+
+  const EditHiveAddSpending({
+    required this.amount,
+    required this.date,
+    required this.apiary,
+    required this.itemName,
+  });
+
+  @override
+  List<Object?> get props => [amount, date, apiary, itemName];
+}

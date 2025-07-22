@@ -8,3 +8,5 @@ export 'tts_service.dart';
 export 'name_generator_service.dart';
 export 'vc_service.dart';
 export 'user_repository.dart';
+export 'history_service.dart';
+export 'storage_service.dart';

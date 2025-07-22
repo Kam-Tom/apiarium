@@ -8,8 +8,8 @@ class EditApiaryState extends Equatable {
   final String name;
   final String description;
   final String location;
-  final DateTime createdAt;
   final String? imageUrl;
+  final DateTime createdAt;
   final double? latitude;
   final double? longitude;
   final bool isMigratory;
@@ -30,17 +30,13 @@ class EditApiaryState extends Equatable {
   final Apiary? originalApiary;
   final List<Hive> originalHives;
 
-  // Helper state for hive/queen creation capabilities
-  final bool canCreateDefaultQueen;
-  final bool canCreateDefaultHive;
-  
   const EditApiaryState({
     this.apiaryId,
     this.name = '',
     this.description = '',
     this.location = '',
-    required this.createdAt,
     this.imageUrl,
+    required this.createdAt,
     this.latitude,
     this.longitude,
     this.isMigratory = false,
@@ -54,8 +50,6 @@ class EditApiaryState extends Equatable {
     this.availableHives = const <Hive>[],
     this.originalApiary,
     this.originalHives = const <Hive>[],
-    this.canCreateDefaultQueen = false,
-    this.canCreateDefaultHive = false,
   });
   
   EditApiaryState copyWith({
@@ -78,8 +72,6 @@ class EditApiaryState extends Equatable {
     Function()? availableHives,
     Function()? originalApiary,
     Function()? originalHives,
-    Function()? canCreateDefaultQueen,
-    Function()? canCreateDefaultHive,
   }) {
     return EditApiaryState(
       apiaryId: apiaryId != null ? apiaryId() : this.apiaryId,
@@ -101,14 +93,12 @@ class EditApiaryState extends Equatable {
       availableHives: availableHives != null ? availableHives() : this.availableHives,
       originalApiary: originalApiary != null ? originalApiary() : this.originalApiary,
       originalHives: originalHives != null ? originalHives() : this.originalHives,
-      canCreateDefaultQueen: canCreateDefaultQueen != null ? canCreateDefaultQueen() : this.canCreateDefaultQueen,
-      canCreateDefaultHive: canCreateDefaultHive != null ? canCreateDefaultHive() : this.canCreateDefaultHive,
     );
   }
   
   bool get isValid {
     // Basic validation rule: name must not be empty
-    return name.isNotEmpty && location.isNotEmpty;
+    return name.isNotEmpty;
   }
   
   /// Helper method to check if the apiary data has been changed
@@ -168,7 +158,6 @@ class EditApiaryState extends Equatable {
     availableHives,
     originalApiary,
     originalHives,
-    canCreateDefaultQueen,
-    canCreateDefaultHive,
   ];
 }
+  

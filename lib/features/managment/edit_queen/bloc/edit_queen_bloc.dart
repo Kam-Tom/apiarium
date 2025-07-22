@@ -1,9 +1,9 @@
-import 'dart:async';
-
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:apiarium/shared/shared.dart';
 import 'package:flutter/material.dart';
+import 'package:apiarium/shared/services/storage_service.dart';
+import 'package:apiarium/core/di/dependency_injection.dart';
 
 part 'edit_queen_event.dart';
 part 'edit_queen_state.dart';
@@ -17,217 +17,173 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
     required QueenService queenService,
     required ApiaryService apiaryService,
     required HiveService hiveService,
-    bool skipSaving = false,
+    String? queenId,
     bool hideLocation = false,
+    bool fromHive = false,
   }) : 
     _queenService = queenService,
     _apiaryService = apiaryService,
     _hiveService = hiveService,
-    super(EditQueenState(birthDate: DateTime.now(), skipSaving: skipSaving, hideLocation: hideLocation)) {
-    on<EditQueenLoadData>(_onLoadRequest);
-    
-    // Individual field event handlers
+    super(EditQueenState(
+      birthDate: DateTime.now(),
+      marked: true,
+      markColor: _getQueenMarkColorByYear(DateTime.now().year),
+      isCreatedFromHive: fromHive,
+      shouldShowLocation: !hideLocation,
+    )) {
+    on<EditQueenLoadData>(_onLoad);
     on<EditQueenNameChanged>(_onNameChanged);
     on<EditQueenBreedChanged>(_onBreedChanged);
     on<EditQueenBirthDateChanged>(_onBirthDateChanged);
     on<EditQueenSourceChanged>(_onSourceChanged);
-    on<EditQueenHiveNameChanged>(_onHiveNameChanged);
     on<EditQueenMarkedChanged>(_onMarkedChanged);
     on<EditQueenMarkColorChanged>(_onMarkColorChanged);
     on<EditQueenStatusChanged>(_onStatusChanged);
     on<EditQueenOriginChanged>(_onOriginChanged);
-    
     on<EditQueenApiaryChanged>(_onApiaryChanged);
     on<EditQueenHiveChanged>(_onHiveChanged);
-    on<EditQueenCreateBreed>(_onCreateBreed);
-    on<EditQueenToggleBreedStar>(_onToggleBreedStar);
+    on<EditQueenGenerateName>(_onGenerateName);
     on<EditQueenSubmitted>(_onSubmitted);
+    on<EditQueenAddSpending>(_onAddSpending);
+    
+    if (queenId != null) {
+      add(EditQueenLoadData(queenId: queenId));
+    } else {
+      add(EditQueenLoadData());
+    }
   }
 
-  Future<void> _onLoadRequest(EditQueenLoadData event, Emitter<EditQueenState> emit) async {
+  Future<void> _onLoad(EditQueenLoadData event, Emitter<EditQueenState> emit) async {
     emit(state.copyWith(status: () => EditQueenStatus.loading));
 
-    var breeds = await _queenService.getAllBreeds();
+    try {
+      final breeds = await _queenService.getAllQueenBreeds();
+      final apiaries = await _apiaryService.getAllApiaries();
+      final hives = await _hiveService.getAllHives();
 
-    //TODO DELETE THIS AFTER TESTING
-    if(breeds.isEmpty) {
-      await _queenService.insertBreed(
-        breed: QueenBreed(
-          id: '',
-          name: 'Italian',
-          scientificName: 'Apis mellifera ligustica',
-          origin: 'Italy',
-          country: 'Italy',
-          isStarred: true,
-          priority: 1,
-        )
-      );
-      breeds = await _queenService.getAllBreeds();
-    }
-    //TODO ---
-
-    final apiaries = await _apiaryService.getAllApiaries();
-    
-    // Load hives with queen information
-    final apiaryHives = await _hiveService.getAllHives(includeQueen: true);
-    
-    // Filter hives to show only those without a queen or with the queen being edited
-    final availableHives = apiaryHives.where((hive) => 
-      hive.queen == null || (event.queenId != null && hive.queen?.id == event.queenId)
-    ).toList();
-        
-    if(event.queenId != null) {
-      final queen = await _queenService.getQueenById(event.queenId!, includeApiary: true, includeHive: true);
-      if (queen != null) {
-        // Hive doesn't equal queen.hive because of hive.queen
-        Hive? selectedHive = queen.hive != null ? availableHives.firstWhere((hive) => hive.id == queen.hive!.id) : null; 
-        Apiary? selectedApiary = queen.apiary != null ? apiaries.firstWhere((apiary) => apiary.id == queen.apiary!.id) : null;
-
+      if (event.queenId != null) {
+        final queen = await _queenService.getQueenById(event.queenId!);
+        if (queen != null) {
+          Apiary? selectedApiary;
+          Hive? selectedHive;
+          QueenBreed? selectedBreed;
+          
+          if (queen.apiaryId != null) {
+            selectedApiary = apiaries.where((a) => a.id == queen.apiaryId).firstOrNull;
+          }
+          
+          if (queen.hiveId != null) {
+            selectedHive = hives.where((h) => h.id == queen.hiveId).firstOrNull;
+          }
+          
+          selectedBreed = breeds.where((b) => b.id == queen.breedId).firstOrNull;
+          
+          emit(state.copyWith(
+            id: () => queen.id,
+            name: () => queen.name,
+            queenBreed: () => selectedBreed,
+            birthDate: () => queen.birthDate,
+            source: () => queen.source,
+            marked: () => queen.marked,
+            markColor: () => queen.markColor,
+            queenStatus: () => queen.status,
+            origin: () => queen.origin,
+            selectedApiary: () => selectedApiary,
+            selectedHive: () => selectedHive,
+            status: () => EditQueenStatus.loaded,
+            availableBreeds: () => breeds,
+            availableApiaries: () => apiaries,
+            availableHives: () => hives,
+            shouldShowLocation: () => true,
+          ));
+        } else {
+          emit(state.copyWith(
+            status: () => EditQueenStatus.failure,
+            errorMessage: () => 'Queen not found',
+          ));
+        }
+      } else {
+        String generatedName;
+        try {
+          final nameService = getIt<NameGeneratorService>();
+          generatedName = await nameService.generateQueenName();
+        } catch (_) {
+          final queenCount = await _queenService.getAllQueens();
+          generatedName = 'Queen ${queenCount.length + 1}';
+        }
         emit(state.copyWith(
-          id:() => queen.id,
-          name: () => queen.name,
-          queenBreed: () => queen.breed,
-          birthDate: () => queen.birthDate,
-          source: () => queen.source,
-          marked: () => queen.marked,
-          markColor: () => queen.markColor,
-          queenStatus: () => queen.status,
-          origin: () => queen.origin,
+          name: () => generatedName,
+          marked: () => true,
+          markColor: () => EditQueenState.getColorForYear(DateTime.now().year),
           status: () => EditQueenStatus.loaded,
           availableBreeds: () => breeds,
           availableApiaries: () => apiaries,
-          availableHives: () => availableHives,
-          selectedApiary: () => selectedApiary,
-          selectedHive: () => selectedHive,
-          originalQueen: () => queen,
-        ));
-      } else {
-        emit(state.copyWith(
-          status: () => EditQueenStatus.failure,
-          errorMessage: () => 'Queen not found',
+          availableHives: () => hives,
         ));
       }
-    }
-    else {
-      final queenNr = await _queenService.getQueensCount();
+    } catch (e) {
       emit(state.copyWith(
-        name: () => 'Queen ${queenNr + 1}',
-        marked: () => true,
-        markColor: () => EditQueenState.getColorForYear(DateTime.now().year),
-        status: () => EditQueenStatus.loaded,
-        availableBreeds: () => breeds,
-        availableApiaries: () => apiaries,
-        availableHives: () => availableHives,
-        originalQueen: () => null, // No original queen for new entries
+        status: () => EditQueenStatus.failure,
+        errorMessage: () => 'Failed to load data: ${e.toString()}',
       ));
     }
   }
-  
-  // Individual field handlers
-  // ...existing code...
 
   Future<void> _onSubmitted(EditQueenSubmitted event, Emitter<EditQueenState> emit) async {
-    // Validate the form first
-    final Map<String, String?> validationErrors = {};
-    
-    // Validate required fields
-    if (state.name.trim().isEmpty) {
-      validationErrors['name'] = 'Queen name is required';
-    }
-    
-    if (state.queenBreed == null) {
-      validationErrors['breed'] = 'Queen breed is required';
-    }
-    
-    // Add any other validations here
-    
-    // Show validation errors if form is invalid
-    if (validationErrors.isNotEmpty) {
+    if (state.name.trim().isEmpty || state.queenBreed == null) {
       emit(state.copyWith(
-        showValidationErrors: () => true,
-        validationErrors: () => validationErrors,
+        status: () => EditQueenStatus.failure,
+        errorMessage: () => 'Please fill in all required fields',
       ));
       return;
     }
     
-    // Create the queen object
-    final Queen queen = Queen(
-      id: state.id ?? '',
-      name: state.name,
-      breed: state.queenBreed!,
-      birthDate: state.birthDate,
-      source: state.source,
-      marked: state.marked,
-      markColor: state.markColor,
-      status: state.queenStatus,
-      origin: state.origin,
-      apiary: state.selectedApiary,
-      hive: state.selectedHive,
-    );
-    
-    // If skipSaving is true, just emit success with the created queen
-    if (state.skipSaving) {
-      emit(state.copyWith(
-        status: () => EditQueenStatus.success,
-        createdQueen: () => queen,
-      ));
-      return;
-    }
-    
-    emit(state.copyWith(
-      status: () => EditQueenStatus.submitting,
-    ));
+    emit(state.copyWith(status: () => EditQueenStatus.submitting));
     
     try {
-      // Create a group ID for related operations
-      final String groupId = _queenService.createGroupId();
+      Queen queen;
       
-      final bool hasQueenChanged = state.hasQueenChanged;
-      final bool hasLocationChanged = state.hasLocationChanged;
-      
-      Queen savedQueen = queen;
-      if (hasQueenChanged) {
-        if (state.id == null) {
-          savedQueen = await _queenService.insertQueen(queen, groupId: groupId);
+      if (state.id == null || state.id?.isEmpty == true) {
+        // Create new queen with hive assignment if selected
+        queen = await _queenService.createQueen(
+          name: state.name,
+          birthDate: state.birthDate,
+          breedId: state.queenBreed!.id,
+          source: state.source,
+          marked: state.marked,
+          markColor: state.markColor,
+          status: state.queenStatus,
+          origin: state.origin,
+          hiveId: !state.isCreatedFromHive ? state.selectedHive?.id : null,
+        );
+      } else {
+        // Update existing queen
+        final existingQueen = await _queenService.getQueenById(state.id!);
+        if (existingQueen != null) {
+          queen = existingQueen.copyWith(
+            name: () => state.name,
+            birthDate: () => state.birthDate,
+            source: () => state.source,
+            marked: () => state.marked,
+            markColor: () => state.markColor,
+            status: () => state.queenStatus,
+            origin: () => state.origin,
+            // Update hive assignment
+            hiveId: () => !state.isCreatedFromHive ? state.selectedHive?.id : existingQueen.hiveId,
+            hiveName: () => !state.isCreatedFromHive ? state.selectedHive?.name : existingQueen.hiveName,
+            apiaryId: () => !state.isCreatedFromHive ? state.selectedHive?.apiaryId : existingQueen.apiaryId,
+            apiaryName: () => !state.isCreatedFromHive ? state.selectedHive?.apiaryName : existingQueen.apiaryName,
+            apiaryLocation: () => !state.isCreatedFromHive ? state.selectedHive?.apiaryLocation : existingQueen.apiaryLocation,
+          );
+          queen = await _queenService.updateQueen(queen);
         } else {
-          savedQueen = await _queenService.updateQueen(
-            queen: queen, 
-            groupId: groupId
-          );
-        }
-      }
-      
-      if (hasLocationChanged && savedQueen.id.isNotEmpty) {
-        final newHive = state.selectedHive;
-        final oldHive = state.originalQueen?.hive;
-        
-        if (newHive?.id == oldHive?.id) {
-          // No change in hive, no need to update
-          return;
-        }
-        
-        if (oldHive != null) {
-          // Unassign queen from old hive
-          await _hiveService.updateHive(
-            hive: oldHive.copyWith(queen: () => null),
-            skipHistoryLog: true,  // Skip logging this intermediate step
-            groupId: groupId
-          );
-        }
-        
-        if (newHive != null) {
-          // Assign queen to new hive
-          await _hiveService.updateHive(
-            hive: newHive.copyWith(queen: () => savedQueen),
-            skipHistoryLog: false,  // Log this final change
-            groupId: groupId
-          );
+          throw Exception('Queen not found');
         }
       }
       
       emit(state.copyWith(
         status: () => EditQueenStatus.success,
-        createdQueen: () => queen,
+        queen: () => queen,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -237,115 +193,20 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
     }
   }
 
-  FutureOr<void> _onApiaryChanged(EditQueenApiaryChanged event, Emitter<EditQueenState> emit) async {
-    if(event.apiary == null) {
-      // Show hives without an apiary
-      final hivesWithoutApiary = await _hiveService.getHivesWithoutApiary(includeQueen: true);
-      
-      // Filter to only show hives without a queen or with the queen being edited
-      final availableHives = hivesWithoutApiary.where((hive) => 
-        hive.queen == null || hive.queen?.id == state.id
-      ).toList();
-      
-      emit(state.copyWith(
-        selectedApiary: () => null,
-        selectedHive: () => null,
-        availableHives: () => availableHives,
-      ));
-    }
-    else {
-      // Get hives for this apiary with queen information
-      final apiaryHives = await _hiveService.getByApiaryId(event.apiary!.id, includeQueen: true);
-      
-      // Filter to only show hives without a queen or with the queen being edited
-      final availableHives = apiaryHives.where((hive) => 
-        hive.queen == null || hive.queen?.id == state.id
-      ).toList();
-
-      emit(state.copyWith(
-        selectedApiary: () => event.apiary,
-        availableHives: () => availableHives,
-        selectedHive: () => null,
-      ));
-    }
+  Future<void> _onAddSpending(EditQueenAddSpending event, Emitter<EditQueenState> emit) async {
+    // final storageService = getIt<StorageService>();
+    // await storageService.createItem(
+    //   apiaryId: event.apiary?.id,
+    //   apiaryName: event.apiary?.name,
+    //   group: 'queen',
+    //   item: event.itemName,
+    //   amount: event.amount,
+    //   type: 'spending',
+    //   date: event.date,
+    // );
+    // Optionally emit a state to show success/failure
   }
 
-  FutureOr<void> _onCreateBreed(EditQueenCreateBreed event, Emitter<EditQueenState> emit) async {
-    try {
-      final newBreed = QueenBreed(
-        id: '', 
-        name: event.name,
-        scientificName: event.scientificName,
-        origin: event.origin,
-        country: event.country,
-        isStarred: event.isStarred,
-        priority: event.isStarred ? 1 : 0, 
-      );
-      
-      final savedBreed = await _queenService.insertBreed(breed: newBreed);
-      
-      final updatedBreeds = [...state.availableBreeds, savedBreed];
-      
-      updatedBreeds.sort((a, b) {
-        if (a.isStarred && !b.isStarred) return -1;
-        if (!a.isStarred && b.isStarred) return 1;
-        if (a.isStarred == b.isStarred) {
-          return b.priority.compareTo(a.priority); 
-        }
-        return a.name.compareTo(b.name);
-      });
-      
-      emit(state.copyWith(
-        availableBreeds: () => updatedBreeds,
-        queenBreed: () => savedBreed, 
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        errorMessage: () => 'Failed to create breed: ${e.toString()}',
-      ));
-    }
-  }
-
-  FutureOr<void> _onHiveChanged(EditQueenHiveChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(
-      selectedHive: () => event.hive,
-    ));
-  }
-
-  FutureOr<void> _onToggleBreedStar(EditQueenToggleBreedStar event, Emitter<EditQueenState> emit) async {
-    try {
-      final updatedBreed = event.breed.copyWith(
-        isStarred: () => !event.breed.isStarred
-      );
-      
-      final savedBreed = await _queenService.updateBreed(breed: updatedBreed);
-      
-      final updatedBreeds = state.availableBreeds.map((breed) => 
-        breed.id == savedBreed.id ? savedBreed : breed
-      ).toList();
-      
-      // Sort by isStarred first, then by priority
-      updatedBreeds.sort((a, b) {
-        if (a.isStarred && !b.isStarred) return -1;
-        if (!a.isStarred && b.isStarred) return 1;
-        if (a.isStarred == b.isStarred) {
-          return b.priority.compareTo(a.priority);
-        }
-        return a.name.compareTo(b.name);
-      });
-      
-      emit(state.copyWith(
-        availableBreeds: () => updatedBreeds,
-        queenBreed: state.queenBreed?.id == savedBreed.id ? () => savedBreed : null,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        errorMessage: () => 'Failed to update breed star status: ${e.toString()}',
-      ));
-    }
-  }
-  
-  // Keep the other field event handlers as they are
   void _onNameChanged(EditQueenNameChanged event, Emitter<EditQueenState> emit) {
     emit(state.copyWith(name: () => event.name));
   }
@@ -355,22 +216,16 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
   }
 
   void _onBirthDateChanged(EditQueenBirthDateChanged event, Emitter<EditQueenState> emit) {
-    if(state.marked) {
-      emit(state.copyWith(
-        birthDate: () => event.birthDate,
-        markColor: () => EditQueenState.getColorForYear(event.birthDate.year)));
-    }
-    else {
-      emit(state.copyWith(birthDate: () => event.birthDate));
-    }
+    final markColor = _getQueenMarkColorByYear(event.birthDate.year);
+    emit(state.copyWith(
+      birthDate: () => event.birthDate,
+      marked: () => true,
+      markColor: () => markColor,
+    ));
   }
 
   void _onSourceChanged(EditQueenSourceChanged event, Emitter<EditQueenState> emit) {
     emit(state.copyWith(source: () => event.source));
-  }
-
-  void _onHiveNameChanged(EditQueenHiveNameChanged event, Emitter<EditQueenState> emit) {
-    emit(state.copyWith(hiveName: () => event.hiveName));
   }
 
   void _onMarkedChanged(EditQueenMarkedChanged event, Emitter<EditQueenState> emit) {
@@ -387,5 +242,50 @@ class EditQueenBloc extends Bloc<EditQueenEvent, EditQueenState> {
 
   void _onOriginChanged(EditQueenOriginChanged event, Emitter<EditQueenState> emit) {
     emit(state.copyWith(origin: () => event.origin));
+  }
+
+  void _onApiaryChanged(EditQueenApiaryChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(
+      selectedApiary: () => event.apiary,
+      selectedHive: () => null,
+    ));
+  }
+
+  void _onHiveChanged(EditQueenHiveChanged event, Emitter<EditQueenState> emit) {
+    emit(state.copyWith(selectedHive: () => event.hive));
+  }
+
+  Future<void> _onGenerateName(EditQueenGenerateName event, Emitter<EditQueenState> emit) async {
+    try {
+      final nameService = getIt<NameGeneratorService>();
+      final generatedName = await nameService.generateQueenName();
+      emit(state.copyWith(name: () => generatedName));
+    } catch (e) {
+      final fallbackName = "Queen ${DateTime.now().millisecondsSinceEpoch % 1000}";
+      emit(state.copyWith(name: () => fallbackName));
+    }
+  }
+
+  static Color _getQueenMarkColorByYear(int year) {
+    final lastDigit = year % 10;
+    switch (lastDigit) {
+      case 1:
+      case 6:
+        return Colors.white;
+      case 2:
+      case 7:
+        return Colors.yellow;
+      case 3:
+      case 8:
+        return Colors.red;
+      case 4:
+      case 9:
+        return Colors.green;
+      case 0:
+      case 5:
+        return Colors.blue;
+      default:
+        return Colors.white;
+    }
   }
 }

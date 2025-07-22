@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/edit_hive/bloc/edit_hive_bloc.dart';
 import 'package:apiarium/features/managment/edit_hive/widgets/edit_hive_card.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:math' as math;
 
 class HiveFrames extends StatefulWidget {
@@ -98,502 +99,468 @@ class _HiveFramesState extends State<HiveFrames> {
   Widget build(BuildContext context) {
     return BlocBuilder<EditHiveBloc, EditHiveState>(
       buildWhen: (previous, current) => 
-        previous.hiveType != current.hiveType ||
-        previous.currentFrameCount != current.currentFrameCount ||
-        previous.currentBroodFrameCount != current.currentBroodFrameCount ||
-        previous.currentBroodBoxCount != current.currentBroodBoxCount ||
-        previous.currentHoneySuperBoxCount != current.currentHoneySuperBoxCount,
+        previous.honeyFrameCount != current.honeyFrameCount ||
+        previous.broodFrameCount != current.broodFrameCount ||
+        previous.boxCount != current.boxCount ||
+        previous.superBoxCount != current.superBoxCount ||
+        previous.framesPerBox != current.framesPerBox ||
+        previous.hasFrames != current.hasFrames ||
+        previous.frameStandard != current.frameStandard,
       builder: (context, state) {
-        // Only show this section if the selected hive type has frames
-        if (state.hiveType == null || !state.hiveType!.hasFrames) {
+        if (!(state.hasFrames ?? false)) {
           return const SizedBox.shrink();
         }
-        
-        // Update controllers when state changes
-        _frameCountController.text = state.currentFrameCount?.toString() ?? '0';
-        _broodFrameCountController.text = state.currentBroodFrameCount?.toString() ?? '0';
-        _broodBoxCountController.text = state.currentBroodBoxCount?.toString() ?? '0';
-        _honeySuperBoxCountController.text = state.currentHoneySuperBoxCount?.toString() ?? '0';
-        
+
+        _frameCountController.text = state.honeyFrameCount?.toString() ?? '0';
+        _broodFrameCountController.text = state.broodFrameCount?.toString() ?? '0';
+        _broodBoxCountController.text = state.boxCount?.toString() ?? '0';
+        _honeySuperBoxCountController.text = state.superBoxCount?.toString() ?? '0';
+
         return EditHiveCard(
-          title: 'Frames and Boxes',
+          title: 'frames_and_boxes'.tr(),
           icon: Icons.grid_view,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFramesAndBoxesGrid(context, state),
-              if (state.hiveType?.frameStandard != null) ...[
-                const SizedBox(height: 16),
-                _buildFrameInfo(context, state),
-              ],
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmall = constraints.maxWidth < 500;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFramesAndBoxesGrid(context, state, isSmall),
+                  if (state.frameStandard != null) ...[
+                    const SizedBox(height: 16),
+                    _buildFrameInfo(context, state),
+                  ],
+                ],
+              );
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildFramesAndBoxesGrid(BuildContext context, EditHiveState state) {
-    // Calculate expected total frames based on defaults and box counts
-    final broodBoxCount = state.currentBroodBoxCount ?? 0;
-    final honeySuperCount = state.currentHoneySuperBoxCount ?? 0;
-    final defaultFramesPerBox = state.hiveType?.defaultFrameCount ?? 0;
-    
-    // Calculate max frame limits
-    final maxNormalFrames = honeySuperCount > 0 ? defaultFramesPerBox * honeySuperCount : 100;
-    final maxBroodFrames = broodBoxCount > 0 ? defaultFramesPerBox * broodBoxCount : 100;
-    
+  Widget _buildFramesAndBoxesGrid(BuildContext context, EditHiveState state, bool isSmall) {
+    final broodBoxCount = state.boxCount ?? 0;
+    final honeySuperCount = state.superBoxCount ?? 0;
+    final framesPerBox = state.framesPerBox ?? 0;
+
+    final maxNormalFrames = honeySuperCount > 0 && framesPerBox > 0 ? framesPerBox * honeySuperCount : 100;
+    final maxBroodFrames = broodBoxCount > 0 && framesPerBox > 0 ? framesPerBox * broodBoxCount : 100;
+
+    final rowChildren = [
+      // Normal Frames
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'normal_frames'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _frameCountController,
+              decoration: InputDecoration(
+                labelText: 'frame_count'.tr(),
+                border: const OutlineInputBorder(),
+                helperText: framesPerBox > 0 && honeySuperCount > 0
+                    ? '${state.honeyFrameCount ?? 0}/${framesPerBox * honeySuperCount}'
+                    : 'total_frames'.tr(),
+                suffixIcon: _buildCounterButtons(
+                  onDecrease: () {
+                    final currentValue = state.honeyFrameCount ?? 0;
+                    if (currentValue > 0) {
+                      context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(currentValue - 1));
+                    }
+                  },
+                  onIncrease: () {
+                    final currentValue = state.honeyFrameCount ?? 0;
+                    if (currentValue < maxNormalFrames) {
+                      context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(currentValue + 1));
+                    }
+                  },
+                  onLongPressIncrease: () {
+                    final currentValue = state.honeyFrameCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'frameCount',
+                      increment: true,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: maxNormalFrames,
+                      onUpdate: (value) {
+                        context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(value));
+                      },
+                    );
+                  },
+                  onLongPressDecrease: () {
+                    final currentValue = state.honeyFrameCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'frameCount',
+                      increment: false,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: maxNormalFrames,
+                      onUpdate: (value) {
+                        context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(value));
+                      },
+                    );
+                  },
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) {
+                final intValue = int.tryParse(value) ?? 0;
+                if (intValue <= maxNormalFrames) {
+                  context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(intValue));
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(width: 16),
+      // Brood Frames
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'brood_frames'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _broodFrameCountController,
+              decoration: InputDecoration(
+                labelText: 'brood_count'.tr(),
+                border: const OutlineInputBorder(),
+                helperText: framesPerBox > 0 && broodBoxCount > 0
+                    ? '${state.broodFrameCount ?? 0}/${framesPerBox * broodBoxCount}'
+                    : 'frames_with_brood'.tr(),
+                suffixIcon: _buildCounterButtons(
+                  onDecrease: () {
+                    final currentValue = state.broodFrameCount ?? 0;
+                    if (currentValue > 0) {
+                      context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(currentValue - 1));
+                    }
+                  },
+                  onIncrease: () {
+                    final currentValue = state.broodFrameCount ?? 0;
+                    if (currentValue < maxBroodFrames) {
+                      context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(currentValue + 1));
+                    }
+                  },
+                  onLongPressIncrease: () {
+                    final currentValue = state.broodFrameCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'broodFrameCount',
+                      increment: true,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: maxBroodFrames,
+                      onUpdate: (value) {
+                        context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(value));
+                      },
+                    );
+                  },
+                  onLongPressDecrease: () {
+                    final currentValue = state.broodFrameCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'broodFrameCount',
+                      increment: false,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: maxBroodFrames,
+                      onUpdate: (value) {
+                        context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(value));
+                      },
+                    );
+                  },
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) {
+                final intValue = int.tryParse(value) ?? 0;
+                if (intValue <= maxBroodFrames) {
+                  context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(intValue));
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    ];
+
+    final row2Children = [
+      // Honey Supers
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'honey_supers'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _honeySuperBoxCountController,
+              decoration: InputDecoration(
+                labelText: 'super_count'.tr(),
+                border: const OutlineInputBorder(),
+                helperText: honeySuperCount > 0 && framesPerBox > 0
+                    ? '${honeySuperCount * framesPerBox} frames capacity'
+                    : 'frames_with_honey'.tr(),
+                suffixIcon: _buildCounterButtons(
+                  onDecrease: () {
+                    final currentBoxValue = state.superBoxCount ?? 0;
+                    if (currentBoxValue > 0) {
+                      _adjustFrameCountForHoneyBoxChange(
+                        context: context,
+                        state: state,
+                        newBoxCount: currentBoxValue - 1,
+                      );
+                      context.read<EditHiveBloc>().add(
+                        EditHiveHoneySuperBoxCountChanged(currentBoxValue - 1)
+                      );
+                    }
+                  },
+                  onIncrease: () {
+                    final currentBoxValue = state.superBoxCount ?? 0;
+                    _adjustFrameCountForHoneyBoxChange(
+                      context: context,
+                      state: state,
+                      newBoxCount: currentBoxValue + 1,
+                    );
+                    context.read<EditHiveBloc>().add(
+                      EditHiveHoneySuperBoxCountChanged(currentBoxValue + 1)
+                    );
+                  },
+                  onLongPressIncrease: () {
+                    final currentValue = state.superBoxCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'honeySuperBoxCount',
+                      increment: true,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: 10,
+                      onUpdate: (value) {
+                        _adjustFrameCountForHoneyBoxChange(
+                          context: context,
+                          state: state,
+                          newBoxCount: value,
+                        );
+                        context.read<EditHiveBloc>().add(
+                          EditHiveHoneySuperBoxCountChanged(value)
+                        );
+                      },
+                    );
+                  },
+                  onLongPressDecrease: () {
+                    final currentValue = state.superBoxCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'honeySuperBoxCount',
+                      increment: false,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: 10,
+                      onUpdate: (value) {
+                        _adjustFrameCountForHoneyBoxChange(
+                          context: context,
+                          state: state,
+                          newBoxCount: value,
+                        );
+                        context.read<EditHiveBloc>().add(
+                          EditHiveHoneySuperBoxCountChanged(value)
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) {
+                final intValue = int.tryParse(value) ?? 0;
+                context.read<EditHiveBloc>().add(EditHiveHoneySuperBoxCountChanged(intValue));
+              },
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(width: 16),
+      // Brood Boxes
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'brood_boxes'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _broodBoxCountController,
+              decoration: InputDecoration(
+                labelText: 'box_count'.tr(),
+                border: const OutlineInputBorder(),
+                suffixIcon: _buildCounterButtons(
+                  onDecrease: () {
+                    final currentValue = state.boxCount ?? 0;
+                    if (currentValue > 0) {
+                      _adjustBroodFrameCountForBroodBoxChange(
+                        context: context,
+                        state: state,
+                        newBoxCount: currentValue - 1,
+                      );
+                      context.read<EditHiveBloc>().add(
+                        EditHiveBroodBoxCountChanged(currentValue - 1)
+                      );
+                    }
+                  },
+                  onIncrease: () {
+                    final currentValue = state.boxCount ?? 0;
+                    _adjustBroodFrameCountForBroodBoxChange(
+                      context: context,
+                      state: state,
+                      newBoxCount: currentValue + 1,
+                    );
+                    context.read<EditHiveBloc>().add(
+                      EditHiveBroodBoxCountChanged(currentValue + 1)
+                    );
+                  },
+                  onLongPressIncrease: () {
+                    final currentValue = state.boxCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'broodBoxCount',
+                      increment: true,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: 10,
+                      onUpdate: (value) {
+                        _adjustBroodFrameCountForBroodBoxChange(
+                          context: context,
+                          state: state,
+                          newBoxCount: value,
+                        );
+                        context.read<EditHiveBloc>().add(
+                          EditHiveBroodBoxCountChanged(value)
+                        );
+                      },
+                    );
+                  },
+                  onLongPressDecrease: () {
+                    final currentValue = state.boxCount ?? 0;
+                    _startContinuousUpdate(
+                      field: 'broodBoxCount',
+                      increment: false,
+                      currentValue: currentValue,
+                      min: 0,
+                      max: 10,
+                      onUpdate: (value) {
+                        _adjustBroodFrameCountForBroodBoxChange(
+                          context: context,
+                          state: state,
+                          newBoxCount: value,
+                        );
+                        context.read<EditHiveBloc>().add(
+                          EditHiveBroodBoxCountChanged(value)
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) {
+                final intValue = int.tryParse(value) ?? 0;
+                context.read<EditHiveBloc>().add(EditHiveBroodBoxCountChanged(intValue));
+              },
+            ),
+          ],
+        ),
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // First row: Normal Frames and Brood Frames
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Frame Count
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        isSmall
+            ? Column(
                 children: [
-                  Text(
-                    'Normal Frames',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _frameCountController,
-                    decoration: InputDecoration(
-                      labelText: 'Frame Count',
-                      border: const OutlineInputBorder(),
-                      helperText: defaultFramesPerBox > 0 && honeySuperCount > 0
-                          ? '${state.currentFrameCount ?? 0}/${defaultFramesPerBox * honeySuperCount}'
-                          : 'Total frames',
-                      suffixIcon: _buildCounterButtons(
-                        onDecrease: () {
-                          final currentValue = state.currentFrameCount ?? 0;
-                          if (currentValue > 0) {
-                            context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(currentValue - 1));
-                          }
-                        },
-                        onIncrease: () {
-                          final currentValue = state.currentFrameCount ?? 0;
-                          if (currentValue < maxNormalFrames) {
-                            context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(currentValue + 1));
-                          }
-                        },
-                        onLongPressIncrease: () {
-                          final currentValue = state.currentFrameCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'frameCount',
-                            increment: true,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: maxNormalFrames,
-                            onUpdate: (value) {
-                              context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(value));
-                            },
-                          );
-                        },
-                        onLongPressDecrease: () {
-                          final currentValue = state.currentFrameCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'frameCount',
-                            increment: false,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: maxNormalFrames,
-                            onUpdate: (value) {
-                              context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(value));
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (value) {
-                      final intValue = int.tryParse(value) ?? 0;
-                      if (intValue <= maxNormalFrames) {
-                        context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(intValue));
-                      }
-                    },
-                  ),
+                  ...rowChildren,
                 ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Brood Frame Count
-            Expanded(
-              child: Column(
+              )
+            : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Brood Frames',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _broodFrameCountController,
-                    decoration: InputDecoration(
-                      labelText: 'Brood Count',
-                      border: const OutlineInputBorder(),
-                      helperText: defaultFramesPerBox > 0 && broodBoxCount > 0
-                          ? '${state.currentBroodFrameCount ?? 0}/${defaultFramesPerBox * broodBoxCount}'
-                          : 'Frames with brood',
-                      suffixIcon: _buildCounterButtons(
-                        onDecrease: () {
-                          final currentValue = state.currentBroodFrameCount ?? 0;
-                          if (currentValue > 0) {
-                            context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(currentValue - 1));
-                          }
-                        },
-                        onIncrease: () {
-                          final currentValue = state.currentBroodFrameCount ?? 0;
-                          if (currentValue < maxBroodFrames) {
-                            context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(currentValue + 1));
-                          }
-                        },
-                        onLongPressIncrease: () {
-                          final currentValue = state.currentBroodFrameCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'broodFrameCount',
-                            increment: true,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: maxBroodFrames,
-                            onUpdate: (value) {
-                              context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(value));
-                            },
-                          );
-                        },
-                        onLongPressDecrease: () {
-                          final currentValue = state.currentBroodFrameCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'broodFrameCount',
-                            increment: false,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: maxBroodFrames,
-                            onUpdate: (value) {
-                              context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(value));
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (value) {
-                      final intValue = int.tryParse(value) ?? 0;
-                      if (intValue <= maxBroodFrames) {
-                        context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(intValue));
-                      }
-                    },
-                  ),
-                ],
+                children: rowChildren,
               ),
-            ),
-          ],
-        ),
         const SizedBox(height: 16),
-        // Second row: Honey Supers and Brood Boxes
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Honey Super Box Count
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        isSmall
+            ? Column(
                 children: [
-                  Text(
-                    'Honey Supers',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _honeySuperBoxCountController,
-                    decoration: InputDecoration(
-                      labelText: 'Super Count',
-                      border: const OutlineInputBorder(),
-                      helperText: honeySuperCount > 0 && defaultFramesPerBox > 0
-                          ? '${honeySuperCount * defaultFramesPerBox} frames capacity'
-                          : 'Frames with honey',
-                      suffixIcon: _buildCounterButtons(
-                        onDecrease: () {
-                          final currentBoxValue = state.currentHoneySuperBoxCount ?? 0;
-                          if (currentBoxValue > 0) {
-                            // Adjust frame count when decreasing honey supers
-                            _adjustFrameCountForHoneyBoxChange(
-                              context: context, 
-                              state: state, 
-                              newBoxCount: currentBoxValue - 1,
-                            );
-                            
-                            context.read<EditHiveBloc>().add(
-                              EditHiveHoneySuperBoxCountChanged(currentBoxValue - 1)
-                            );
-                          }
-                        },
-                        onIncrease: () {
-                          final currentBoxValue = state.currentHoneySuperBoxCount ?? 0;
-                          // Adjust frame count when increasing honey supers
-                          _adjustFrameCountForHoneyBoxChange(
-                            context: context, 
-                            state: state, 
-                            newBoxCount: currentBoxValue + 1,
-                          );
-                          
-                          context.read<EditHiveBloc>().add(
-                            EditHiveHoneySuperBoxCountChanged(currentBoxValue + 1)
-                          );
-                        },
-                        onLongPressIncrease: () {
-                          final currentValue = state.currentHoneySuperBoxCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'honeySuperBoxCount',
-                            increment: true,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: 10, // Reasonable max for honey supers
-                            onUpdate: (value) {
-                              // Adjust frame count when changing honey supers with long press
-                              _adjustFrameCountForHoneyBoxChange(
-                                context: context,
-                                state: state,
-                                newBoxCount: value,
-                              );
-                              
-                              context.read<EditHiveBloc>().add(
-                                EditHiveHoneySuperBoxCountChanged(value)
-                              );
-                            },
-                          );
-                        },
-                        onLongPressDecrease: () {
-                          final currentValue = state.currentHoneySuperBoxCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'honeySuperBoxCount',
-                            increment: false,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: 10,
-                            onUpdate: (value) {
-                              // Adjust frame count when changing honey supers with long press
-                              _adjustFrameCountForHoneyBoxChange(
-                                context: context,
-                                state: state,
-                                newBoxCount: value,
-                              );
-                              
-                              context.read<EditHiveBloc>().add(
-                                EditHiveHoneySuperBoxCountChanged(value)
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (value) {
-                      final intValue = int.tryParse(value) ?? 0;
-                      context.read<EditHiveBloc>().add(EditHiveHoneySuperBoxCountChanged(intValue));
-                    },
-                  ),
+                  ...row2Children,
                 ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Brood Box Count
-            Expanded(
-              child: Column(
+              )
+            : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Brood Boxes',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _broodBoxCountController,
-                    decoration: InputDecoration(
-                      labelText: 'Box Count',
-                      border: const OutlineInputBorder(),
-                      helperText: defaultFramesPerBox > 0
-                          ? '${broodBoxCount * defaultFramesPerBox} frames capacity'
-                          : state.hiveType?.broodBoxCount != null 
-                             ? 'Typical: ${state.hiveType!.broodBoxCount}' 
-                             : 'Number of boxes',
-                      suffixIcon: _buildCounterButtons(
-                        onDecrease: () {
-                          final currentValue = state.currentBroodBoxCount ?? 0;
-                          if (currentValue > 0) {
-                            // Adjust brood frame count when decreasing brood boxes
-                            _adjustBroodFrameCountForBroodBoxChange(
-                              context: context, 
-                              state: state, 
-                              newBoxCount: currentValue - 1,
-                            );
-                            
-                            context.read<EditHiveBloc>().add(
-                              EditHiveBroodBoxCountChanged(currentValue - 1)
-                            );
-                          }
-                        },
-                        onIncrease: () {
-                          final currentValue = state.currentBroodBoxCount ?? 0;
-                          // Adjust brood frame count when increasing brood boxes
-                          _adjustBroodFrameCountForBroodBoxChange(
-                            context: context, 
-                            state: state, 
-                            newBoxCount: currentValue + 1,
-                          );
-                          
-                          context.read<EditHiveBloc>().add(
-                            EditHiveBroodBoxCountChanged(currentValue + 1)
-                          );
-                        },
-                        onLongPressIncrease: () {
-                          final currentValue = state.currentBroodBoxCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'broodBoxCount',
-                            increment: true,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: 10, // Reasonable max for brood boxes
-                            onUpdate: (value) {
-                              // Adjust brood frame count when changing brood boxes with long press
-                              _adjustBroodFrameCountForBroodBoxChange(
-                                context: context,
-                                state: state,
-                                newBoxCount: value,
-                              );
-                              
-                              context.read<EditHiveBloc>().add(
-                                EditHiveBroodBoxCountChanged(value)
-                              );
-                            },
-                          );
-                        },
-                        onLongPressDecrease: () {
-                          final currentValue = state.currentBroodBoxCount ?? 0;
-                          _startContinuousUpdate(
-                            field: 'broodBoxCount',
-                            increment: false,
-                            currentValue: currentValue,
-                            min: 0,
-                            max: 10,
-                            onUpdate: (value) {
-                              // Adjust brood frame count when changing brood boxes with long press
-                              _adjustBroodFrameCountForBroodBoxChange(
-                                context: context,
-                                state: state,
-                                newBoxCount: value,
-                              );
-                              
-                              context.read<EditHiveBloc>().add(
-                                EditHiveBroodBoxCountChanged(value)
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (value) {
-                      final intValue = int.tryParse(value) ?? 0;
-                      context.read<EditHiveBloc>().add(EditHiveBroodBoxCountChanged(intValue));
-                    },
-                  ),
-                ],
+                children: row2Children,
               ),
-            ),
-          ],
-        ),
       ],
     );
   }
 
-  // Helper method to adjust normal frame count when honey box count changes
   void _adjustFrameCountForHoneyBoxChange({
     required BuildContext context,
     required EditHiveState state,
     required int newBoxCount,
   }) {
-    final defaultFramesPerBox = state.hiveType?.defaultFrameCount ?? 0;
-    if (defaultFramesPerBox == 0) return;
-    
-    final oldBoxCount = state.currentHoneySuperBoxCount ?? 0;
-    final oldFrameCount = state.currentFrameCount ?? 0;
-    
-    // Calculate the new maximum capacity
-    final newMaxFrames = newBoxCount * defaultFramesPerBox;
-    
-    // Calculate the new frame count based on box count change
+    final framesPerBox = state.framesPerBox ?? 0;
+    if (framesPerBox == 0) return;
+    final oldBoxCount = state.superBoxCount ?? 0;
+    final oldFrameCount = state.honeyFrameCount ?? 0;
+    final newMaxFrames = newBoxCount * framesPerBox;
     int newFrameCount;
-    
     if (newBoxCount > oldBoxCount) {
-      // Increasing box count: Add frames for the new box, but don't exceed the new maximum
-      newFrameCount = math.min(oldFrameCount + defaultFramesPerBox, newMaxFrames);
+      newFrameCount = math.min(oldFrameCount + framesPerBox, newMaxFrames);
     } else if (newBoxCount < oldBoxCount) {
-      // Decreasing box count: Clamp to the new maximum
       newFrameCount = math.min(oldFrameCount, newMaxFrames);
-      
-      // If there are more frames than the new maximum, reduce to the new maximum
       if (oldFrameCount > newMaxFrames) {
         newFrameCount = newMaxFrames;
       } else if (newBoxCount == 0) {
-        // If we're removing all boxes, set frames to 0
         newFrameCount = 0;
       }
     } else {
-      // No change in box count
       return;
     }
-    
-    // Update the frame count in the bloc
     context.read<EditHiveBloc>().add(EditHiveFrameCountChanged(newFrameCount));
   }
   
-  // Helper method to adjust brood frame count when brood box count changes
   void _adjustBroodFrameCountForBroodBoxChange({
     required BuildContext context,
     required EditHiveState state,
     required int newBoxCount,
   }) {
-    final defaultFramesPerBox = state.hiveType?.defaultFrameCount ?? 0;
-    if (defaultFramesPerBox == 0) return;
-    
-    final oldBoxCount = state.currentBroodBoxCount ?? 0;
-    final oldBroodFrameCount = state.currentBroodFrameCount ?? 0;
-    
-    // Calculate the new maximum capacity
-    final newMaxFrames = newBoxCount * defaultFramesPerBox;
-    
-    // Calculate the new brood frame count based on box count change
+    final framesPerBox = state.framesPerBox ?? 0;
+    if (framesPerBox == 0) return;
+    final oldBoxCount = state.boxCount ?? 0;
+    final oldBroodFrameCount = state.broodFrameCount ?? 0;
+    final newMaxFrames = newBoxCount * framesPerBox;
     int newBroodFrameCount;
-    
     if (newBoxCount > oldBoxCount) {
-      // Increasing box count: Add frames for the new box, but don't exceed the new maximum
-      newBroodFrameCount = math.min(oldBroodFrameCount + defaultFramesPerBox, newMaxFrames);
+      newBroodFrameCount = math.min(oldBroodFrameCount + framesPerBox, newMaxFrames);
     } else if (newBoxCount < oldBoxCount) {
-      // Decreasing box count: Clamp to the new maximum
       newBroodFrameCount = math.min(oldBroodFrameCount, newMaxFrames);
-      
-      // If there are more frames than the new maximum, reduce to the new maximum
       if (oldBroodFrameCount > newMaxFrames) {
         newBroodFrameCount = newMaxFrames;
       } else if (newBoxCount == 0) {
-        // If we're removing all boxes, set frames to 0
         newBroodFrameCount = 0;
       }
     } else {
-      // No change in box count
       return;
     }
-    
-    // Update the brood frame count in the bloc
     context.read<EditHiveBloc>().add(EditHiveBroodFrameCountChanged(newBroodFrameCount));
   }
 
@@ -610,13 +577,13 @@ class _HiveFramesState extends State<HiveFrames> {
           onTap: onDecrease,
           onLongPress: onLongPressDecrease,
           onLongPressEnd: (_) => _stopContinuousUpdate(),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Icon(Icons.remove, color: Colors.grey),
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.remove, color: Colors.grey, size: 20),
           ),
         ),
         Container(
-          height: 24,
+          height: 20,
           width: 1,
           color: Colors.grey.shade300,
         ),
@@ -624,9 +591,9 @@ class _HiveFramesState extends State<HiveFrames> {
           onTap: onIncrease,
           onLongPress: onLongPressIncrease,
           onLongPressEnd: (_) => _stopContinuousUpdate(),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Icon(Icons.add, color: Colors.grey),
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.add, color: Colors.grey, size: 20),
           ),
         ),
       ],
@@ -645,28 +612,14 @@ class _HiveFramesState extends State<HiveFrames> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Frame Information',
+            'frame_information'.tr(),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
           const SizedBox(height: 8),
-          if (state.hiveType?.frameStandard != null)
-            _infoRow('Standard:', state.hiveType!.frameStandard!),
-          if (state.hiveType?.frameWidth != null && state.hiveType?.frameHeight != null)
-            _infoRow(
-              'Dimensions:',
-              '${state.hiveType!.frameWidth} × ${state.hiveType!.frameHeight} cm',
-            ),
-          if (state.hiveType?.broodFrameWidth != null && state.hiveType?.broodFrameHeight != null)
-            _infoRow(
-              'Brood frame:',
-              '${state.hiveType!.broodFrameWidth} × ${state.hiveType!.broodFrameHeight} cm',
-            ),
-          if (state.hiveType?.broodBoxCount != null)
-            _infoRow('Typical brood boxes:', state.hiveType!.broodBoxCount.toString()),
-          if (state.hiveType?.honeySuperBoxCount != null)
-            _infoRow('Typical honey supers:', state.hiveType!.honeySuperBoxCount.toString()),
+          if (state.frameStandard != null)
+            _infoRow('standard'.tr(), state.frameStandard!),
         ],
       ),
     );
@@ -693,3 +646,4 @@ class _HiveFramesState extends State<HiveFrames> {
     );
   }
 }
+// No changes needed here if you use state.hasFrames, state.framesPerBox, state.frameStandard

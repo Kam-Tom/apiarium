@@ -5,6 +5,6 @@ export 'queen.dart';
 export 'queen_breed.dart';
 export 'history_log.dart';
 export 'base_model.dart';
-
-export 'field.dart';
-export 'report.dart';
+export 'storage_item.dart';
+export 'storage_transaction.dart';
+export 'inspection.dart';

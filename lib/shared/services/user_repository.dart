@@ -5,11 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../models/user.dart';
 import '../utils/logger.dart';
 
-class UserRepository {
+class UserRepository {  
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _tag = 'UserService';
   static const String _userCacheKey = 'cached_user';
+  static const String _lastSyncKey = 'last_sync_time';
 
   User? _currentUser;
 
@@ -132,10 +133,10 @@ class UserRepository {
   Future<void> _cacheUser(User user) async {
     await _storage.write(key: _userCacheKey, value: user.toJsonString());
   }
-
   Future<void> clearUserData() async {
     try {
       await _storage.delete(key: _userCacheKey);
+      await _storage.delete(key: _lastSyncKey);
       _currentUser = null;
       Logger.i('User data cleared', tag: _tag);
     } catch (e) {
@@ -143,6 +144,31 @@ class UserRepository {
     }
   }
 
+  // Sync time management
+  Future<DateTime> getLastSyncTime() async {
+    try {
+      final syncTimeString = await _storage.read(key: _lastSyncKey);
+      if (syncTimeString != null) {
+        return DateTime.parse(syncTimeString);
+      }
+      // If no sync time, return very old date to get all data
+      return DateTime(1900);
+    } catch (e) {
+      Logger.e('Failed to get last sync time', tag: _tag, error: e);
+      return DateTime(1900);
+    }
+  }
+
+  Future<void> setLastSyncTime() async {
+    try {
+      final now = DateTime.now();
+      await _storage.write(key: _lastSyncKey, value: now.toIso8601String());
+      Logger.i('Updated last sync time: $now', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to update last sync time', tag: _tag, error: e);
+    }
+  }
+
   bool get hasUser => _currentUser != null;
-  bool get isPremium => false; // TODO: Implement RevenueCat check
+  bool get isPremium => true; // TODO: Implement RevenueCat check
 }

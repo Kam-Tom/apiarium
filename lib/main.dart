@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive_ce_flutter/adapters.dart';
 import 'core/core.dart';
 import 'core/di/dependency_injection.dart';
 import 'features/settings/bloc/preferences_bloc.dart';
@@ -13,11 +14,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   
+  // Initialize Hive
+  await Hive.initFlutter();
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
-  );
+  );  await DependencyInjection.init();
   
-  await DependencyInjection.init();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   runApp(

@@ -9,6 +9,7 @@ abstract class BaseModel extends Equatable {
   final SyncStatus syncStatus;
   final DateTime? lastSyncedAt;
   final bool deleted;
+  final int serverVersion;
 
   const BaseModel({
     required this.id,
@@ -17,6 +18,7 @@ abstract class BaseModel extends Equatable {
     this.syncStatus = SyncStatus.pending,
     this.lastSyncedAt,
     this.deleted = false,
+    this.serverVersion = 0,
   });
 
   Map<String, dynamic> get baseSyncFields => {
@@ -26,9 +28,10 @@ abstract class BaseModel extends Equatable {
     'syncStatus': syncStatus.name,
     'lastSyncedAt': lastSyncedAt?.toIso8601String(),
     'deleted': deleted,
+    'serverVersion': serverVersion,
   };
 
   List<Object?> get baseSyncProps => [
-    id, createdAt, updatedAt, syncStatus, lastSyncedAt, deleted
+    id, createdAt, updatedAt, syncStatus, lastSyncedAt, deleted, serverVersion
   ];
 }

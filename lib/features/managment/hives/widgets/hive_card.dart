@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:apiarium/shared/shared.dart';
+import 'package:apiarium/core/theme/app_theme.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HiveCard extends StatelessWidget {
   final Hive hive;
@@ -7,7 +9,7 @@ class HiveCard extends StatelessWidget {
   final VoidCallback onEditTap;
   final VoidCallback onDeleteTap;
   final DateTime? lastInspectionDate;
-  
+
   const HiveCard({
     super.key,
     required this.hive,
@@ -19,242 +21,164 @@ class HiveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag indicator at top of card
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+    final Color accentColor = hive.color ?? AppTheme.primaryColor;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 ),
               ),
-            ),
-            
-            // Hive header section (name, status)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hive image or color
-                  _buildHiveImage(),
-                  const SizedBox(width: 12),
-                  
-                  // Hive info
-                  Expanded(
-                    child: Column(
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Name and status
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
+                        _buildHiveImageOrIcon(),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
                                 hive.name,
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            _buildHiveStatusChip(),
-                          ],
-                        ),
-                        
-                        // Hive type in styled container
-                        Container(
-                          margin: const EdgeInsets.only(top: 4, bottom: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Text(
+                                    hive.hiveType,
+                                    style: TextStyle(
+                                      fontStyle: FontStyle.italic,
+                                      color: accentColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _buildStatusBadge(context, hive.status),
+                                ],
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            _formatHiveType(hive.hiveType),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _InfoItem(
+                          label: 'hives.apiary'.tr(),
+                          value: hive.apiaryName ?? 'hives.no_apiary'.tr(),
+                          icon: Icons.location_on_outlined,
+                        ),
+                        const SizedBox(width: 8),
+                        _InfoItem(
+                          label: 'hives.queen'.tr(),
+                          value: hive.queenName ?? 'hives.no_queen'.tr(),
+                          icon: Icons.pets,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _FrameProgressBars(
+                      honeyCurrent: hive.honeyFrameCount ?? 0,
+                      honeyMax: hive.maxHoneyFrameCount ?? 0,
+                      broodCurrent: hive.broodFrameCount ?? 0,
+                      broodMax: hive.maxBroodFrameCount ?? 0,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _BoxCountItem(
+                          icon: Icons.view_module,
+                          label: 'hives.boxes'.tr(),
+                          count: hive.boxCount ?? 0,
+                        ),
+                        const SizedBox(width: 12),
+                        _BoxCountItem(
+                          icon: Icons.layers,
+                          label: 'hives.supers'.tr(),
+                          count: hive.superBoxCount ?? 0,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (lastInspectionDate != null)
+                      Row(
+                        children: [
+                          Icon(Icons.search, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${'hives.last_inspection'.tr()}: ${_formatDate(lastInspectionDate!)}',
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontStyle: FontStyle.italic,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Divider
-            Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-            
-            // Location section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 16,
-                    color: hive.apiary != null ? Colors.teal : Colors.grey,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      hive.apiary?.name ?? 'No Apiary',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: hive.apiary != null ? Colors.teal : Colors.grey,
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (hive.queen != null)
-                    _buildQueenStatusChip(),
-                ],
-              ),
-            ),
-            
-            // Divider
-            Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-            
-            // Frame counts section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Frames
-                  Expanded(
-                    child: Row(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade700.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Icon(
-                            Icons.grid_view,
-                            size: 14,
-                            color: Colors.amber.shade700,
+                        TextButton.icon(
+                          onPressed: onEditTap,
+                          icon: const Icon(Icons.edit, size: 18),
+                          label: Text('common.edit'.tr()),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFrameCounter(
-                            title: 'Frames',
-                            current: hive.currentFrameCount,
-                            total: _calculateMaxFrames(),
-                            color: Colors.amber.shade700,
+                        TextButton.icon(
+                          onPressed: onDeleteTap,
+                          icon: const Icon(Icons.delete, size: 18),
+                          label: Text('common.delete'.tr()),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  
-                  const SizedBox(width: 12),
-                  
-                  // Brood frames
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.brown.shade600.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Icon(
-                            Icons.hexagon,
-                            size: 14,
-                            color: Colors.brown.shade600,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFrameCounter(
-                            title: 'Brood Frames',
-                            current: hive.currentBroodFrameCount,
-                            total: _calculateMaxBroodFrames(),
-                            color: Colors.brown.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: onEditTap,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12),
-                      minimumSize: const Size(60, 32),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: onDeleteTap,
-                    icon: const Icon(Icons.delete, size: 16),
-                    label: const Text('Delete'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12),
-                      minimumSize: const Size(60, 32),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHiveImage() {
-    // If image exists, use it, otherwise use color
+  Widget _buildHiveImageOrIcon() {
     if (hive.imageUrl != null) {
       return Container(
-        width: 55,
-        height: 55,
+        width: 54,
+        height: 54,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           image: DecorationImage(
             image: NetworkImage(hive.imageUrl!),
             fit: BoxFit.cover,
@@ -263,219 +187,260 @@ class HiveCard extends StatelessWidget {
       );
     } else {
       return Container(
-        width: 55,
-        height: 55,
+        width: 54,
+        height: 54,
         decoration: BoxDecoration(
-          color: hive.color ?? Colors.amber.shade300,
-          borderRadius: BorderRadius.circular(8),
+          color: (hive.color ?? Colors.amber.shade300).withOpacity(0.7),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: const Center(
-          child: Icon(Icons.home, size: 30, color: Colors.white),
+          child: Icon(Icons.home, size: 32, color: Colors.white),
         ),
       );
     }
   }
-  
-  Widget _buildFrameCounter({
-    required String title,
-    required int? current,
-    required int? total,
-    required Color color,
-  }) {
-    final currentValue = current ?? 0;
-    final totalValue = total ?? 0;
-    final percentage = totalValue > 0 ? (currentValue / totalValue).clamp(0.0, 1.0) : 0.0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey.shade700,
+
+  Widget _buildStatusBadge(BuildContext context, HiveStatus status) {
+    Color badgeColor;
+    String statusText;
+    IconData iconData;
+
+    switch (status) {
+      case HiveStatus.active:
+        badgeColor = Colors.green;
+        statusText = 'hive_status.active'.tr();
+        iconData = Icons.check_circle;
+        break;
+      case HiveStatus.inactive:
+        badgeColor = Colors.grey;
+        statusText = 'hive_status.inactive'.tr();
+        iconData = Icons.pause_circle;
+        break;
+      case HiveStatus.archived:
+        badgeColor = Colors.red;
+        statusText = 'hive_status.archived'.tr();
+        iconData = Icons.archive;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: badgeColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(iconData, size: 12, color: badgeColor),
+          const SizedBox(width: 3),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: badgeColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _InfoItem({
+    Key? key,
+    required this.label,
+    required this.value,
+    required this.icon,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 0.5,
           ),
         ),
-        const SizedBox(height: 2),
-        Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: LinearProgressIndicator(
-                value: percentage,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-                minHeight: 5,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
             Text(
-              '$currentValue${totalValue > 0 ? '/$totalValue' : ''}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color,
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 10,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FrameProgressBars extends StatelessWidget {
+  final int honeyCurrent;
+  final int honeyMax;
+  final int broodCurrent;
+  final int broodMax;
+
+  const _FrameProgressBars({
+    Key? key,
+    required this.honeyCurrent,
+    required this.honeyMax,
+    required this.broodCurrent,
+    required this.broodMax,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _ProgressBarWithLabel(
+          label: 'hives.honey_frames'.tr(),
+          current: honeyCurrent,
+          max: honeyMax,
+          color: Colors.amber.shade700,
+        ),
+        const SizedBox(height: 6),
+        _ProgressBarWithLabel(
+          label: 'hives.brood_frames'.tr(),
+          current: broodCurrent,
+          max: broodMax,
+          color: Colors.brown.shade400,
         ),
       ],
     );
   }
-  
-  Widget _buildQueenStatusChip() {
-    if (hive.queen == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+}
+
+class _ProgressBarWithLabel extends StatelessWidget {
+  final String label;
+  final int current;
+  final int max;
+  final Color color;
+
+  const _ProgressBarWithLabel({
+    Key? key,
+    required this.label,
+    required this.current,
+    required this.max,
+    required this.color,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final double percent = (max > 0) ? (current / max).clamp(0.0, 1.0) : 0.0;
+    return Row(
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+          ),
         ),
-        child: const Text(
-          'No Queen',
+        Expanded(
+          child: LinearProgressIndicator(
+            value: percent,
+            minHeight: 8,
+            backgroundColor: color.withOpacity(0.15),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '$current/${max > 0 ? max : "-"}',
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
-        ),
-      );
-    }
-    
-    // Queen exists, display simplified information
-    final queen = hive.queen!;
-    String displayText = '';
-    Color color = Colors.grey;
-    
-    // Determine status color
-    color = switch(queen.status) {
-      QueenStatus.active => Colors.green,
-      QueenStatus.dead => Colors.red,
-      QueenStatus.replaced => Colors.blue,
-      QueenStatus.lost => Colors.orange,
-      _ => Colors.grey
-    };
-    
-    // Display breed if available, otherwise status
-    if (queen.breed != null) {
-      displayText = queen.breed.name;
-      if (displayText.length > 15) {
-        displayText = displayText.substring(0, 12) + '...';
-      }
-    } else {
-      // Fallback to status if no breed
-      displayText = switch(queen.status) {
-        QueenStatus.active => 'Active Queen',
-        QueenStatus.dead => 'Dead Queen',
-        QueenStatus.replaced => 'Replaced Queen',
-        QueenStatus.lost => 'Lost Queen',
-        _ => 'Queen'
-      };
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Show bee icon with marking color if queen is marked
-          if (queen.marked)
-            Icon(
-              Icons.bug_report, // Using bug_report as a bee substitute
-              size: 14, 
-              color: queen.markColor ?? Colors.amber,
-            ),
-          const SizedBox(width: 4),
-          Text(
-            displayText,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildHiveStatusChip() {
-    Color color = switch(hive.status) {
-      HiveStatus.active => Colors.green,
-      HiveStatus.inactive => Colors.grey,
-      HiveStatus.archived => Colors.red,
-      _ => Colors.purple
-    };
-    
-    String statusText = hive.status.toString().split('.').last;
-    // Capitalize first letter only
-    statusText = statusText.substring(0, 1).toUpperCase() + 
-                 statusText.substring(1).toLowerCase();
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hive.status == HiveStatus.active ? Icons.check_circle_outline : Icons.info_outline,
-            size: 14,
+            fontWeight: FontWeight.w600,
             color: color,
           ),
-          const SizedBox(width: 4),
-          Text(
-            statusText,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-  
-  String _formatHiveType(HiveType type) {
-    // More descriptive hive type formatting
-    String result = type.name;
-    if (type.frameStandard != null) {
-      result += ' (${type.frameStandard})';
-    }
-    return result;
-  }
-  
-  int? _calculateMaxFrames() {
-    if (hive.hiveType.defaultFrameCount == null) return null;
-    
-    // Only count honey super boxes for normal frames
-    final honeyBoxes = hive.currentHoneySuperBoxCount ?? 0;
-    
-    if (honeyBoxes == 0) return null;
-    
-    return hive.hiveType.defaultFrameCount! * honeyBoxes;
-  }
-  
-  int? _calculateMaxBroodFrames() {
-    if (hive.hiveType.defaultFrameCount == null) return null;
-    
-    // Only count brood boxes for brood frames
-    final broodBoxes = hive.currentBroodBoxCount ?? 0;
-    
-    if (broodBoxes == 0) return null;
-    
-    return hive.hiveType.defaultFrameCount! * broodBoxes;
+}
+
+class _BoxCountItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+
+  const _BoxCountItem({
+    Key? key,
+    required this.icon,
+    required this.label,
+    required this.count,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey.shade700),
+        const SizedBox(width: 4),
+        Text(
+          '$count',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
   }
 }

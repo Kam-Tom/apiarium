@@ -4,6 +4,7 @@ import 'package:apiarium/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/edit_hive/bloc/edit_hive_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HiveLocation extends StatelessWidget {
   const HiveLocation({super.key});
@@ -11,12 +12,15 @@ class HiveLocation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return EditHiveCard(
-      title: 'Location',
+      title: 'edit_hive.location'.tr(),
       icon: Icons.location_on_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Apiary', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'edit_hive.apiary'.tr(),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           _buildApiary(context),
         ],
@@ -31,25 +35,13 @@ class HiveLocation extends StatelessWidget {
       ...context.select((EditHiveBloc bloc) => bloc.state.availableApiaries)
     ];
 
-    return RoundedDropdown<Apiary?>( 
+    return RoundedDropdown<Apiary?>(
       value: apiary,
       items: apiaries,
       onChanged: (value) {
         context.read<EditHiveBloc>().add(EditHiveApiaryChanged(value));
       },
-      itemBuilder: (context, item, isSelected) => item != null 
-          ? Center(
-              child: Text(
-                item.name,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: isSelected ? AppTheme.primaryColor : null,
-                ),
-              ),
-            ) 
-          : const Center(child: Text("None")),
-      buttonItemBuilder: (context, item) => item != null 
-          ? Center(child: Text(item.name)) 
-          : const Center(child: Text("None")),
+      hintText: 'none'
     );
   }
 }

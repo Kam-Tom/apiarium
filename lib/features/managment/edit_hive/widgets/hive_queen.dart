@@ -2,11 +2,12 @@ import 'package:apiarium/core/core.dart';
 import 'package:apiarium/core/theme/app_theme.dart';
 import 'package:apiarium/features/managment/edit_hive/widgets/edit_hive_card.dart';
 import 'package:apiarium/shared/shared.dart';
-import 'package:apiarium/shared/widgets/dropdown/searchable_rounded_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/edit_hive/bloc/edit_hive_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:apiarium/shared/widgets/dropdown/searchable_rounded_dropdown.dart';
 
 class HiveQueen extends StatelessWidget {
   const HiveQueen({Key? key}) : super(key: key);
@@ -14,22 +15,13 @@ class HiveQueen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return EditHiveCard(
-      title: 'Queen',
+      title: 'edit_hive.queen'.tr(),
       icon: Icons.emoji_nature,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Assign Queen',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              _buildQueenManagementButton(context),
-            ],
-          ),
-          const SizedBox(height: 8),
+          _buildQueenHeader(context),
+          const SizedBox(height: 12),
           _buildQueenSelector(context),
           const SizedBox(height: 16),
           _buildQueenInfo(context),
@@ -38,23 +30,34 @@ class HiveQueen extends StatelessWidget {
     );
   }
 
-  Widget _buildQueenManagementButton(BuildContext context) {
+  Widget _buildQueenHeader(BuildContext context) {
     final queen = context.select((EditHiveBloc bloc) => bloc.state.queen);
-    
-    return TextButton.icon(
-      onPressed: () => _createQueen(context, queen),
-      icon: Icon(
-        queen != null ? Icons.edit : Icons.add, 
-        size: 18,
-        color: AppTheme.primaryColor,
-      ),
-      label: Text(
-        queen != null ? 'Edit Queen' : 'Create Queen',
-        style: TextStyle(color: AppTheme.primaryColor),
-      ),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-      ),
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'edit_hive.assign_queen'.tr(),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _createQueen(context, queen),
+            icon: Icon(
+              queen != null ? Icons.edit : Icons.add,
+              size: 18,
+            ),
+            label: Text(queen != null ? 'edit_hive.edit_queen'.tr() : 'edit_hive.create_queen'.tr()),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(color: AppTheme.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -65,65 +68,41 @@ class HiveQueen extends StatelessWidget {
       ...context.select((EditHiveBloc bloc) => bloc.state.availableQueens)
     ];
 
-    return RoundedDropdown<Queen?>(
+    return SearchableRoundedDropdown<Queen?>(
       value: queen,
       items: queens,
       onChanged: (value) {
         context.read<EditHiveBloc>().add(EditHiveQueenChanged(value));
       },
-      itemBuilder: (context, item, isSelected) => item != null
-          ? Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: isSelected ? AppTheme.primaryColor : null,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (item.marked && item.markColor != null)
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: item.markColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
-                      ),
-                    ),
-                ],
+      itemBuilder: (ctx, queenOption, isSelected) {
+        if (queenOption == null) {
+          return Text("edit_hive.no_queen".tr());
+        }
+        return Row(
+          children: [
+            Expanded(
+              child: Text(
+                queenOption.name,
+                overflow: TextOverflow.ellipsis,
               ),
-            )
-          : const Center(child: Text("No Queen")),
-      buttonItemBuilder: (context, item) => item != null
-          ? Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    item.name,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+            ),
+            const SizedBox(width: 8),
+            if (queenOption.marked && queenOption.markColor != null)
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: queenOption.markColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey),
                 ),
-                const SizedBox(width: 8),
-                if (item.marked && item.markColor != null)
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: item.markColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey),
-                    ),
-                  ),
-              ],
-            )
-          : const Center(child: Text("No Queen")),
+              ),
+          ],
+        );
+      },
+      hintText: 'edit_hive.select_queen'.tr(),
+      searchHintText: 'edit_hive.search_queen'.tr(),
+      minHeight: 48.0,
     );
   }
 
@@ -131,10 +110,21 @@ class HiveQueen extends StatelessWidget {
     final queen = context.select((EditHiveBloc bloc) => bloc.state.queen);
 
     if (queen == null) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text("No queen assigned to this hive"),
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Center(
+          child: Text(
+            "edit_hive.no_queen_assigned".tr(),
+            style: const TextStyle(
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
         ),
       );
     }
@@ -142,7 +132,7 @@ class HiveQueen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade300),
       ),
@@ -150,51 +140,52 @@ class HiveQueen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              if (queen.marked && queen.markColor != null) ...[
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: queen.markColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Expanded(
-                child: Row(
-                  children: [
-                    if (queen.marked && queen.markColor != null)
-                      Container(
-                        width: 24,
-                        height: 24,
-                        margin: const EdgeInsets.only(right: 10),
-                        decoration: BoxDecoration(
-                          color: queen.markColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey),
-                        ),
+                child: Text(
+                  'edit_hive.queen_details'.tr(),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                    Text(
-                      'Queen Details',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          _infoRow('Name:', queen.name),
-          _infoRow('Breed:', queen.breed.name),
+          _infoRow('edit_hive.queen_name'.tr(), queen.name),
+          _infoRow('edit_hive.queen_breed'.tr(), queen.breedName),
           _infoRow(
-            'Birth Date:',
+            'edit_hive.queen_birth_date'.tr(),
             '${queen.birthDate.year}-${queen.birthDate.month.toString().padLeft(2, '0')}-${queen.birthDate.day.toString().padLeft(2, '0')}',
           ),
-          _infoRow('Status:', queen.status.toString().split('.').last),
+          _infoRow('edit_hive.queen_status'.tr(), queen.status.toString().split('.').last),
         ],
       ),
     );
   }
 
   void _createQueen(BuildContext context, Queen? queen) async {
-    if(queen != null) {
-      final updatedQueen = await context.push(AppRouter.editQueen, extra: {'queenId': queen.id, 'hideLocation': true});
-      if(context.mounted && updatedQueen is Queen) {
-        //Reload queen data
+    if (queen != null) {
+      final updatedQueen = await context.push(
+        AppRouter.editQueen,
+        extra: {
+          'queenId': queen.id,
+          'hideLocation': true,
+        }
+      );
+      if (context.mounted && updatedQueen is Queen) {
         context.read<EditHiveBloc>().add(EditHiveUpdateQueen(updatedQueen));
       }
       return;
@@ -202,32 +193,43 @@ class HiveQueen extends StatelessWidget {
 
     final canCreateDefaultQueen = context.read<EditHiveBloc>().state.canCreateDefaultQueen;
 
-    if(canCreateDefaultQueen){
+    if (canCreateDefaultQueen) {
       context.read<EditHiveBloc>().add(const EditHiveCreateDefaultQueen());
       return;
     }
-    final newQueen = await context.push(AppRouter.editQueen, extra: {'skipSaving': true} );
 
-    if(context.mounted && newQueen is Queen) {
+    final newQueen = await context.push(
+      AppRouter.editQueen,
+      extra: {
+        'fromHive': true,
+        'hideLocation': true,
+      }
+    );
+
+    if (context.mounted && newQueen is Queen) {
       context.read<EditHiveBloc>().add(EditHiveCreateQueen(newQueen));
     }
   }
+
   Widget _infoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100,
+            width: 80,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 13,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
+              style: const TextStyle(fontSize: 13),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
             ),

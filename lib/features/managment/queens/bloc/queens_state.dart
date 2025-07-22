@@ -46,7 +46,6 @@ class QueensState extends Equatable {
   final bool ascending;
   final String? errorMessage;
   final List<QueenBreed> availableBreeds;
-  final List<Apiary> availableApiaries;
 
   const QueensState({
     this.status = QueensStatus.initial,
@@ -57,7 +56,6 @@ class QueensState extends Equatable {
     this.ascending = true,
     this.errorMessage,
     this.availableBreeds = const [],
-    this.availableApiaries = const [],
   });
 
   QueensState copyWith({
@@ -69,7 +67,6 @@ class QueensState extends Equatable {
     bool? ascending,
     String? Function()? errorMessage,
     List<QueenBreed>? availableBreeds,
-    List<Apiary>? availableApiaries,
   }) {
     return QueensState(
       status: status ?? this.status,
@@ -80,7 +77,6 @@ class QueensState extends Equatable {
       ascending: ascending ?? this.ascending,
       errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
       availableBreeds: availableBreeds ?? this.availableBreeds,
-      availableApiaries: availableApiaries ?? this.availableApiaries,
     );
   }
 
@@ -94,6 +90,5 @@ class QueensState extends Equatable {
     ascending,
     errorMessage,
     availableBreeds,
-    availableApiaries,
   ];
 }

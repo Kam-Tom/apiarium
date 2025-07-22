@@ -1,4 +1,6 @@
 import 'package:apiarium/shared/shared.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class QueenBreed extends BaseModel {
   final String name;
@@ -6,6 +8,15 @@ class QueenBreed extends BaseModel {
   final String? origin;
   final String? country;
   final bool isStarred;
+  final bool isLocal;
+  final int? temperamentRating; // 1-5 stars (1=very aggressive, 5=very gentle)
+  final int? honeyProductionRating; // 1-5 stars (1=low, 5=high)
+  final int? winterHardinessRating; // 1-5 stars (1=poor, 5=excellent)
+  final int? diseaseResistanceRating; // 1-5 stars (1=poor, 5=excellent)
+  final int? popularityRating; // 1-5 stars (1=very rare, 5=very popular)
+  final String? characteristics;
+  final String? imageName;
+  final double? cost;
 
   const QueenBreed({
     required super.id,
@@ -14,23 +25,76 @@ class QueenBreed extends BaseModel {
     super.syncStatus,
     super.lastSyncedAt,
     super.deleted = false,
+    super.serverVersion = 0,
     required this.name,
     this.scientificName,
     this.origin,
     this.country,
     this.isStarred = false,
+    this.isLocal = false,
+    this.temperamentRating,
+    this.honeyProductionRating,
+    this.winterHardinessRating,
+    this.diseaseResistanceRating,
+    this.popularityRating,
+    this.characteristics,
+    this.imageName,
+    this.cost,
   });
+
+  Future<String?> getLocalImagePath() async {
+    if (imageName == null || imageName!.isEmpty) return null;
+    
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final localPath = '${appDir.path}/images/queen_breeds/$imageName';
+      final file = File(localPath);
+      return await file.exists() ? localPath : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  factory QueenBreed.fromMap(Map<String, dynamic> data) {
+    return QueenBreed(
+      id: data['id'],
+      createdAt: DateTime.parse(data['createdAt']),
+      updatedAt: DateTime.parse(data['updatedAt']),
+      syncStatus: SyncStatus.values.firstWhere(
+        (s) => s.name == data['syncStatus'],
+        orElse: () => SyncStatus.pending,
+      ),
+      lastSyncedAt: data['lastSyncedAt'] != null 
+          ? DateTime.parse(data['lastSyncedAt']) 
+          : null,
+      deleted: data['deleted'] ?? false,
+      serverVersion: data['serverVersion'] ?? 0,
+      name: data['name'],
+      scientificName: data['scientificName'],
+      origin: data['origin'],      country: data['country'],
+      isStarred: data['isStarred'] ?? false,
+      isLocal: data['isLocal'] ?? false,
+      temperamentRating: data['temperamentRating'],
+      honeyProductionRating: data['honeyProductionRating'],
+      winterHardinessRating: data['winterHardinessRating'],
+      diseaseResistanceRating: data['diseaseResistanceRating'],
+      popularityRating: data['popularityRating'],
+      characteristics: data['characteristics'],
+      imageName: data['imageName'],
+      cost: data['cost']?.toDouble(),
+    );
+  }
 
   String get displayName => scientificName != null 
     ? '$name ($scientificName)'
-    : name;
+    : name;  @override
 
-  @override
   List<Object?> get props => [
     ...baseSyncProps,
-    name, scientificName, origin, country, isStarred
+    name, scientificName, origin, country, isStarred, isLocal, 
+    temperamentRating, honeyProductionRating, winterHardinessRating, 
+    diseaseResistanceRating, popularityRating, characteristics, imageName, cost
   ];
-
   Map<String, dynamic> toMap() {
     return {
       ...baseSyncFields,
@@ -39,32 +103,59 @@ class QueenBreed extends BaseModel {
       'origin': origin,
       'country': country,
       'isStarred': isStarred,
+      'isLocal': isLocal,
+      'temperamentRating': temperamentRating,
+      'honeyProductionRating': honeyProductionRating,
+      'winterHardinessRating': winterHardinessRating,
+      'diseaseResistanceRating': diseaseResistanceRating,
+      'popularityRating': popularityRating,
+      'characteristics': characteristics,
+      'imageName': imageName,
+      'cost': cost,
     };
-  }
-  
-  QueenBreed copyWith({
-    String? name,
-    String? scientificName,
-    String? origin,
-    String? country,
-    bool? isStarred,
-    DateTime? updatedAt,
-    SyncStatus? syncStatus,
-    DateTime? lastSyncedAt,
-    bool? deleted,
+  }    QueenBreed copyWith({
+    String? Function()? name,
+    String? Function()? scientificName,
+    String? Function()? origin,
+    String? Function()? country,
+    bool? Function()? isStarred,
+    bool? Function()? isLocal,
+    int? Function()? temperamentRating,
+    int? Function()? honeyProductionRating,
+    int? Function()? winterHardinessRating,
+    int? Function()? diseaseResistanceRating,
+    int? Function()? popularityRating,
+    String? Function()? characteristics,
+    String? Function()? imageName,
+    double? Function()? cost,
+    DateTime? Function()? updatedAt,
+    SyncStatus? Function()? syncStatus,
+    DateTime? Function()? lastSyncedAt,
+    bool? Function()? deleted,
+    int? Function()? serverVersion,
   }) {
     return QueenBreed(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
-      syncStatus: syncStatus ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
-      deleted: deleted ?? this.deleted,
-      name: name ?? this.name,
-      scientificName: scientificName ?? this.scientificName,
-      origin: origin ?? this.origin,
-      country: country ?? this.country,
-      isStarred: isStarred ?? this.isStarred,
+      updatedAt: updatedAt?.call() ?? DateTime.now(),
+      syncStatus: syncStatus?.call() ?? SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
+      deleted: deleted?.call() ?? this.deleted,
+      serverVersion: serverVersion?.call() ?? this.serverVersion,
+      name: name?.call() ?? this.name,
+      scientificName: scientificName?.call() ?? this.scientificName,
+      origin: origin?.call() ?? this.origin,
+      country: country?.call() ?? this.country,
+      isStarred: isStarred?.call() ?? this.isStarred,
+      isLocal: isLocal?.call() ?? this.isLocal,
+      temperamentRating: temperamentRating?.call() ?? this.temperamentRating,
+      honeyProductionRating: honeyProductionRating?.call() ?? this.honeyProductionRating,
+      winterHardinessRating: winterHardinessRating?.call() ?? this.winterHardinessRating,
+      diseaseResistanceRating: diseaseResistanceRating?.call() ?? this.diseaseResistanceRating,
+      popularityRating: popularityRating?.call() ?? this.popularityRating,
+      characteristics: characteristics?.call() ?? this.characteristics,
+      imageName: imageName?.call() ?? this.imageName,
+      cost: cost?.call() ?? this.cost,
     );
   }
 }

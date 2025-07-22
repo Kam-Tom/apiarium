@@ -29,15 +29,6 @@ class FilterByApiaryId extends HivesEvent {
   List<Object?> get props => [apiaryId];
 }
 
-class FilterByStrength extends HivesEvent {
-  final String? strength;
-
-  const FilterByStrength(this.strength);
-
-  @override
-  List<Object?> get props => [strength];
-}
-
 class ResetFilters extends HivesEvent {
   const ResetFilters();
 }

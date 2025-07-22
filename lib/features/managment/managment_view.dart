@@ -29,9 +29,7 @@ class ManagmentView extends StatelessWidget {
                 ),
                 SizedBox(height: dynamicSpacing),
                 _buildMapCard(),
-                SizedBox(height: dynamicSpacing * 1.5),
-
-                // Management navigation buttons
+                SizedBox(height: dynamicSpacing * 1.5),                // Management navigation buttons
                 const Text(
                   'Management Options',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -57,10 +55,32 @@ class ManagmentView extends StatelessWidget {
                       'Queens', 
                       Icons.casino,
                       () => context.push(AppRouter.queens),
-                    ),
-                  ],
+                    ),                  ],
                 ),
                 
+                SizedBox(height: dynamicSpacing),
+                
+                // Additional options - smaller buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildWideNavigationButton(
+                        context,
+                        'Queen Breeds',
+                        Icons.pets,
+                        () => context.push(AppRouter.queenBreeds),
+                      ),
+                    ),
+                    SizedBox(width: dynamicSpacing),                    Expanded(
+                      child: _buildWideNavigationButton(
+                        context,
+                        'Hive Types',
+                        Icons.category,
+                        () => context.push(AppRouter.hiveTypes),
+                      ),
+                    ),
+                  ],
+                ),                
                 SizedBox(height: dynamicSpacing * 2),
                 
                 // Statistics section
@@ -87,8 +107,7 @@ class ManagmentView extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildNavigationButton(BuildContext context, String title, IconData icon, VoidCallback onPressed) {
+    Widget _buildNavigationButton(BuildContext context, String title, IconData icon, VoidCallback onPressed) {
     return InkWell(
       onTap: onPressed,
       child: Container(
@@ -113,6 +132,41 @@ class ManagmentView extends StatelessWidget {
             Text(
               title,
               style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildWideNavigationButton(BuildContext context, String title, IconData icon, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: Colors.amber.shade700),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.amber.shade800,
+              ),
             ),
           ],
         ),

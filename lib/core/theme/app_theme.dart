@@ -9,6 +9,7 @@ class AppTheme {
   static final Color _disabledColor = Colors.grey.shade300;
   
   static const Color primaryColor = Colors.amber;
+  static const Color backgroundColor = Color(0xFFF5F5F5);
   
   static ThemeData get lightTheme {
     return ThemeData(
@@ -65,12 +66,11 @@ class AppTheme {
           ),
         ),
       ),
-      
-      // Input decoration theme (for text fields)
+        // Input decoration theme (for text fields)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -92,6 +92,7 @@ class AppTheme {
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         hintStyle: TextStyle(color: Colors.grey.shade500),
+        isDense: true,
       ),
       
       // Dialog theme

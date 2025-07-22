@@ -1,87 +1,57 @@
 import 'package:apiarium/shared/shared.dart';
 
 enum Attribute {
-  // Colony attributes
-  colonyStrength('colony.strength', FieldType.number, false),
-  colonyActivity('colony.activity', FieldType.number, false),
-  colonyTemperament('colony.temperament', FieldType.number, false),
-  colonyRobbingObserved('colony.robbingObserved', FieldType.boolean, false),
+  // Essential colony attributes
+  familyStrength('familyStrength', FieldType.number),
+  colonyTemperament('colonyTemperament', FieldType.number),
   
-  // Queen attributes
-  queenSeen('queen.seen', FieldType.boolean, false),
-  queenIsMarked('queen.isMarked', FieldType.boolean, false),
-  queenBehavior('queen.behavior', FieldType.number, false),
-  queenCells('queen.cells', FieldType.categorical, false),
-  queenSwarmingSigns('queen.swarmingSigns', FieldType.boolean, false),
+  // Queen attributes (most important)
+  queenSeen('queenSeen', FieldType.boolean),
+  queenMarked('queenMarked', FieldType.boolean),
+  lastTimeQueenSeen('lastTimeQueenSeen', FieldType.date),
+  queenCells('queenCells', FieldType.categorical),
+  swarmingSigns('swarmingSigns', FieldType.boolean),
 
-  // Brood attributes
-  broodEggs('brood.eggs', FieldType.boolean, false),
-  broodLarvae('brood.larvae', FieldType.boolean, false),
-  broodCapped('brood.capped', FieldType.boolean, false),
-  broodExcessDrones('brood.excessDrones', FieldType.boolean, false),
-  broodPattern('brood.pattern', FieldType.categorical, false),
-  broodPopulation('brood.population', FieldType.number, false),
+  // Brood (simplified)
+  broodPresent('broodPresent', FieldType.boolean),
+  broodPattern('broodPattern', FieldType.categorical),
+  broodFrames('broodFrames', FieldType.number),
 
-  // Frame attributes
-  framesCoveredByBees('frames.coveredByBees', FieldType.number, false),
-  framesBrood('frames.brood', FieldType.number, false),
-  framesHoney('frames.honey', FieldType.number, false),
-  framesPollen('frames.pollen', FieldType.number, false),
-  framesEmpty('frames.empty', FieldType.number, false),
-  framesTotal('frames.total', FieldType.number, false),
+  // Food stores (essential)
+  foodStores('foodStores', FieldType.number),
+  honeyFrames('honeyFrames', FieldType.number),
+  honeyHarvested('honeyHarvested', FieldType.number),
+  feedingRequired('feedingRequired', FieldType.boolean),
+  
+  // Health & condition (important)
+  diseasesSeen('diseasesSeen', FieldType.multipleChoice),
+  pestsSeen('pestsSeen', FieldType.multipleChoice),
+  varroaMites('varroaMites', FieldType.categorical),
+  deadBeesVisible('deadBeesVisible', FieldType.boolean),
 
-  // Stores attributes
-  storesHoney('stores.honey', FieldType.number, false),
-  storesPollen('stores.pollen', FieldType.number, false),
-  storesSupplementalFeedAmount('stores.supplementalFeedAmount', FieldType.number, false),
-  storesSupplementalFeedType('stores.supplementalFeedType', FieldType.categorical, false),
+  // Hive condition (simplified)
+  hiveCondition('hiveCondition', FieldType.categorical),
+  moisture('moisture', FieldType.boolean),
 
-  // Pests and diseases
-  pestsAndDiseasesDiseasesSpotted('pestsAndDiseases.diseasesSpotted', FieldType.multipleChoice, false),
-  pestsAndDiseasesPestsSpotted('pestsAndDiseases.pestsSpotted', FieldType.multipleChoice, false),
-  pestsAndDiseasesPredatorsSpotted('pestsAndDiseases.predatorsSpotted', FieldType.multipleChoice, false),
-  pestsAndDiseasesVarroaDropObserved('pestsAndDiseases.varroaDropObserved', FieldType.number, false),
+  // Space management
+  framesAdded('framesAdded', FieldType.number),
+  framesRemoved('framesRemoved', FieldType.number),
 
-  // Hive condition
-  hiveConditionEquipmentStatus('hiveCondition.equipmentStatus', FieldType.categorical, false),
-  hiveConditionOdor('hiveCondition.odor', FieldType.categorical, false),
-  hiveConditionBraceComb('hiveCondition.braceComb', FieldType.boolean, false),
-  hiveConditionExcessivePropolis('hiveCondition.excessivePropolis', FieldType.boolean, false),
-  hiveConditionDeadBeesVisible('hiveCondition.deadBeesVisible', FieldType.boolean, false),
-  hiveConditionMoisture('hiveCondition.moisture', FieldType.boolean, false),
-  hiveConditionMold('hiveCondition.mold', FieldType.boolean, false),
+  // Actions taken
+  treatmentApplied('treatmentApplied', FieldType.multipleChoice),
+  
+  // Weather (useful for context)
+  temperature('temperature', FieldType.number),
+  weatherConditions('weatherConditions', FieldType.categorical),
 
-  // Frames moved
-  framesMovedHoneySuperBoxNet('framesMoved.honeySuperBoxNet', FieldType.number, false),
-  framesMovedHoneyNet('framesMoved.honeyNet', FieldType.number, false),
-  framesMovedEmptyNet('framesMoved.emptyNet', FieldType.number, false),
-  framesMovedBroodBoxNet('framesMoved.broodBoxNet', FieldType.number, false), // OK
-  framesMovedBroodNet('framesMoved.broodNet', FieldType.number, false),
-  framesMovedEmptyBroodNet('framesMoved.emptyBroodNet', FieldType.number, false),
+  // Weight (optional but useful)
+  hiveWeight('hiveWeight', FieldType.number),
 
-  // Weight
-  weightHiveWeightKg('weight.hiveWeightKg', FieldType.number, false),
-
-  // Weather
-  weatherConditions('weather.conditions', FieldType.categorical, false),
-  weatherTemperature('weather.temperature', FieldType.number, false),
-  weatherHumidity('weather.humidity', FieldType.number, false),
-  weatherWindSpeed('weather.wind.speed', FieldType.number, false),
-  weatherWindDirection('weather.wind.direction', FieldType.categorical, false),
-  weatherPressure('weather.pressure', FieldType.number, false),
-
-  // Actions
-  actionsAdditional('actions.additional', FieldType.multipleChoice, false),
-
-  // Notes
-  notes('notes', FieldType.string, false),
-
-  // None, for unrecognized attributes
-  none('none', FieldType.string, true);
+  // General
+  notes('notes', FieldType.string);
 
   final String name;
   final FieldType type;
-  final bool obsolete;
 
-  const Attribute(this.name, this.type, this.obsolete);
+  const Attribute(this.name, this.type);
 }

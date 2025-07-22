@@ -1,337 +1,514 @@
-import 'package:apiarium/shared/shared.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/material.dart';
+import '../shared.dart';
 
-/// Service class that handles business logic related to queens and queen breeds,
-/// including tracking changes through history logs.
 class QueenService {
+  static const String _tag = 'QueenService';
+  static const Uuid _uuid = Uuid();
+  
   final QueenRepository _queenRepository;
-  final QueenBreedRepository _queenBreedRepository;
-  final HistoryLogRepository _historyLogRepository;
-  final Uuid _uuid = const Uuid();
-
+  final QueenBreedRepository _breedRepository;
+  final HiveRepository _hiveRepository;
+  final UserRepository _userRepository;
+  final HistoryService _historyService;
+  
   QueenService({
     required QueenRepository queenRepository,
-    required QueenBreedRepository queenBreedRepository,
-    required HistoryLogRepository historyLogRepository,
-  })  : _queenRepository = queenRepository,
-        _queenBreedRepository = queenBreedRepository,
-        _historyLogRepository = historyLogRepository;
-
-  /// Creates a unique group ID for grouping related history log entries
-  String createGroupId() => _uuid.v4();
-
-  // MARK: - Queen Query Operations
-
-  /// Retrieves all queens with optional related data.
-  /// 
-  /// Parameters:
-  /// - [includeApiary]: Whether to include apiary information
-  /// - [includeHive]: Whether to include hive information
-  Future<List<Queen>> getAllQueens({
-    bool includeApiary = false,
-    bool includeHive = false,
-  }) async {
-    return _queenRepository.getAllQueens(
-      includeApiary: includeApiary,
-      includeHive: includeHive,
-    );
+    required QueenBreedRepository breedRepository,
+    required HiveRepository hiveRepository,
+    required UserRepository userRepository,
+    required HistoryService historyService,
+  }) : _queenRepository = queenRepository,
+       _breedRepository = breedRepository,
+       _hiveRepository = hiveRepository,
+       _userRepository = userRepository,
+       _historyService = historyService;
+  
+  Future<void> initialize() async {
+    await _queenRepository.initialize();
+    await _breedRepository.initialize();
+    Logger.i('Queen service initialized', tag: _tag);
   }
 
-  /// Gets a queen by ID with optional related data.
-  /// 
-  /// Parameters:
-  /// - [id]: The ID of the queen to retrieve
-  /// - [includeApiary]: Whether to include apiary information
-  /// - [includeHive]: Whether to include hive information
-  Future<Queen?> getQueenById(
-    String id, {
-    bool includeApiary = false,
-    bool includeHive = false,
-  }) async {
-    return _queenRepository.getQueenById(
-      id,
-      includeApiary: includeApiary,
-      includeHive: includeHive,
-    );
+  Future<List<Queen>> getAllQueens() async {
+    return await _queenRepository.getAllQueens();
   }
 
-  /// Retrieves queens that aren't assigned to any hive.
   Future<List<Queen>> getUnassignedQueens() async {
-    return _queenRepository.getUnassignedQueens();
+    final queens = await getAllQueens();
+    return queens.where((q) => q.hiveId == null && q.status == QueenStatus.active).toList();
   }
 
-  /// Gets the total count of queens in the database.
-  Future<int> getQueensCount() async {
-    return _queenRepository.getQueensCount();
+  Future<List<Queen>> getAssignedQueens() async {
+    final queens = await getAllQueens();
+    return queens.where((q) => q.hiveId != null && q.status == QueenStatus.active).toList();
   }
 
-  /// Gets the count of queens filtered by apiary.
-  /// 
-  /// Parameters:
-  /// - [apiaryId]: Optional apiary ID to filter by
-  Future<int> getQueensCountByApiary(String? apiaryId) async {
-    return _queenRepository.getQueensCountByApiary(apiaryId);
+  Future<Queen?> getQueenById(String id) async {
+    return await _queenRepository.getQueenById(id);
   }
 
-  /// Checks if there are queens that can be used as templates.
-  Future<bool> canCreateDefaultQueen() async {
-    return _queenRepository.canCreateDefaultQueen();
-  }
-
-  // MARK: - Queen CRUD Operations
-
-  /// Inserts a new queen into the database and logs the action.
-  /// 
-  /// Parameters:
-  /// - [queen]: The queen to insert
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<Queen> insertQueen(
-    Queen queen, {
-    String? groupId,
-    bool skipHistoryLog = false,
-  }) async {
-    final createdQueen = await _queenRepository.insertQueen(queen);
-    
-    if (!skipHistoryLog) {
-      await _logQueenAction(
-        queenId: createdQueen.id,
-        queenName: createdQueen.name,
-        action: HistoryAction.create,
-        description: 'Queen created: ${createdQueen.name}',
-        groupId: groupId,
-      );
-    }
-    
-    return createdQueen;
-  }
-
-  /// Updates an existing queen in the database and logs the changes.
-  /// 
-  /// Parameters:
-  /// - [queen]: The queen with updated values
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<Queen> updateQueen({
-    required Queen queen,
-    String? groupId,
-    bool skipHistoryLog = false,
-  }) async {
-    final oldQueen = await _queenRepository.getQueenById(queen.id);
-    if (oldQueen == null) {
-      throw Exception('Queen not found for update: ${queen.id}');
-    }
-    
-    final updatedQueen = await _queenRepository.updateQueen(queen);
-    
-    if (!skipHistoryLog) {
-      final changes = oldQueen.toMap().differenceWith(updatedQueen.toMap());
-      if (changes.isNotEmpty) {
-        await _logQueenAction(
-          queenId: updatedQueen.id,
-          queenName: updatedQueen.name,
-          action: HistoryAction.update,
-          description: 'Queen updated: ${updatedQueen.name}',
-          groupId: groupId,
-          changes: changes,
-        );
-      }
-    }
-    
-    return updatedQueen;
-  }
-
-  /// Deletes a queen (marks as deleted) and logs the action.
-  /// 
-  /// Parameters:
-  /// - [queenId]: The ID of the queen to delete
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<bool> deleteQueen({
-    required String queenId,
-    String? groupId,
-    bool skipHistoryLog = false,
-  }) async {
-    final queen = await _queenRepository.getQueenById(queenId);
-    if (queen == null) {
-      throw Exception('Queen not found for deletion: $queenId');
-    }
-    
-    final result = await _queenRepository.deleteQueen(queenId);
-    
-    if (result && !skipHistoryLog) {
-      await _logQueenAction(
-        queenId: queenId,
-        queenName: queen.name,
-        action: HistoryAction.delete,
-        description: 'Queen deleted: ${queen.name}',
-        groupId: groupId,
-      );
-    }
-    
-    return result;
-  }
-
-  /// Creates a new queen with default or specified values and logs the action.
-  /// 
-  /// See [QueenRepository.createDefaultQueen] for parameter details.
-  Future<Queen> createDefaultQueen({
-    String? breedId,
-    String name = 'New Queen',
-    DateTime? birthDate,
-    QueenSource? source,
-    bool? marked,
-    String? markColorHex,
-    QueenStatus? status,
-    String? origin,
-    String? groupId,
-    bool skipHistoryLog = false,
-  }) async {
-    final queen = await _queenRepository.createDefaultQueen(
-      breedId: breedId,
-      name: name,
-      birthDate: birthDate,
-      source: source,
-      marked: marked,
-      markColorHex: markColorHex,
-      status: status,
-      origin: origin,
-    );
-    
-    if (!skipHistoryLog) {
-      await _logQueenAction(
-        queenId: queen.id,
-        queenName: queen.name,
-        action: HistoryAction.create,
-        description: 'Default queen created: ${queen.name}',
-        groupId: groupId,
-      );
-    }
-    
-    return queen;
-  }
-
-  // MARK: - Queen Breed Operations
-
-  /// Gets all queen breeds.
-  Future<List<QueenBreed>> getAllBreeds() async {
-    return _queenBreedRepository.getAllBreeds();
-  }
-
-  /// Gets a queen breed by ID.
-  /// 
-  /// Parameters:
-  /// - [id]: The ID of the queen breed to retrieve
-  Future<QueenBreed?> getBreedById(String id) async {
-    return _queenBreedRepository.getBreedById(id);
-  }
-
-  /// Inserts a new queen breed and logs the action.
-  /// 
-  /// Parameters:
-  /// - [breed]: The queen breed to insert
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<QueenBreed> insertBreed({
-    required QueenBreed breed,
-    String? groupId,
-    bool skipHistoryLog = false,
-  }) async {
-    final createdBreed = await _queenBreedRepository.insertBreed(breed);
-    
-    if (!skipHistoryLog) {
-      await _logBreedAction(
-        breedId: createdBreed.id,
-        breedName: createdBreed.name,
-        action: HistoryAction.create,
-        description: 'Queen breed created: ${createdBreed.name}',
-        groupId: groupId,
-      );
-    }
-    
-    return createdBreed;
-  }
-
-  /// Updates a queen breed and logs the changes.
-  /// 
-  /// Parameters:
-  /// - [breed]: The queen breed with updated values
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<QueenBreed> updateBreed({
-    required QueenBreed breed,
-    String? groupId,
-    bool skipHistoryLog = false,
-  }) async {
-    final oldBreed = await _queenBreedRepository.getBreedById(breed.id);
-    if (oldBreed == null) {
-      throw Exception('Queen breed not found for update: ${breed.id}');
-    }
-    
-    final updatedBreed = await _queenBreedRepository.updateBreed(breed);
-    
-    if (!skipHistoryLog) {
-      final changes = oldBreed.toMap().differenceWith(updatedBreed.toMap());
-      if (changes.isNotEmpty) {
-        await _logBreedAction(
-          breedId: updatedBreed.id,
-          breedName: updatedBreed.name,
-          action: HistoryAction.update,
-          description: 'Queen breed updated: ${updatedBreed.name}',
-          groupId: groupId,
-          changes: changes,
-        );
-      }
-    }
-    
-    return updatedBreed;
-  }
-
-  // MARK: - Private Helper Methods
-
-  /// Helper method to log queen-related actions to history.
-  Future<void> _logQueenAction({
-    required String queenId,
-    required String queenName,
-    required HistoryAction action,
-    required String description,
-    String? groupId,
-    Map<String, dynamic>? changes,
-  }) async {
-    await _historyLogRepository.insertHistoryLog(
-      HistoryLog(
-        id: _uuid.v4(),
-        entityId: queenId,
-        entityType: EntityType.queen,
-        action: action,
-        timestamp: DateTime.now(),
-        description: description,
-        groupId: groupId,
-        changes: changes,
-      ),
+  Future<Queen?> getQueenByHiveId(String hiveId) async {
+    final queens = await getAllQueens();
+    return queens.cast<Queen?>().firstWhere(
+      (q) => q?.hiveId == hiveId && q?.status == QueenStatus.active,
+      orElse: () => null,
     );
   }
 
-  /// Helper method to log queen breed-related actions to history.
-  Future<void> _logBreedAction({
+  Future<Queen> createQueen({
+    required String name,
+    required DateTime birthDate,
     required String breedId,
-    required String breedName,
-    required HistoryAction action,
-    required String description,
-    String? groupId,
-    Map<String, dynamic>? changes,
+    required QueenSource source,
+    bool marked = false,
+    Color? markColor,
+    String? origin,
+    QueenStatus status = QueenStatus.active,
+    String? hiveId,
+    double? cost,
   }) async {
-    await _historyLogRepository.insertHistoryLog(
-      HistoryLog(
+    try {
+      final now = DateTime.now();
+      final breed = await _breedRepository.getQueenBreedById(breedId);
+      
+      if (breed == null) {
+        throw Exception('Queen breed not found: $breedId');
+      }
+
+      var queen = Queen(
         id: _uuid.v4(),
-        entityId: breedId,
-        entityType: EntityType.queenBreed,
-        action: action,
-        timestamp: DateTime.now(),
-        description: description,
-        groupId: groupId,
-        changes: changes,
-      ),
+        createdAt: now,
+        updatedAt: now,
+        name: name,
+        birthDate: birthDate,
+        source: source,
+        marked: marked,
+        markColor: markColor,
+        status: status,
+        origin: origin,
+        cost: cost ?? breed.cost,
+        breedId: breedId,
+        breedName: breed.name,
+        breedScientificName: breed.scientificName,
+        breedOrigin: breed.origin,
+        hiveId: hiveId,
+      );
+
+      // Update hive if queen is assigned to one
+      if (hiveId != null) {
+        final hive = await _updateHive(hiveId, queen);
+        queen = queen.copyWith(
+          hiveName: () => hive?.name,
+          apiaryId: () => hive?.apiaryId,
+          apiaryName: () => hive?.apiaryName,
+          apiaryLocation: () => hive?.apiaryLocation,
+        );
+      }
+
+      await _queenRepository.saveQueen(queen);
+      Logger.i('Created queen: ${queen.name}', tag: _tag);
+      
+      // Log the creation with entity name
+      await _historyService.logEntityCreate(
+        entityId: queen.id,
+        entityType: 'queen',
+        entityName: queen.name,
+        entityData: queen.toMap(),
+      );
+      
+      await _syncQueen(queen);
+      
+      return queen;
+    } catch (e) {
+      Logger.e('Failed to create queen: $name', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<Queen> updateQueen(Queen queen) async {
+    try {
+      final oldQueen = await _queenRepository.getQueenById(queen.id);
+      if (oldQueen == null) {
+        throw Exception('Queen not found: ${queen.id}');
+      }
+
+      var updatedQueen = queen.copyWith(
+        updatedAt: () => DateTime.now(),
+        hiveName: () => null,
+        apiaryName: () => null,
+        apiaryLocation: () => null,
+      );
+
+      if (oldQueen.hiveId != null && oldQueen.hiveId != updatedQueen.hiveId) {
+        await _updateHive(oldQueen.hiveId!, null); 
+      }
+      
+      if (updatedQueen.hiveId != null) {
+        final hive = await _updateHive(updatedQueen.hiveId!, updatedQueen); 
+        updatedQueen = updatedQueen.copyWith(
+          hiveName: () => hive?.name,
+          apiaryId: () => hive?.apiaryId,
+          apiaryName: () => hive?.apiaryName,
+          apiaryLocation: () => hive?.apiaryLocation,
+        );
+      }
+
+      await _queenRepository.saveQueen(updatedQueen);
+      Logger.i('Updated queen: ${updatedQueen.name}', tag: _tag);
+      
+      // Log the update with entity name
+      await _historyService.logEntityUpdate(
+        entityId: updatedQueen.id,
+        entityType: 'queen',
+        entityName: updatedQueen.name,
+        oldData: oldQueen.toMap(),
+        newData: updatedQueen.toMap(),
+      );
+      
+      await _syncQueen(updatedQueen);
+      
+      return updatedQueen;
+    } catch (e) {
+      Logger.e('Failed to update queen: ${queen.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteQueen(String id) async {
+    try {
+      final queen = await getQueenById(id);
+      if (queen != null) {
+
+        Queen deletedQueen = queen.copyWith(
+          deleted: () => true,
+          updatedAt: () => DateTime.now(),
+          hiveName: () => null,
+          apiaryId: () => null,
+          apiaryName: () => null,
+          apiaryLocation: () => null,
+        );
+
+        if (queen.hiveId != null) {
+          await _updateHive(queen.hiveId!, null);
+          deletedQueen = deletedQueen.copyWith(
+            hiveId: () => null,
+          );
+        }
+        
+        await _queenRepository.saveQueen(deletedQueen);
+        Logger.i('Deleted queen: $id', tag: _tag);
+        
+        // Log the deletion with entity name
+        await _historyService.logEntityDelete(
+          entityId: queen.id,
+          entityType: 'queen',
+          entityName: queen.name,
+        );
+        
+        await _syncQueen(deletedQueen);
+      }
+    } catch (e) {
+      Logger.e('Failed to delete queen: $id', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<Hive?> _updateHive(String hiveId, Queen? queen) async {
+    final hive = await _hiveRepository.getHiveById(hiveId);
+    if (hive == null) {
+      throw Exception('Hive not found: $hiveId');
+    }
+
+    if (queen != null && hive.queenId != null && hive.queenId != queen.id) {
+      throw Exception('Hive already has a queen: ${hive.queenName}');
+    }
+
+    final updatedHive = hive.copyWith(
+      queenId: () => queen?.id,
+      queenName: () => queen?.name,
+      queenMarked: () => queen?.marked,
+      queenMarkColor: () => queen?.markColor,
+      breed: () => queen?.breedName,
+      queenBirthDate: () => queen?.birthDate,
+      lastTimeQueenSeen: () => queen?.lastTimeSeen,
+      updatedAt: () => DateTime.now(),
     );
+
+    await _hiveRepository.saveHive(updatedHive);
+    await _syncHive(updatedHive);
+
+    return updatedHive;
+  }
+
+  // Queen Breed Operations
+  Future<List<QueenBreed>> getAllQueenBreeds() async {
+    return await _breedRepository.getAllQueenBreeds();
+  }
+
+  Future<QueenBreed> createQueenBreed({
+    required String name,
+    String? scientificName,
+    String? origin,
+    String? country,
+    bool isStarred = true,
+    bool isLocal = true,
+    int? temperamentRating,
+    int? honeyProductionRating,
+    int? winterHardinessRating,
+    int? diseaseResistanceRating,
+    int? popularityRating,
+    String? characteristics,
+    String? imageName,
+    double? cost,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final breed = QueenBreed(
+        id: _uuid.v4(),
+        createdAt: now,
+        updatedAt: now,
+        name: name,
+        scientificName: scientificName,
+        origin: origin,
+        country: country,
+        isStarred: isStarred,
+        isLocal: isLocal,
+        temperamentRating: temperamentRating,
+        honeyProductionRating: honeyProductionRating,
+        winterHardinessRating: winterHardinessRating,
+        diseaseResistanceRating: diseaseResistanceRating,
+        popularityRating: popularityRating,
+        characteristics: characteristics,
+        imageName: imageName,
+        cost: cost,
+      );
+
+      await _breedRepository.saveQueenBreed(breed);
+      Logger.i('Created queen breed: ${breed.name}', tag: _tag);
+      
+      // Log the creation with entity name
+      await _historyService.logEntityCreate(
+        entityId: breed.id,
+        entityType: 'queenBreed',
+        entityName: breed.name,
+        entityData: breed.toMap(),
+      );
+      
+      await _syncBreed(breed);
+      
+      return breed;
+    } catch (e) {
+      Logger.e('Failed to create queen breed: $name', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<QueenBreed> updateQueenBreed(QueenBreed breed) async {
+    try {
+      final oldBreed = await _breedRepository.getQueenBreedById(breed.id);
+      
+      if (!breed.isLocal) {
+        await _breedRepository.saveUserEditedBreed(breed);
+      } else {
+        final updatedBreed = breed.copyWith(updatedAt: () => DateTime.now());
+        await _breedRepository.saveQueenBreed(updatedBreed);
+      }
+      
+      Logger.i('Updated queen breed: ${breed.name}', tag: _tag);
+      
+      // Log the update if we have the old breed
+      if (oldBreed != null) {
+        await _historyService.logEntityUpdate(
+          entityId: breed.id,
+          entityType: 'queenBreed',
+          entityName: breed.name,
+          oldData: oldBreed.toMap(),
+          newData: breed.toMap(),
+        );
+      }
+      
+      await _syncBreed(breed);
+      
+      return breed;
+    } catch (e) {
+      Logger.e('Failed to update queen breed: ${breed.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> toggleBreedStar(String breedId) async {
+    try {
+      final breed = await _breedRepository.getQueenBreedById(breedId);
+      if (breed != null) {
+        final updatedBreed = breed.copyWith(
+          isStarred: () => !breed.isStarred,
+          updatedAt: () => DateTime.now(),
+        );
+        
+        if (!breed.isLocal) {
+          await _breedRepository.saveUserEditedBreed(updatedBreed);
+        } else {
+          await _breedRepository.saveQueenBreed(updatedBreed);
+        }
+        
+        await _syncBreed(updatedBreed);
+      }
+    } catch (e) {
+      Logger.e('Failed to toggle breed star: $breedId', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncFromFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) {
+      Logger.w('Firestore sync skipped - not premium or not logged in', tag: _tag);
+      return;
+    }
+
+    try {
+      final userId = _userRepository.currentUser!.id;
+      final userCountry = _userRepository.currentUser!.country ?? 'global';
+      final lastSync = await _userRepository.getLastSyncTime();
+      
+      await _queenRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
+      await _breedRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
+      await _breedRepository.syncPublicBreeds(userCountry);
+      
+      Logger.i('Synced queens and breeds from Firestore', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
+    }
+  }
+  Future<void> _syncQueen(Queen queen) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _queenRepository.syncToFirestore(queen, userId);
+      } catch (e) {
+        Logger.e('Failed to sync queen to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping queen sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> _syncHive(Hive hive) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _hiveRepository.syncToFirestore(hive, userId);
+      } catch (e) {
+        Logger.e('Failed to sync hive to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping hive sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> _syncBreed(QueenBreed breed) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _breedRepository.syncToFirestore(breed, userId);
+      } catch (e) {
+        Logger.e('Failed to sync breed to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping breed sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> dispose() async {
+    await _queenRepository.dispose();
+    await _breedRepository.dispose();
+    Logger.i('Queen service disposed', tag: _tag);
+  }
+
+  Future<void> updateQueensBatch(List<Queen> queens, {bool deepUpdate = false}) async {
+    try {
+      await _queenRepository.saveQueensBatch(queens);
+      Logger.i('Updated ${queens.length} queens in batch', tag: _tag);
+      
+      if (deepUpdate) {
+        final hivesToUpdate = <Hive>[];
+        
+        for (final queen in queens) {
+          if (queen.hiveId != null) {
+            final hive = await _hiveRepository.getHiveById(queen.hiveId!);
+            if (hive != null) {
+              final updatedHive = hive.copyWith(
+                queenName: () => queen.name,
+                queenMarked: () => queen.marked,
+                queenMarkColor: () => queen.markColor,
+                breed: () => queen.breedName,
+                queenBirthDate: () => queen.birthDate,
+                lastTimeQueenSeen: () => queen.lastTimeSeen,
+                updatedAt: () => DateTime.now(),
+              );
+              hivesToUpdate.add(updatedHive);
+            }
+          }
+        }
+        
+        if (hivesToUpdate.isNotEmpty) {
+          await _hiveRepository.saveHivesBatch(hivesToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _hiveRepository.syncBatchToFirestore(hivesToUpdate, userId);
+          }
+        }
+      }
+      
+      if (_userRepository.isPremium && _userRepository.currentUser != null) {
+        final userId = _userRepository.currentUser!.id;
+        await _queenRepository.syncBatchToFirestore(queens, userId);
+      }
+    } catch (e) {
+      Logger.e('Failed to update queens batch', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> updateQueenBreedsBatch(List<QueenBreed> breeds, {bool deepUpdate = false}) async {
+    try {
+      await _breedRepository.saveQueenBreedsBatch(breeds);
+      Logger.i('Updated ${breeds.length} queen breeds in batch', tag: _tag);
+      
+      if (deepUpdate) {
+        final queensToUpdate = <Queen>[];
+        
+        for (final breed in breeds) {
+          final queens = await _queenRepository.getAllQueens();
+          final relatedQueens = queens.where((q) => q.breedId == breed.id).toList();
+          
+          for (final queen in relatedQueens) {
+            final updatedQueen = queen.copyWith(
+              breedName: () => breed.name,
+              breedScientificName: () => breed.scientificName,
+              breedOrigin: () => breed.origin,
+              updatedAt: () => DateTime.now(),
+            );
+            queensToUpdate.add(updatedQueen);
+          }
+        }
+        
+        if (queensToUpdate.isNotEmpty) {
+          await _queenRepository.saveQueensBatch(queensToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _queenRepository.syncBatchToFirestore(queensToUpdate, userId);
+          }
+        }
+      }
+      
+      if (_userRepository.isPremium && _userRepository.currentUser != null) {
+        final userId = _userRepository.currentUser!.id;
+        await _breedRepository.syncBatchToFirestore(breeds, userId);
+      }
+    } catch (e) {
+      Logger.e('Failed to update queen breeds batch', tag: _tag, error: e);
+      rethrow;
+    }
   }
 }

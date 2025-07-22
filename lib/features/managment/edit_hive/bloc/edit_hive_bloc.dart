@@ -4,6 +4,8 @@ import 'package:apiarium/shared/shared.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:apiarium/shared/services/storage_service.dart';
+import 'package:apiarium/core/di/dependency_injection.dart';
 
 part 'edit_hive_event.dart';
 part 'edit_hive_state.dart';
@@ -17,13 +19,11 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
     required QueenService queenService,
     required ApiaryService apiaryService,
     required HiveService hiveService,
-    bool skipSaving = false,
-    bool hideLocation = false,
   }) : 
     _queenService = queenService,
     _apiaryService = apiaryService,
     _hiveService = hiveService,
-    super(EditHiveState(acquisitionDate: DateTime.now(), skipSaving: skipSaving, hideLocation: hideLocation)) {
+    super(EditHiveState(acquisitionDate: DateTime.now())) {
       on<EditHiveLoadData>(_onLoadRequest);
       on<EditHiveNameChanged>(_onNameChanged);
       on<EditHiveApiaryChanged>(_onApiaryChanged);
@@ -42,6 +42,8 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
       on<EditHiveCreateDefaultQueen>(_onEditHiveCreateDefaultQueen);
       on<EditHiveUpdateQueen>(_onUpdateQueen);
       on<EditHiveCreateQueen>(_onEditHiveCreateQueen);
+      on<EditHiveGenerateName>(_onGenerateName);
+      on<EditHiveAddSpending>(_onAddSpending);
     }
 
   FutureOr<void> _onLoadRequest(EditHiveLoadData event, Emitter<EditHiveState> emit) async {
@@ -50,84 +52,67 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
     ));
     
     try {
-      // Load available hive types
-      var hiveTypes = await _hiveService.getAllTypes();
-
-      //TODO REMOVE AFTER TESTING
-      if(hiveTypes.isEmpty) {
-        await _hiveService.insertType(
-          type: HiveType(
-            id:'',
-            name: 'Langstroth',
-            defaultFrameCount: 10,
-            mainMaterial: HiveMaterial.wood,
-            hasFrames: true,
-            frameStandard: 'Hoffmann',
-            broodBoxCount: 2,
-            honeySuperBoxCount: 3,
-            hiveCost: 250.0,
-            currency: Currency.usd,
-            frameUnitCost: 5.0,
-            broodFrameUnitCost: 6.0,
-            broodBoxUnitCost: 45.0,
-            honeySuperBoxUnitCost: 35.0,
-          )
-        );
-        hiveTypes = await _hiveService.getAllTypes();
-      }
-      //TODO REMOVE AFTER TESTING
-
       // Load available queens that are not already assigned
       final queens = await _queenService.getUnassignedQueens();
-      final canCreateDefaultQueen = await _queenService.canCreateDefaultQueen();
       
       // Load available apiaries
       final apiaries = await _apiaryService.getAllApiaries();
+      
+      // Load available hive types
+      final hiveTypes = await _hiveService.getAllHiveTypes();
+
+      // If queenId is provided, find and pre-select the queen
+      Queen? preSelectedQueen;
+      if (event.queenId != null) {
+        try {
+          preSelectedQueen = await _queenService.getQueenById(event.queenId!);
+        } catch (e) {
+          // Queen not found, continue without pre-selection
+        }
+      }
 
       if (event.hiveId != null) {
         // Load existing hive data if we're editing
-        final dbHive = await _hiveService.getHiveById(
-          event.hiveId!,
-          includeApiary: true,
-          includeQueen: true
-        );
-        
-        // hive.Apiary and Apiares dont equal because of hive count that is not loaded from getHiveById
-        Apiary? selectedApiary;
-        for (var apiary in apiaries) {
-          if (apiary.id == dbHive?.apiary?.id) {
-            selectedApiary = apiary;
-            break;
-          }
-        }
-        final hive = dbHive?.copyWith(apiary: () => selectedApiary);
+        final hive = await _hiveService.getHiveById(event.hiveId!);
 
         if (hive != null) {
-          // If hive has a queen, add it to available queens
-          if (hive.queen != null) {
-            queens.add(hive.queen!);
+          // Find the selected apiary from the list
+          Apiary? selectedApiary;
+          for (var apiary in apiaries) {
+            if (apiary.id == hive.apiaryId) {
+              selectedApiary = apiary;
+              break;
+            }
+          }
+
+          // Find the selected hive type from the list
+          HiveType? selectedHiveType;
+          for (var hiveType in hiveTypes) {
+            if (hiveType.id == hive.hiveTypeId) {
+              selectedHiveType = hiveType;
+              break;
+            }
           }
           
           emit(state.copyWith(
             hiveId: () => hive.id,
             name: () => hive.name,
             selectedApiary: () => selectedApiary,
-            hiveType: () => hive.hiveType,
-            queen: () => hive.queen,
+            hiveType: () => selectedHiveType,
             status: () => hive.status,
             acquisitionDate: () => hive.acquisitionDate,
-            imageUrl: () => hive.imageUrl,
-            position: () => hive.position,
             color: () => hive.color,
-            currentFrameCount: () => hive.currentFrameCount,
-            currentBroodFrameCount: () => hive.currentBroodFrameCount,
-            currentBroodBoxCount: () => hive.currentBroodBoxCount,
-            currentHoneySuperBoxCount: () => hive.currentHoneySuperBoxCount,
+            broodFrameCount: () => hive.broodFrameCount ?? 0,
+            honeyFrameCount: () => hive.honeyFrameCount ?? 0,
+            boxCount: () => hive.boxCount ?? 0,
+            superBoxCount: () => hive.superBoxCount ?? 0,
             formStatus: () => EditHiveStatus.loaded,
-            availableHiveTypes: () => hiveTypes,
             availableApiaries: () => apiaries,
             availableQueens: () => queens,
-            canCreateDefaultQueen: () => canCreateDefaultQueen,
+            availableHiveTypes: () => hiveTypes,
+            hasFrames: () => hive.hasFrames,
+            framesPerBox: () => hive.framesPerBox,
+            frameStandard: () => hive.frameStandard,
           ));
         } else {
           emit(state.copyWith(
@@ -140,10 +125,17 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
         emit(state.copyWith(
           hiveId: () => null,
           formStatus: () => EditHiveStatus.loaded,
-          availableHiveTypes: () => hiveTypes,
           availableApiaries: () => apiaries,
           availableQueens: () => queens,
-          canCreateDefaultQueen: () => canCreateDefaultQueen,
+          availableHiveTypes: () => hiveTypes,
+          broodFrameCount: () => 0,
+          honeyFrameCount: () => 0,
+          boxCount: () => 0,
+          superBoxCount: () => 0,
+          hasFrames: () => null,
+          framesPerBox: () => null,
+          frameStandard: () => null,
+          queen: () => preSelectedQueen, // Pre-select the queen if provided
         ));
       }
     } catch (e) {
@@ -165,7 +157,10 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
   FutureOr<void> _onHiveTypeChanged(EditHiveTypeChanged event, Emitter<EditHiveState> emit) {
     emit(state.copyWith(
       hiveType: () => event.hiveType,
-      currentFrameCount: () => event.hiveType.defaultFrameCount,
+      hasFrames: () => event.hiveType.hasFrames,
+      framesPerBox: () => event.hiveType.framesPerBox,
+      frameStandard: () => event.hiveType.frameStandard,
+      honeyFrameCount: () => 10,
     ));
   }
 
@@ -186,71 +181,74 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
   }
 
   FutureOr<void> _onFrameCountChanged(EditHiveFrameCountChanged event, Emitter<EditHiveState> emit) {
-    emit(state.copyWith(currentFrameCount: () => event.count));
+    emit(state.copyWith(honeyFrameCount: () => event.count));
   }
 
   FutureOr<void> _onBroodFrameCountChanged(EditHiveBroodFrameCountChanged event, Emitter<EditHiveState> emit) {
-    emit(state.copyWith(currentBroodFrameCount: () => event.count));
+    emit(state.copyWith(broodFrameCount: () => event.count));
   }
 
   FutureOr<void> _onBroodBoxCountChanged(EditHiveBroodBoxCountChanged event, Emitter<EditHiveState> emit) {
-    emit(state.copyWith(currentBroodBoxCount: () => event.count));
+    emit(state.copyWith(boxCount: () => event.count));
   }
 
   FutureOr<void> _onHoneySuperBoxCountChanged(EditHiveHoneySuperBoxCountChanged event, Emitter<EditHiveState> emit) {
-    emit(state.copyWith(currentHoneySuperBoxCount: () => event.count));
+    emit(state.copyWith(superBoxCount: () => event.count));
   }
 
   FutureOr<void> _onSubmitted(EditHiveSubmitted event, Emitter<EditHiveState> emit) async {
-    // Show validation errors if the form is invalid
     if (!state.isValid) {
       emit(state.copyWith(showValidationErrors: () => true));
       return;
     }
-    
-    // Create the hive object
-    final hive = Hive(
-      id: state.hiveId ?? '',
-      name: state.name,
-      apiary: state.selectedApiary,
-      hiveType: state.hiveType!,
-      queen: state.queen,
-      status: state.status,
-      acquisitionDate: state.acquisitionDate,
-      imageUrl: state.imageUrl,
-      position: state.position,
-      color: state.color,
-      currentFrameCount: state.currentFrameCount,
-      currentBroodFrameCount: state.currentBroodFrameCount,
-      currentBroodBoxCount: state.currentBroodBoxCount,
-      currentHoneySuperBoxCount: state.currentHoneySuperBoxCount,
-    );
-    
-    // If skipSaving is true, just return the hive object without saving
-    if (state.skipSaving) {
-      emit(state.copyWith(
-        formStatus: () => EditHiveStatus.success,
-        createdHive: () => hive,
-      ));
-      return;
-    }
-    
-    // Otherwise proceed with normal save
     emit(state.copyWith(formStatus: () => EditHiveStatus.submitting));
-    
     try {
-      
-      if (state.hiveId == null || state.hiveId?.isEmpty == true) {
-        await _hiveService.insertHive(hive);
-      } else {
-        await _hiveService.updateHive(
-          hive: hive,
+      Hive savedHive;
+      bool isCreation = state.hiveId == null || state.hiveId?.isEmpty == true;
+      if (isCreation) {
+        savedHive = await _hiveService.createHive(
+          name: state.name,
+          apiaryId: state.selectedApiary?.id ?? '',
+          hiveTypeId: state.hiveType?.id ?? 'default',
+          acquisitionDate: state.acquisitionDate,
+          status: state.status,
+          color: state.color,
+          imageUrl: state.imageUrl,
+          cost: state.hiveType?.cost,
         );
+      } else {
+        final existingHive = await _hiveService.getHiveById(state.hiveId!);
+        if (existingHive != null) {
+          final updatedHive = existingHive.copyWith(
+            name: () => state.name,
+            status: () => state.status,
+            color: () => state.color,
+            broodFrameCount: () => state.broodFrameCount,
+            honeyFrameCount: () => state.honeyFrameCount,
+            boxCount: () => state.boxCount,
+            superBoxCount: () => state.superBoxCount,
+          );
+          savedHive = await _hiveService.updateHive(updatedHive);
+        } else {
+          throw Exception('Hive not found');
+        }
+      }
+      
+      // Assign queen to hive if selected
+      if (state.queen != null) {
+        final updatedQueen = state.queen!.copyWith(
+          hiveId: () => savedHive.id,
+          hiveName: () => savedHive.name,
+          apiaryId: () => savedHive.apiaryId,
+          apiaryName: () => savedHive.apiaryName,
+          apiaryLocation: () => savedHive.apiaryLocation,
+        );
+        await _queenService.updateQueen(updatedQueen);
       }
       
       emit(state.copyWith(
         formStatus: () => EditHiveStatus.success,
-        createdHive: () => hive,
+        savedHive: () => savedHive,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -260,65 +258,113 @@ class EditHiveBloc extends Bloc<EditHiveEvent, EditHiveState> {
     }
   }
 
-  FutureOr<void> _onAddNewHiveType(EditHiveAddNewHiveType event, Emitter<EditHiveState> emit) async {
+  FutureOr<void> _onToggleStarHiveType(EditHiveToggleStarHiveType event, Emitter<EditHiveState> emit) async {
     try {
-      emit(state.copyWith(formStatus: () => EditHiveStatus.loading));
+      await _hiveService.toggleHiveTypeStar(event.hiveType.id);
       
-      final savedHiveType = await _hiveService.insertType(type: event.hiveType);
-      
-      final updatedTypes = [...state.availableHiveTypes, savedHiveType];
+      // Update the hive type in the available list
+      final updatedHiveTypes = state.availableHiveTypes.map((hiveType) {
+        if (hiveType.id == event.hiveType.id) {
+          return hiveType.copyWith(isStarred: () => !hiveType.isStarred);
+        }
+        return hiveType;
+      }).toList();
       
       emit(state.copyWith(
-        availableHiveTypes: () => updatedTypes,
-        hiveType: () => savedHiveType,
-        formStatus: () => EditHiveStatus.loaded,
+        availableHiveTypes: () => updatedHiveTypes,
       ));
     } catch (e) {
       emit(state.copyWith(
-        errorMessage: () => 'Failed to add hive type: ${e.toString()}',
-        formStatus: () => EditHiveStatus.failure,
+        errorMessage: () => 'Failed to toggle star: ${e.toString()}',
+        formStatus: () => EditHiveStatus.loaded,
       ));
     }
   }
 
-  FutureOr<void> _onToggleStarHiveType(EditHiveToggleStarHiveType event, Emitter<EditHiveState> emit) async {
-    final updateType = event.hiveType.copyWith(isStarred: () => !event.hiveType.isStarred);
-    await _hiveService.updateType(type: updateType);
-
-    final availableTypes = state.availableHiveTypes.map((type) => 
-      type.id == updateType.id ? updateType : type).toList();
-
-    final updatedSelectedType = state.hiveType?.id == updateType.id 
-      ? updateType 
-      : state.hiveType;
-
-    emit(state.copyWith(
-      availableHiveTypes: () => availableTypes,
-      hiveType: () => updatedSelectedType,
-    ));
+  FutureOr<void> _onAddNewHiveType(EditHiveAddNewHiveType event, Emitter<EditHiveState> emit) async {
+    try {
+      final createdHiveType = await _hiveService.createHiveType(
+        name: event.hiveType.name,
+        manufacturer: event.hiveType.manufacturer,
+        material: event.hiveType.material,
+        hasFrames: event.hiveType.hasFrames,
+        broodFrameCount: event.hiveType.broodFrameCount,
+        honeyFrameCount: event.hiveType.honeyFrameCount,
+        frameStandard: event.hiveType.frameStandard,
+        boxCount: event.hiveType.boxCount,
+        superBoxCount: event.hiveType.superBoxCount,
+        framesPerBox: event.hiveType.framesPerBox,
+        accessories: event.hiveType.accessories,
+        country: event.hiveType.country,
+        cost: event.hiveType.cost,
+      );
+      
+      // Add to available hive types and select it
+      final updatedHiveTypes = [...state.availableHiveTypes, createdHiveType];
+      
+      emit(state.copyWith(
+        availableHiveTypes: () => updatedHiveTypes,
+        hiveType: () => createdHiveType,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: () => 'Failed to create hive type: ${e.toString()}',
+        formStatus: () => EditHiveStatus.loaded,
+      ));
+    }
   }
 
   FutureOr<void> _onEditHiveCreateDefaultQueen(EditHiveCreateDefaultQueen event, Emitter<EditHiveState> emit) async {
-    final newQueen = await _queenService.createDefaultQueen();
-    emit(state.copyWith(queen: () => newQueen));
-    emit(state.copyWith(availableQueens: () => [...state.availableQueens, newQueen]));
+    // Simplified - just show a message that this feature is coming soon
+    emit(state.copyWith(
+      errorMessage: () => 'Queen creation coming soon',
+      formStatus: () => EditHiveStatus.loaded,
+    ));
   }
 
   FutureOr<void> _onEditHiveCreateQueen(EditHiveCreateQueen event, Emitter<EditHiveState> emit) async {
-    final newQueen = await _queenService.insertQueen(event.queen);
+    // Add the new queen to available queens and select it
+    final updatedQueens = [...state.availableQueens, event.queen];
+    
     emit(state.copyWith(
-      queen: () => newQueen,
-      availableQueens: () => [...state.availableQueens, newQueen]
+      availableQueens: () => updatedQueens,
+      queen: () => event.queen, // Select the newly created queen
     ));
   }
 
   FutureOr<void> _onUpdateQueen(EditHiveUpdateQueen event, Emitter<EditHiveState> emit) async {
-    await _queenService.updateQueen(queen: event.queen);
+    // Update the queen in available queens list and keep it selected
+    final updatedQueens = state.availableQueens.map((queen) => 
+      queen.id == event.queen.id ? event.queen : queen).toList();
     
     emit(state.copyWith(
       queen: () => event.queen,
-      availableQueens: () => state.availableQueens.map((queen) => 
-        queen.id == event.queen.id ? event.queen : queen).toList(),
+      availableQueens: () => updatedQueens,
     ));
+  }
+
+  FutureOr<void> _onGenerateName(EditHiveGenerateName event, Emitter<EditHiveState> emit) async {
+    try {
+      final nameService = getIt<NameGeneratorService>();
+      final generatedName = await nameService.generateBeehiveName();
+      emit(state.copyWith(name: () => generatedName));
+    } catch (e) {
+      final fallbackName = "Hive ${DateTime.now().millisecondsSinceEpoch % 1000}";
+      emit(state.copyWith(name: () => fallbackName));
+    }
+  }
+
+  FutureOr<void> _onAddSpending(EditHiveAddSpending event, Emitter<EditHiveState> emit) async {
+    // final storageService = getIt<StorageService>();
+    // await storageService.createItem(
+    //   apiaryId: event.apiary?.id,
+    //   apiaryName: event.apiary?.name,
+    //   group: 'hive',
+    //   item: event.itemName,
+    //   amount: event.amount,
+    //   type: 'spending',
+    //   date: event.date,
+    // );
+    // Optionally emit a state to show success/failure
   }
 }

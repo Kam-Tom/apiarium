@@ -1,403 +1,327 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:apiarium/shared/shared.dart';
+import 'package:apiarium/features/managment/queen_detail/queen_detail_page.dart';
+import 'package:apiarium/features/managment/queens/widgets/queen_status_badge.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class QueenCard extends StatelessWidget {
   final Queen queen;
-  final VoidCallback onTap;
-  final VoidCallback onEditTap;
-  final VoidCallback onDeleteTap;  
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const QueenCard({
-    Key? key,
+    super.key,
     required this.queen,
-    required this.onTap,
-    required this.onEditTap,
-    required this.onDeleteTap,  
+    this.onEdit,
+    this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _navigateToDetail(context),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            queen.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                queen.breedName,
+                                style: const TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                _getAgeText(),
+                                style: const TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        QueenStatusBadge(status: queen.status),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const _MarkedCircle(),
+                            const SizedBox(width: 4),
+                            Text(
+                              "management.queens.marked".tr(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _InfoItem(
+                      label: 'management.queens.apiary'.tr(),
+                      value: queen.apiaryName ?? 'management.queens.unassigned'.tr(),
+                      icon: Icons.location_on_outlined,
+                    ),
+                    const SizedBox(width: 8),
+                    _InfoItem(
+                      label: 'management.queens.hive'.tr(),
+                      value: queen.hiveName ?? 'management.queens.no_hive'.tr(),
+                      icon: Icons.home_outlined,
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: Text('common.edit'.tr()),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final confirmed = await _showDeleteConfirmation(context);
+                        if (confirmed == true) {
+                          onDelete?.call();
+                        }
+                      },
+                      icon: const Icon(Icons.delete, size: 18),
+                      label: Text('common.delete'.tr()),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getAgeText() {
+    final currentYear = DateTime.now().year;
+    final queenAge = currentYear - queen.birthDate.year;
+    return '${queenAge}y';
+  }
+
+  void _navigateToDetail(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => QueenDetailPage(queen: queen),
+      ),
+    );
+  }
+
+  Future<bool?> _showDeleteConfirmation(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => DeleteConfirmationDialog(queenName: queen.name),
+    );
+  }
+}
+
+class _MarkedCircle extends StatelessWidget {
+  const _MarkedCircle({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final QueenCard? card = context.findAncestorWidgetOfExactType<QueenCard>();
+    final queen = card?.queen;
+    if (queen == null) return SizedBox.shrink();
+
+    final bool isMarked = queen.marked == true;
+    final Color? markColor = queen.markColor;
+    final double size = 14;
+
+    if (isMarked && markColor != null) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: markColor,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+        ),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.3),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: const Center(
+        child: Icon(Icons.help_outline, size: 10, color: Colors.black54),
+      ),
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _InfoItem({
+    Key? key,
+    required this.label,
+    required this.value,
+    required this.icon,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final DateFormat dateFormat = DateFormat('MMM yyyy');
-    final currentYear = DateTime.now().year;
-    final queenAge = currentYear - queen.birthDate.year;
-    final theme = Theme.of(context);
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+    final isImportant = value == 'management.queens.no_hive'.tr() ||
+        value == 'management.queens.unassigned'.tr() ||
+        value == 'management.queens.unknown'.tr();
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 0.5,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isImportant ? FontWeight.bold : FontWeight.w600,
+                color: Colors.black87,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 10,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildQueenMarking(),
-                  const SizedBox(width: 12),
-                  
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                queen.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            _buildStatusBadge(queen.status),
-                          ],
-                        ),
-                        
-                        Container(
-                          margin: const EdgeInsets.only(top: 4, bottom: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            queen.breed.name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-            
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: queen.apiary != null ? Colors.teal : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            queen.apiary?.name ?? 'No Apiary',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: queen.apiary != null ? Colors.teal : Colors.grey,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  Container(
-                    height: 16,
-                    width: 1,
-                    color: Colors.grey.shade300,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.home,
-                          size: 16,
-                          color: queen.hive != null ? Colors.amber.shade700 : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            queen.hive?.name ?? 'No Hive',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: queen.hive != null ? Colors.amber.shade700 : Colors.grey,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-            
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Birth Date',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            RichText(
-                              text: TextSpan(
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: dateFormat.format(queen.birthDate),
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  TextSpan(
-                                    text: ' (${queenAge}y)',
-                                    style: TextStyle(
-                                      color: queenAge > 2 
-                                        ? Colors.red 
-                                        : Colors.grey.shade600,
-                                      fontWeight: queenAge > 2 
-                                        ? FontWeight.bold 
-                                        : FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Icon(
-                            Icons.source,
-                            size: 14,
-                            color: theme.colorScheme.secondary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Source',
-                              style: TextStyle(
-                                fontSize: 11, 
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            Text(
-                              queen.origin ?? _formatSource(queen.source),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: theme.colorScheme.secondary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: onEditTap,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12),
-                      minimumSize: const Size(60, 32),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: onDeleteTap,
-                    icon: const Icon(Icons.delete, size: 16),
-                    label: const Text('Delete'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12),
-                      minimumSize: const Size(60, 32),
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
-  
-  Widget _buildQueenMarking() {
-    // Use gray for unmarked queens, regardless of markColor
-    final circleColor = queen.marked ? (queen.markColor ?? Colors.grey.shade300) : Colors.grey.shade300;
-    
-    return Container(
-      width: 55,
-      height: 55,
-      decoration: BoxDecoration(
-        color: circleColor,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.grey.shade400,
-          width: 2,
-        ),
-      ),
-      child: Center(
-        child: queen.marked
-          ? const Icon(Icons.check, color: Colors.white, size: 30)
-          : const Icon(Icons.question_mark, color: Colors.white, size: 30),
-      ),
-    );
-  }
+}
 
-  Widget _buildStatusBadge(QueenStatus status) {
-    Color badgeColor;
-    String statusText;
-    IconData iconData;
-    
-    switch (status) {
-      case QueenStatus.active:
-        badgeColor = Colors.green;
-        statusText = 'Active';
-        iconData = Icons.check_circle;
-        break;
-      case QueenStatus.dead:
-        badgeColor = Colors.red;
-        statusText = 'Dead';
-        iconData = Icons.cancel;
-        break;
-      case QueenStatus.replaced:
-        badgeColor = Colors.orange;
-        statusText = 'Replaced';
-        iconData = Icons.swap_horiz;
-        break;
-      case QueenStatus.lost:
-        badgeColor = Colors.grey;
-        statusText = 'Lost';
-        iconData = Icons.help;
-        break;
-      default:
-        badgeColor = Colors.blue;
-        statusText = status.toString().split('.').last;
-        iconData = Icons.info;
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: badgeColor.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+class DeleteConfirmationDialog extends StatelessWidget {
+  final String queenName;
+
+  const DeleteConfirmationDialog({required this.queenName});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
         children: [
-          Icon(
-            iconData,
-            size: 14,
-            color: badgeColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            statusText,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: badgeColor,
-            ),
-          ),
+          Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600, size: 28),
+          const SizedBox(width: 8),
+          Expanded(child: Text('management.queens.delete_title'.tr())),
         ],
       ),
+      content: Text(
+        'management.queens.delete_confirm'
+            .tr(namedArgs: {'name': queenName}),
+        style: const TextStyle(height: 1.4),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(
+            'common.cancel'.tr(),
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Text('common.delete'.tr()),
+        ),
+      ],
     );
-  }
-
-  String _formatSource(QueenSource source) {
-    final name = source.toString().split('.').last.toLowerCase();
-    return '${name[0].toUpperCase()}${name.substring(1)}';
   }
 }

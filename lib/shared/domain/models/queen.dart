@@ -11,6 +11,7 @@ class Queen extends BaseModel {
   final Color? markColor;
   final QueenStatus status;
   final String? origin;
+  final double? cost;
   
   final String breedId;
   final String breedName;
@@ -21,6 +22,7 @@ class Queen extends BaseModel {
   final String? apiaryId;
   final String? apiaryName;
   final String? apiaryLocation;
+  final DateTime? lastTimeSeen;
 
   const Queen({
     required super.id,
@@ -29,6 +31,7 @@ class Queen extends BaseModel {
     super.syncStatus,
     super.lastSyncedAt,
     super.deleted = false,
+    super.serverVersion = 0,
     required this.name,
     required this.birthDate,
     required this.source,
@@ -36,6 +39,7 @@ class Queen extends BaseModel {
     this.markColor,
     required this.status,
     this.origin,
+    this.cost,
     required this.breedId,
     required this.breedName,
     this.breedScientificName,
@@ -45,17 +49,61 @@ class Queen extends BaseModel {
     this.apiaryId,
     this.apiaryName,
     this.apiaryLocation,
+    this.lastTimeSeen,
   });
+
+  factory Queen.fromMap(Map<String, dynamic> data) {
+    return Queen(
+      id: data['id'],
+      createdAt: DateTime.parse(data['createdAt']),
+      updatedAt: DateTime.parse(data['updatedAt']),
+      syncStatus: SyncStatus.values.firstWhere(
+        (s) => s.name == data['syncStatus'],
+        orElse: () => SyncStatus.pending,
+      ),
+      lastSyncedAt: data['lastSyncedAt'] != null 
+          ? DateTime.parse(data['lastSyncedAt']) 
+          : null,
+      deleted: data['deleted'] ?? false,
+      serverVersion: data['serverVersion'] ?? 0,
+      name: data['name'],
+      birthDate: DateTime.parse(data['birthDate']),
+      source: QueenSource.values.firstWhere(
+        (s) => s.name == data['source'],
+        orElse: () => QueenSource.bred,
+      ),
+      marked: data['marked'] ?? false,
+      markColor: data['markColor'] != null ? Color(data['markColor']) : null,
+      status: QueenStatus.values.firstWhere(
+        (s) => s.name == data['status'],
+        orElse: () => QueenStatus.active,
+      ),
+      origin: data['origin'],
+      cost: data['cost']?.toDouble(),
+      breedId: data['breedId'],
+      breedName: data['breedName'],
+      breedScientificName: data['breedScientificName'],
+      breedOrigin: data['breedOrigin'],
+      hiveId: data['hiveId'],
+      hiveName: data['hiveName'],
+      apiaryId: data['apiaryId'],
+      apiaryName: data['apiaryName'],
+      apiaryLocation: data['apiaryLocation'],
+      lastTimeSeen: data['lastTimeSeen'] != null ? DateTime.parse(data['lastTimeSeen']) : null,
+    );
+  }
 
   int get ageInDays => DateTime.now().difference(birthDate).inDays;
   int get ageInWeeks => (ageInDays / 7).floor();
+  double get ageInYears => DateTime.now().difference(birthDate).inDays / 365.25;
 
   @override
   List<Object?> get props => [
     ...baseSyncProps,
-    name, birthDate, source, marked, markColor, status, origin,
+    name, birthDate, source, marked, markColor, status, origin, cost,
     breedId, breedName, breedScientificName, breedOrigin,
     hiveId, hiveName, apiaryId, apiaryName, apiaryLocation,
+    lastTimeSeen,
   ];
 
   Map<String, dynamic> toMap() {
@@ -68,6 +116,7 @@ class Queen extends BaseModel {
       'markColor': markColor?.toARGB32(),
       'status': status.name,
       'origin': origin,
+      'cost': cost,
       'breedId': breedId,
       'breedName': breedName,
       'breedScientificName': breedScientificName,
@@ -77,54 +126,66 @@ class Queen extends BaseModel {
       'apiaryId': apiaryId,
       'apiaryName': apiaryName,
       'apiaryLocation': apiaryLocation,
+      'lastTimeSeen': lastTimeSeen?.toIso8601String(),
     };
   }
   
   Queen copyWith({
-    String? name,
-    DateTime? birthDate,
-    QueenSource? source,
-    bool? marked,
-    Color? markColor,
-    QueenStatus? status,
-    String? origin,
-    String? breedId,
-    String? breedName,
-    String? breedScientificName,
-    String? breedOrigin,    
-    String? hiveId,
-    String? hiveName,
-    String? apiaryId,
-    String? apiaryName,
-    String? apiaryLocation,
-    DateTime? updatedAt,
-    SyncStatus? syncStatus,
-    DateTime? lastSyncedAt,
-    bool? deleted,
+    String? Function()? name,
+    DateTime? Function()? birthDate,
+    QueenSource? Function()? source,
+    bool? Function()? marked,
+    Color? Function()? markColor,
+    QueenStatus? Function()? status,
+    String? Function()? origin,
+    double? Function()? cost,
+    String? Function()? breedId,
+    String? Function()? breedName,
+    String? Function()? breedScientificName,
+    String? Function()? breedOrigin,    
+    String? Function()? hiveId,
+    String? Function()? hiveName,
+    String? Function()? apiaryId,
+    String? Function()? apiaryName,
+    String? Function()? apiaryLocation,
+    DateTime? Function()? updatedAt,
+    SyncStatus? Function()? syncStatus,
+    DateTime? Function()? lastSyncedAt,
+    bool? Function()? deleted,
+    DateTime? Function()? lastTimeSeen,
+    int? Function()? serverVersion,
   }) {
     return Queen(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
-      syncStatus: syncStatus ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
-      deleted: deleted ?? this.deleted,
-      name: name ?? this.name,
-      birthDate: birthDate ?? this.birthDate,
-      source: source ?? this.source,
-      marked: marked ?? this.marked,
-      markColor: markColor ?? this.markColor,
-      status: status ?? this.status,
-      origin: origin ?? this.origin,
-      breedId: breedId ?? this.breedId,
-      breedName: breedName ?? this.breedName,
-      breedScientificName: breedScientificName ?? this.breedScientificName,
-      breedOrigin: breedOrigin ?? this.breedOrigin,      
-      hiveId: hiveId ?? this.hiveId,
-      hiveName: hiveName ?? this.hiveName,
-      apiaryId: apiaryId ?? this.apiaryId,
-      apiaryName: apiaryName ?? this.apiaryName,
-      apiaryLocation: apiaryLocation ?? this.apiaryLocation,
+      updatedAt: updatedAt?.call() ?? DateTime.now(),
+      syncStatus: syncStatus?.call() ?? SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
+      deleted: deleted?.call() ?? this.deleted,
+      name: name?.call() ?? this.name,
+      birthDate: birthDate?.call() ?? this.birthDate,
+      source: source?.call() ?? this.source,
+      marked: marked?.call() ?? this.marked,
+      markColor: markColor?.call() ?? this.markColor,
+      status: status?.call() ?? this.status,
+      origin: origin?.call() ?? this.origin,
+      cost: cost?.call() ?? this.cost,
+      breedId: breedId?.call() ?? this.breedId,
+      breedName: breedName?.call() ?? this.breedName,
+      breedScientificName: breedScientificName?.call() ?? this.breedScientificName,
+      breedOrigin: breedOrigin?.call() ?? this.breedOrigin,
+      hiveId: hiveId?.call() ?? this.hiveId,
+      hiveName: hiveName?.call() ?? this.hiveName,
+      apiaryId: apiaryId?.call() ?? this.apiaryId,
+      apiaryName: apiaryName?.call() ?? this.apiaryName,
+      apiaryLocation: apiaryLocation?.call() ?? this.apiaryLocation,
+      lastTimeSeen: lastTimeSeen?.call() ?? this.lastTimeSeen,
+      serverVersion: serverVersion?.call() ?? this.serverVersion,
     );
+  }
+
+  @override
+  String toString() {
+    return name;
   }
 }

@@ -5,3 +5,6 @@ export 'hive_type_repository.dart';
 export 'queen_breed_repository.dart';
 export 'report_repository.dart';
 export 'history_log_repository.dart';
+export 'storage_repository.dart';
+export 'transaction_repository.dart';
+export 'inspection_repository.dart';

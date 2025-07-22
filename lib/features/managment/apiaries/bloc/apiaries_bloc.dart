@@ -60,7 +60,7 @@ class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
     Emitter<ApiariesState> emit,
   ) async {
     try {
-      await _apiaryService.deleteApiary(apiaryId: event.apiaryId);
+      await _apiaryService.deleteApiary(event.apiaryId);
       
       // Refresh the list
       add(const LoadApiaries());
@@ -147,39 +147,11 @@ class ApiariesBloc extends Bloc<ApiariesEvent, ApiariesState> {
     final item = updatedApiaries.removeAt(event.oldIndex);
     updatedApiaries.insert(adjustedNewIndex, item);
     
-    // Now assign consecutive position values to all apiaries
-    final apiariesWithNewPositions = List<Apiary>.generate(
-      updatedApiaries.length,
-      (index) => updatedApiaries[index].copyWith(
-        position: () => index,
-      ),
-    );
-    
-    // Create a map of apiary IDs to their updated versions for easy lookup
-    final updatedApiaryMap = {
-      for (var apiary in apiariesWithNewPositions) apiary.id: apiary
-    };
-    
-    // Update the allApiaries list with the new positions
-    final updatedAllApiaries = state.allApiaries.map((apiary) {
-      // If this apiary was reordered, use the updated version
-      return updatedApiaryMap.containsKey(apiary.id) 
-          ? updatedApiaryMap[apiary.id]! 
-          : apiary;
-    }).toList();
-
     try {
       emit(
         state.copyWith(
-          filteredApiaries: apiariesWithNewPositions,
-          allApiaries: updatedAllApiaries,
+          filteredApiaries: updatedApiaries,
         ),
-      );
-      
-
-      await _apiaryService.updateApiariesBatch(
-        apiariesWithNewPositions,
-        skipHistoryLog: true,
       );
     } catch (e) {
       emit(state.copyWith(

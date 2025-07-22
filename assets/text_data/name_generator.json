@@ -1,6 +1,6 @@
 {
   "adjectives": {
-    "polish": {
+    "pl": {
       "masculine": [
         "Złoty", "Słodki", "Pracowity", "Bzyczący", "Miodowy", 
         "Kwiatowy", "Leśny", "Polny", "Magiczny", "Radosny",
@@ -41,7 +41,7 @@
         "Wrzosowe", "Leciutkie", "Bursztynowe", "Głębokie", "Intensywne"
       ]
     },
-    "english": {
+    "en": {
       "masculine": [
         "Golden", "Sweet", "Diligent", "Buzzing", "Honey", 
         "Floral", "Forest", "Field", "Magical", "Joyful",
@@ -60,7 +60,7 @@
     }
   },
   "beehive_nouns": {
-    "polish": {
+    "pl": {
       "masculine": [
         "Dom", "Pałac", "Zamek", "Dwór", "Folwark", "Domek", 
         "Przyczółek", "Zagajnik", "Kryształ", "Bastion", "Azyl",
@@ -83,7 +83,7 @@
         "Krążenie", "Kokon"
       ]
     },
-    "english": {
+    "en": {
       "masculine": [
         "Home", "Palace", "Castle", "Manor", "Homestead", "Cottage",
         "Outpost", "Grove", "Crystal", "Bastion", "Sanctuary",
@@ -102,8 +102,8 @@
       "neuter": []
     }
   },
-  "bee_stripe_nouns": {
-    "polish": {
+  "apiary_nouns": {
+    "pl": {
       "masculine": [
         "Ogród", "Sad", "Raj", "Majątek", "Zagajnik", "Las", 
         "Zakątek", "Przyczółek", "Świat", "Rezerwat", "Gaj", "Szlak",
@@ -126,7 +126,7 @@
         "Ranczo", "Centrum"
       ]
     },
-    "english": {
+    "en": {
       "masculine": [
         "Garden", "Orchard", "Paradise", "Estate", "Grove", "Forest",
         "Corner", "Outpost", "World", "Reserve", "Copse", "Trail",
@@ -146,7 +146,7 @@
     }
   },
   "bee_nouns": {
-    "polish": {
+    "pl": {
       "masculine": [
         "Zwiadowca", "Promyczek", "Strażnik", "Tropiciel", 
         "Budowniczy", "Posłaniec", "Zbieracz", "Pyłek"
@@ -169,7 +169,7 @@
         "Światełko", "Lśnienie", "Berło", "Korona"
       ]
     },
-    "english": {
+    "en": {
       "masculine": [
         "Scout", "Ray", "Guardian", "Tracker", "Builder", "Messenger",
         "Collector", "Caretaker", "Warrior", "Flyer", "Gardener", 

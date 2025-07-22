@@ -1,5 +1,6 @@
 import 'package:apiarium/core/theme/app_theme.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// A multiselect rounded dropdown widget that allows selection of multiple items.
@@ -37,6 +38,9 @@ class MultiselectRoundedDropdown<T> extends StatefulWidget {
   /// Separator used when joining multiple selected items in display.
   final String separator;
 
+  /// Flag to indicate if the values should be translated.
+  final bool translate;
+
   const MultiselectRoundedDropdown({
     super.key,
     required this.items,
@@ -50,6 +54,7 @@ class MultiselectRoundedDropdown<T> extends StatefulWidget {
     this.hasError = false,
     this.errorText,
     this.separator = ', ',
+    this.translate = false,
   });
 
   @override
@@ -59,10 +64,27 @@ class MultiselectRoundedDropdown<T> extends StatefulWidget {
 class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdown<T>> {
   bool _isMenuOpen = false;
 
+  String _translateValue(BuildContext context, T? value) {
+    if (!widget.translate) {
+      if (value == null && widget.hintText != null) return widget.hintText!;
+      if (value == null) return '';
+      return value.toString();
+    }
+    if (value == null && widget.hintText != null) return widget.hintText!.tr();
+    if (value is Enum) {
+      final type = value as Enum;
+      return type.name.tr();
+    }
+
+    return 'common.${value.toString()}'.tr();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isEmpty = widget.items.isEmpty;
     final String displayText = widget.hintText ?? (isEmpty ? 'No items available' : 'Select items');
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final responsiveHeight = isSmallScreen ? 46.0 : widget.minHeight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +118,7 @@ class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdo
                           },
                           child: Container(
                             height: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6.0 : 8.0),
                             child: widget.itemBuilder != null
                                 ? widget.itemBuilder!(context, item, isItemSelected)
                                 : Row(
@@ -106,13 +128,15 @@ class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdo
                                             ? Icons.check_box_outlined
                                             : Icons.check_box_outline_blank,
                                         color: isItemSelected ? AppTheme.primaryColor : null,
+                                        size: isSmallScreen ? 20 : 24,
                                       ),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: isSmallScreen ? 6 : 8),
                                       Expanded(
                                         child: Text(
-                                          item.toString(),
+                                          _translateValue(context, item),
                                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                                 color: isItemSelected ? AppTheme.primaryColor : null,
+                                                fontSize: isSmallScreen ? 14 : 16,
                                               ),
                                         ),
                                       ),
@@ -137,8 +161,11 @@ class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdo
                       child: Text(
                         widget.selectedValues.isEmpty
                             ? displayText
-                            : widget.selectedValues.map((e) => e.toString()).join(widget.separator),
-                        style: Theme.of(context).textTheme.bodyLarge,
+                            : widget.selectedValues.map((e) => _translateValue(context, e)).join(widget.separator),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: widget.selectedValues.isNotEmpty ? FontWeight.w600 : FontWeight.normal,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -154,17 +181,21 @@ class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdo
           hint: Container(
             alignment: Alignment.centerLeft,
             child: Text(
-              displayText,
+              _translateValue(context, null),
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
             ),
           ),
           buttonStyleData: ButtonStyleData(
             width: double.infinity,
-            height: widget.minHeight,
-            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
+            height: responsiveHeight,
+            padding: EdgeInsets.symmetric(
+              vertical: 2, 
+              horizontal: isSmallScreen ? 10 : 12,
+            ),
             decoration: BoxDecoration(
               color: isEmpty ? Colors.grey.shade100 : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(12),
@@ -176,7 +207,7 @@ class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdo
                         : _isMenuOpen
                             ? AppTheme.primaryColor
                             : Colors.grey.shade300,
-                width: 2,
+                width: _isMenuOpen ? 2 : 1,
               ),
             ),
           ),
@@ -202,8 +233,8 @@ class _MultiselectRoundedDropdownState<T> extends State<MultiselectRoundedDropdo
               color: isEmpty ? Colors.grey.shade500 : null,
             ),
           ),
-          menuItemStyleData: const MenuItemStyleData(
-            height: 40,
+          menuItemStyleData: MenuItemStyleData(
+            height: isSmallScreen ? 36 : 40,
             padding: EdgeInsets.zero,
           ),
         ),

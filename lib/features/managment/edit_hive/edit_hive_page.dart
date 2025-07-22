@@ -1,37 +1,40 @@
+import 'package:apiarium/core/di/dependency_injection.dart';
+import 'package:apiarium/core/theme/app_theme.dart';
 import 'package:apiarium/features/managment/edit_hive/bloc/edit_hive_bloc.dart';
 import 'package:apiarium/features/managment/edit_hive/edit_hive_view.dart';
-import 'package:apiarium/shared/repositories/apiary_repository.dart';
-import 'package:apiarium/shared/repositories/hive_repository.dart';
-import 'package:apiarium/shared/repositories/queen_repository.dart';
 import 'package:apiarium/shared/shared.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class EditHivePage extends StatelessWidget {
   final String? hiveId;
-  final bool skipSaving;
   final bool hideLocation;
-  
+  final String? queenId;
+
   const EditHivePage({
-    this.hiveId, 
-    this.skipSaving = false,
+    this.hiveId,
     this.hideLocation = false,
-    super.key
+    this.queenId,
+    super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => EditHiveBloc(
-        queenService: context.read<QueenService>(),
-        apiaryService: context.read<ApiaryService>(),
-        hiveService: context.read<HiveService>(),
-        skipSaving: skipSaving,
-        hideLocation: hideLocation,
-      )..add(EditHiveLoadData(hiveId: hiveId)),
+        queenService: getIt<QueenService>(),
+        apiaryService: getIt<ApiaryService>(),
+        hiveService: getIt<HiveService>(),
+      )..add(EditHiveLoadData(hiveId: hiveId, queenId: queenId)),
       child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
-          title: Text(hiveId == null ? 'Create Hive' : 'Edit Hive'),
+          title: Text(
+            hiveId == null
+                ? 'edit_hive.create'.tr()
+                : 'edit_hive.edit'.tr(),
+          ),
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -42,7 +45,7 @@ class EditHivePage extends StatelessWidget {
             ),
           ),
         ),
-        body: const EditHiveView(),
+        body: EditHiveView(hideLocation: hideLocation),
       ),
     );
   }

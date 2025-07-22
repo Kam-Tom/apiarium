@@ -52,15 +52,6 @@ class EditQueenSourceChanged extends EditQueenEvent {
   List<Object> get props => [source];
 }
 
-class EditQueenHiveNameChanged extends EditQueenEvent {
-  final String hiveName;
-  
-  const EditQueenHiveNameChanged(this.hiveName);
-  
-  @override
-  List<Object> get props => [hiveName];
-}
-
 class EditQueenMarkedChanged extends EditQueenEvent {
   final bool marked;
   
@@ -100,9 +91,7 @@ class EditQueenOriginChanged extends EditQueenEvent {
 class EditQueenApiaryChanged extends EditQueenEvent {
   final Apiary? apiary;
   
-  const EditQueenApiaryChanged({
-    this.apiary,
-  });
+  const EditQueenApiaryChanged(this.apiary);
   
   @override
   List<Object?> get props => [apiary];
@@ -111,42 +100,31 @@ class EditQueenApiaryChanged extends EditQueenEvent {
 class EditQueenHiveChanged extends EditQueenEvent {
   final Hive? hive;
   
-  const EditQueenHiveChanged({
-    this.hive,
-  });
+  const EditQueenHiveChanged(this.hive);
   
   @override
   List<Object?> get props => [hive];
 }
 
-class EditQueenCreateBreed extends EditQueenEvent {
-  final String name;
-  final String? scientificName;
-  final String? origin;
-  final String? country;
-  final bool isStarred;
-  
-  const EditQueenCreateBreed({
-    required this.name,
-    this.scientificName,
-    this.origin,
-    this.country,
-    this.isStarred = false,
-  });
-  
-  @override
-  List<Object?> get props => [
-    name, scientificName, origin, country, isStarred
-  ];
-}
-
-class EditQueenToggleBreedStar extends EditQueenEvent {
-  final QueenBreed breed;
-  
-  const EditQueenToggleBreedStar(this.breed);
-  
-  @override
-  List<Object> get props => [breed];
+class EditQueenGenerateName extends EditQueenEvent {
+  const EditQueenGenerateName();
 }
 
 class EditQueenSubmitted extends EditQueenEvent {}
+
+class EditQueenAddSpending extends EditQueenEvent {
+  final double amount;
+  final DateTime date;
+  final Apiary? apiary;
+  final String itemName;
+
+  const EditQueenAddSpending({
+    required this.amount,
+    required this.date,
+    required this.apiary,
+    required this.itemName,
+  });
+
+  @override
+  List<Object?> get props => [amount, date, apiary, itemName];
+}

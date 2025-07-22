@@ -99,7 +99,7 @@ class HiveCard extends StatelessWidget {
           maxLines: 1,
         ),
         Text(
-          hive.hiveType.name,
+          hive.hiveType,
           style: TextStyle(
             fontSize: 10,
             color: moreSubtleTextColor,
@@ -112,7 +112,7 @@ class HiveCard extends StatelessWidget {
   }
 
   Widget _buildQueenInfo(Color textColor, Color moreSubtleTextColor, bool isDarkBackground) {
-    if (hive.queen == null) {
+    if (hive.queenId == null) {
       return Row(
         children: [
           Icon(
@@ -146,8 +146,8 @@ class HiveCard extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 5),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: hive.queen!.marked
-                      ? hive.queen!.markColor ?? Colors.grey
+                  color: hive.queenMarked!
+                      ? hive.color ?? Colors.grey
                       : Colors.grey.withOpacity(0.4),
                   border: Border.all(
                     color: isDarkBackground ? Colors.white30 : Colors.black12,
@@ -157,7 +157,7 @@ class HiveCard extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  hive.queen!.name,
+                  hive.queenName ?? 'Unnamed Queen',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
@@ -171,7 +171,7 @@ class HiveCard extends StatelessWidget {
           ),
           const SizedBox(height: 1),
           Text(
-            hive.queen!.breed.name,
+            hive.breed ?? 'Unknown Breed',
             style: TextStyle(
               fontSize: 10,
               color: moreSubtleTextColor,

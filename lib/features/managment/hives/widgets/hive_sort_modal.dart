@@ -1,50 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/hives/bloc/hives_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HiveSortModal extends StatelessWidget {
-  const HiveSortModal({Key? key}) : super(key: key);
+  const HiveSortModal({super.key});
 
   @override
   Widget build(BuildContext context) {
     final state = context.read<HivesBloc>().state;
-    
+
     return AlertDialog(
-      title: const Text('Sort Hives'),
+      title: Text('hives.sort_title'.tr()),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildSortOption(
             context,
-            title: 'Name',
+            title: 'hives.sort_name'.tr(),
             sortOption: HiveSortOption.name,
             currentOption: state.sortOption,
             ascending: state.ascending,
           ),
           _buildSortOption(
             context,
-            title: 'Apiary',
+            title: 'hives.sort_apiary'.tr(),
             sortOption: HiveSortOption.apiary,
             currentOption: state.sortOption,
             ascending: state.ascending,
           ),
           _buildSortOption(
             context,
-            title: 'Hive Type',
+            title: 'hives.sort_type'.tr(),
             sortOption: HiveSortOption.type,
             currentOption: state.sortOption,
             ascending: state.ascending,
           ),
           _buildSortOption(
             context,
-            title: 'Queen Status',
+            title: 'hives.sort_queen_status'.tr(),
             sortOption: HiveSortOption.queenStatus,
             currentOption: state.sortOption,
             ascending: state.ascending,
           ),
           _buildSortOption(
             context,
-            title: 'Hive Status',
+            title: 'hives.sort_hive_status'.tr(),
             sortOption: HiveSortOption.hiveStatus,
             currentOption: state.sortOption,
             ascending: state.ascending,
@@ -62,7 +63,7 @@ class HiveSortModal extends StatelessWidget {
     required bool ascending,
   }) {
     final isSelected = sortOption == currentOption;
-    
+
     return RadioListTile<HiveSortOption>(
       title: Text(title),
       value: sortOption,
@@ -74,11 +75,9 @@ class HiveSortModal extends StatelessWidget {
         ));
         Navigator.pop(context);
       },
-      secondary: Icon(
-        isSelected
-            ? (ascending ? Icons.arrow_upward : Icons.arrow_downward)
-            : null,
-      ),
+      secondary: isSelected
+          ? Icon(ascending ? Icons.arrow_upward : Icons.arrow_downward)
+          : null,
       selected: isSelected,
       activeColor: Theme.of(context).colorScheme.primary,
     );

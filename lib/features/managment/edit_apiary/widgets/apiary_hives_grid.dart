@@ -1,7 +1,6 @@
 import 'package:apiarium/core/router/app_router.dart';
 import 'package:apiarium/core/theme/app_theme.dart';
 import 'package:apiarium/shared/shared.dart';
-import 'package:apiarium/shared/widgets/dropdown/searchable_rounded_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -164,8 +163,6 @@ class _ApiaryHivesGridState extends State<ApiaryHivesGrid> {
   }
 
   Widget _buildEmptyHivesMessage() {
-    final canCreateDefaultHive = context.select((EditApiaryBloc bloc) => bloc.state.canCreateDefaultHive);
-    final canCreateDefaultQueen = context.select((EditApiaryBloc bloc) => bloc.state.canCreateDefaultQueen);
     final addQueensWithHives = context.select((EditApiaryBloc bloc) => bloc.state.addQueensWithHives);
 
     return Container(
@@ -194,7 +191,7 @@ class _ApiaryHivesGridState extends State<ApiaryHivesGrid> {
             onPressed: () => _handleAddHive(),
             icon: const Icon(Icons.add_circle_outline),
             label: Text(
-              _getAddHiveButtonText(canCreateDefaultHive, addQueensWithHives, canCreateDefaultQueen),
+              addQueensWithHives ? 'Create hive with queen'.tr() : 'Create new hive'.tr(),
               style: TextStyle(color: AppTheme.primaryColor),
             ),
           ),
@@ -203,50 +200,49 @@ class _ApiaryHivesGridState extends State<ApiaryHivesGrid> {
     );
   }
 
-  String _getAddHiveButtonText(bool canCreateDefaultHive, bool addQueensWithHives, bool canCreateDefaultQueen) {
-    if (addQueensWithHives && !canCreateDefaultQueen) {
-      return 'Create queen first'.tr();
-    } else if (canCreateDefaultHive) {
-      return 'Add default hive'.tr();
-    } else {
-      return 'Create new hive'.tr();
-    }
-  }
-
   void _handleAddHive() {
-    final bloc = context.read<EditApiaryBloc>();
-    final state = bloc.state;
+    final addQueensWithHives = context.read<EditApiaryBloc>().state.addQueensWithHives;
 
-    if (state.addQueensWithHives) {
-      if (state.canCreateDefaultHive && state.canCreateDefaultQueen) {
-        // Can create both default hive and queen
-        bloc.add(const EditApiaryAddHive());
-      } else if (state.canCreateDefaultHive && !state.canCreateDefaultQueen) {
-        // Need to create a queen first
-        _openCreateQueenDialog(context);
-      } else {
-        // Need to create a custom hive (can't use default)
-        _openCreateHiveDialog(context);
-      }
+    if (addQueensWithHives) {
+      // Open create queen page first, then create hive
+      _openCreateQueenPage(context);
     } else {
-      // AddQueensWithHives is OFF
-      if (state.canCreateDefaultHive) {
-        // Can add default hive without queen
-        bloc.add(const EditApiaryAddHive());
-      } else {
-        // Need to create custom hive
-        _openCreateHiveDialog(context);
-      }
+      // Open create hive page directly
+      _openCreateHivePage(context);
     }
   }
 
-  void _openCreateQueenDialog(BuildContext context) async {
+  void _openCreateQueenPage(BuildContext context) async {
     final result = await context.push(AppRouter.editQueen, extra: {'hideLocation': true});
 
     if (result is Queen && context.mounted) {
-      context.read<EditApiaryBloc>().add(EditApiaryAddHiveWithQueen(result));
-    } else if (result != null && context.mounted) {
-      context.read<EditApiaryBloc>().add(const EditApiaryAddHive());
+      // After creating queen, open hive creation with the queen pre-selected
+      _openCreateHivePageWithQueen(context, result.id);
+    }
+  }
+
+  void _openCreateHivePageWithQueen(BuildContext context, String queenId) async {
+    final result = await context.push(
+      AppRouter.editHive,
+      extra: {
+        'hideLocation': true,
+        'queenId': queenId,
+      },
+    );
+
+    if (result is Hive && context.mounted) {
+      context.read<EditApiaryBloc>().add(EditApiaryAddExistingHive(result));
+    }
+  }
+
+  void _openCreateHivePage(BuildContext context) async {
+    final result = await context.push(
+      AppRouter.editHive,
+      extra: {'hideLocation': true},
+    );
+
+    if (result is Hive && context.mounted) {
+      context.read<EditApiaryBloc>().add(EditApiaryAddExistingHive(result));
     }
   }
 
@@ -293,16 +289,5 @@ class _ApiaryHivesGridState extends State<ApiaryHivesGrid> {
         ),
       ],
     );
-  }
-
-  void _openCreateHiveDialog(BuildContext context) async {
-    final result = await context.push(
-      AppRouter.editHive,
-      extra: {'hideLocation': true},
-    );
-
-    if (result is Hive && context.mounted) {
-      context.read<EditApiaryBloc>().add(EditApiaryAddExistingHive(result));
-    }
   }
 }

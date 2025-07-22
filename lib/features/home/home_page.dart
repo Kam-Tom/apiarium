@@ -8,7 +8,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        top: false,
+        top: true,
         child: Container(
           decoration: const BoxDecoration(
             image: DecorationImage(

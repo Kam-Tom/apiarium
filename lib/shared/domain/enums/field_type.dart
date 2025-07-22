@@ -4,4 +4,5 @@ enum FieldType {
   boolean,
   categorical,
   multipleChoice,
+  date,
 }

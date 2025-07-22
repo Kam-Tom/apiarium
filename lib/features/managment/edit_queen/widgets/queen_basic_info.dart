@@ -1,13 +1,14 @@
-import 'package:apiarium/features/managment/edit_queen/widgets/queen_breed_input_item.dart';
-import 'package:apiarium/features/managment/edit_queen/widgets/queen_breed_list_item.dart';
-import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:apiarium/features/managment/edit_queen/bloc/edit_queen_bloc.dart';
-import 'package:apiarium/features/managment/edit_queen/widgets/add_queen_breed_dialog.dart';
 import 'package:apiarium/features/managment/edit_queen/widgets/edit_queen_card.dart';
-import 'package:apiarium/shared/shared.dart';
+import 'package:apiarium/shared/domain/enums/queen_status.dart';
+import 'package:apiarium/shared/domain/models/queen_breed.dart';
+import 'package:apiarium/shared/widgets/dropdown/queen_breed_dropdown_item.dart';
+import 'package:apiarium/shared/widgets/dropdown/rounded_dropdown.dart';
 import 'package:apiarium/shared/widgets/dropdown/searchable_rounded_dropdown.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class QueenBasicInfo extends StatefulWidget {
   const QueenBasicInfo({super.key});
@@ -20,79 +21,89 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
   final _nameController = TextEditingController();
   bool _isDatePickerOpen = false;
 
-  // Color codes for marking queens based on birth year
   static const List<Color> _markingColors = [
-    Colors.white, // Years ending in 1, 6
-    Colors.yellow, // Years ending in 2, 7
-    Colors.red, // Years ending in 3, 8
-    Colors.green, // Years ending in 4, 9
-    Colors.blue, // Years ending in 0, 5
+    Colors.white,
+    Colors.yellow,
+    Colors.red,
+    Colors.green,
+    Colors.blue,
   ];
 
   @override
   void initState() {
     super.initState();
-    _nameController.text = context.read<EditQueenBloc>().state.name;
+    final state = context.read<EditQueenBloc>().state;
+    // If name is empty, set a default generated name (for consistency)
+    if (state.name.isEmpty) {
+      context.read<EditQueenBloc>().add(const EditQueenGenerateName());
+    }
+    _nameController.text = state.name;
   }
 
   @override
   Widget build(BuildContext context) {
-    return EditQueenCard(
-      title: 'Basic Information'.tr(),
-      icon: Icons.info_outline,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildName(),
-          const SizedBox(height: 16),
-          Text(
-            'Queen Breed'.tr(),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _buildBreed(),
-          const SizedBox(height: 16),
-          Text(
-            'Birth Date'.tr(),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _buildBirthDate(),
-          const SizedBox(height: 16),
-          Text(
-            'Status'.tr(),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _buildStatus(context),
-          const SizedBox(height: 16),
-          _buildMarkingOptions(),
-        ],
+    return BlocListener<EditQueenBloc, EditQueenState>(
+      listenWhen: (previous, current) => previous.name != current.name,
+      listener: (context, state) {
+        if (_nameController.text != state.name) {
+          _nameController.text = state.name;
+        }
+      },
+      child: EditQueenCard(
+        title: 'edit_queen.title'.tr(),
+        icon: Icons.info_outline,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Add a section title above the name input for consistency
+            Text(
+              'edit_queen.name_label'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _buildName(),
+            const SizedBox(height: 16),
+            Text(
+              'edit_queen.breed'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _buildBreed(),
+            const SizedBox(height: 16),
+            Text(
+              'edit_queen.birth_date'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _buildBirthDate(),
+            const SizedBox(height: 16),
+            _buildStatus(context),
+            const SizedBox(height: 16),
+            _buildMarkingOptions(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildName() {
-    final nameError = context.select(
-      (EditQueenBloc bloc) =>
-          bloc.state.showValidationErrors && bloc.state.name.trim().isEmpty
-              ? 'Queen name is required'.tr()
-              : null,
-    );
-
     return TextFormField(
       controller: _nameController,
       decoration: InputDecoration(
-        labelText: 'Queen Name/Number'.tr(),
+        labelText: 'edit_queen.name_label'.tr(),
         border: const OutlineInputBorder(),
-        errorText: nameError,
-        errorBorder:
-            nameError != null
-                ? OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                )
-                : null,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        suffixIcon: IconButton(
+          onPressed: () {
+            context.read<EditQueenBloc>().add(const EditQueenGenerateName());
+          },
+          icon: Icon(
+            Icons.refresh,
+            color: Colors.grey.shade600,
+          ),
+          tooltip: 'edit_queen.generate_name'.tr(),
+        ),
       ),
       onChanged: (value) {
         context.read<EditQueenBloc>().add(EditQueenNameChanged(value.trim()));
@@ -104,69 +115,35 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
     final availableBreeds = context.select(
       (EditQueenBloc bloc) => bloc.state.availableBreeds,
     );
-
     final selectedBreed = context.select(
       (EditQueenBloc bloc) => bloc.state.queenBreed,
     );
-
-    final breedError = context.select(
-      (EditQueenBloc bloc) =>
-          bloc.state.showValidationErrors && bloc.state.queenBreed == null
-              ? 'Queen breed is required'.tr()
-              : null,
-    );
-
-    // Create a key that changes whenever the breed list or any breed's star status changes
-    final dropdownKey = ValueKey(
-      'breeds-${availableBreeds.length}-${DateTime.now().millisecondsSinceEpoch}',
-    );
-
     return SearchableRoundedDropdown<QueenBreed>(
-      key: dropdownKey,
       value: selectedBreed,
       items: availableBreeds,
-      maxHeight: 300,
       minHeight: 56,
-      hasError: breedError != null,
-      errorText: breedError,
-      onAddNewItem: () async {
-        final result = await showDialog<QueenBreed>(
-          context: context,
-          builder: (context) => const AddQueenBreedDialog(),
-        );
-
-        if (result != null && mounted) {
-          FocusManager.instance.primaryFocus?.unfocus();
-          context.read<EditQueenBloc>().add(
-            EditQueenCreateBreed(
-              name: result.name,
-              scientificName: result.scientificName,
-              origin: result.origin,
-              country: result.country,
-              isStarred: result.isStarred,
-            ),
-          );
-        }
-      },
-      itemBuilder: (context, item, isSelected) {
-        return QueenBreedListItem(
-          breed: item,
-          isSelected: isSelected,
-          onToggleStar: () {
-            context.read<EditQueenBloc>().add(EditQueenToggleBreedStar(item));
-          },
-        );
-      },
-      buttonItemBuilder: (context, item) {
-        return QueenBreedInputItem(
-          breed: item,
-        );
-      },
+      hintText: 'edit_queen.breed_hint'.tr(),
+      searchHintText: 'edit_queen.breed_search_hint'.tr(),
       onChanged: (value) {
         if (value != null) {
           context.read<EditQueenBloc>().add(EditQueenBreedChanged(value));
         }
       },
+      searchMatchFn: (item, searchValue) {
+        final breed = item.value as QueenBreed;
+        final lowerSearch = searchValue.toLowerCase();
+        return breed.name.toLowerCase().contains(lowerSearch) ||
+               (breed.scientificName?.toLowerCase().contains(lowerSearch) ?? false) ||
+               (breed.origin?.toLowerCase().contains(lowerSearch) ?? false);
+      },
+      itemBuilder: (ctx, item, isSelected) =>
+        QueenBreedDropdownItem(breed: item, isSelected: isSelected),
+      buttonItemBuilder: (ctx, item) =>
+        QueenBreedDropdownItem(
+          breed: item,
+          isSelected: true,
+          colorizeSelected: false,
+        ),
     );
   }
 
@@ -176,12 +153,12 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
     );
     final inputTheme = Theme.of(context).inputDecorationTheme;
     final borderRadius =
-        (inputTheme.border as OutlineInputBorder?)?.borderRadius ?? 
+        (inputTheme.border as OutlineInputBorder?)?.borderRadius ??
         BorderRadius.circular(12);
     final borderColor =
         _isDatePickerOpen
             ? Theme.of(context).colorScheme.primary
-            : (inputTheme.border as OutlineInputBorder?)?.borderSide.color ?? 
+            : (inputTheme.border as OutlineInputBorder?)?.borderSide.color ??
                 Colors.grey.shade300;
 
     return InkWell(
@@ -190,25 +167,22 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
         setState(() {
           _isDatePickerOpen = true;
         });
-
         final date = await showDatePicker(
           context: context,
           initialDate: birthDate,
           firstDate: DateTime(DateTime.now().year - 10),
           lastDate: DateTime.now(),
         );
-
         setState(() {
           _isDatePickerOpen = false;
         });
-
         if (date != null && mounted) {
           context.read<EditQueenBloc>().add(EditQueenBirthDateChanged(date));
         }
       },
       child: Container(
         padding:
-            inputTheme.contentPadding ?? 
+            inputTheme.contentPadding ??
             const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: inputTheme.fillColor,
@@ -236,14 +210,27 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
   Widget _buildStatus(BuildContext context) {
     final status = context.select((EditQueenBloc bloc) => bloc.state.queenStatus);
 
-    return RoundedDropdown<QueenStatus>(
-      value: status,
-      items: QueenStatus.values,
-      onChanged: (value) {
-        if (value != null) {
-          context.read<EditQueenBloc>().add(EditQueenStatusChanged(value));
-        }
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'edit_queen.status'.tr(),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        RoundedDropdown<QueenStatus>(
+          value: status,
+          items: QueenStatus.values,
+          onChanged: (value) {
+            if (value != null) {
+              context.read<EditQueenBloc>().add(EditQueenStatusChanged(value));
+            }
+          },
+          translate: true,
+          itemBuilder: null,
+          buttonItemBuilder: null,
+        ),
+      ],
     );
   }
 
@@ -269,39 +256,66 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
                 }
               },
             ),
-            Text('Queen is marked'.tr()),
+            Text('edit_queen.marked'.tr()),
           ],
         ),
         if (marked) ...[
           const SizedBox(height: 8),
-          Text('Mark Color'.tr(), style: const TextStyle(fontSize: 16)),
+          Row(
+            children: [
+              Text('edit_queen.mark_color'.tr(), style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Colors.grey.shade600,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'edit_queen.mark_color_auto'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 10,
-            children:
-                _markingColors.map((color) {
-                  final isSelected = markColor == color;
-                  return GestureDetector(
-                    onTap: () {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      context.read<EditQueenBloc>().add(
-                        EditQueenMarkColorChanged(color),
-                      );
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: color,
-                        border: Border.all(
-                          color: isSelected ? Colors.black : Colors.grey,
-                          width: isSelected ? 3 : 1,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+            children: _markingColors.map((color) {
+              final isSelected = markColor?.toARGB32() == color.toARGB32();
+              return GestureDetector(
+                onTap: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  context.read<EditQueenBloc>().add(
+                    EditQueenMarkColorChanged(color),
                   );
-                }).toList(),
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color,
+                    border: Border.all(
+                      color: isSelected ? Colors.black : Colors.grey,
+                      width: isSelected ? 3 : 1,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: isSelected && color == markColor
+                      ? Icon(
+                          Icons.check,
+                          color: color == Colors.white || color == Colors.yellow
+                              ? Colors.black
+                              : Colors.white,
+                          size: 20,
+                        )
+                      : null,
+                ),
+              );
+            }).toList(),
           ),
         ],
       ],
@@ -314,3 +328,4 @@ class _QueenBasicInfoState extends State<QueenBasicInfo> {
     super.dispose();
   }
 }
+

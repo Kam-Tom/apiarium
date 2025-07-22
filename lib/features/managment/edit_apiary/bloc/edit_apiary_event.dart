@@ -132,3 +132,20 @@ class EditApiaryAddHiveWithQueen extends EditApiaryEvent {
 class EditApiarySubmitted extends EditApiaryEvent {
   const EditApiarySubmitted();
 }
+
+class EditApiaryGenerateName extends EditApiaryEvent {
+  const EditApiaryGenerateName();
+}
+
+class EditApiaryImageChanged extends EditApiaryEvent {
+  final String? imagePath;
+  
+  const EditApiaryImageChanged(this.imagePath);
+  
+  @override
+  List<Object?> get props => [imagePath];
+}
+
+class EditApiaryImageDeleted extends EditApiaryEvent {
+  const EditApiaryImageDeleted();
+}

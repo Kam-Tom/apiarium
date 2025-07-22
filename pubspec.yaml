@@ -15,7 +15,6 @@ dependencies:
   google_fonts: ^6.2.1
   easy_localization: ^3.0.7+1
   envied: ^1.1.1
-  sqflite: ^2.4.2
   path: ^1.9.1
   meta: ^1.16.0
   bloc: ^9.0.0
@@ -27,15 +26,21 @@ dependencies:
   flutter_tts: ^4.2.3 
   fluttertoast: ^8.2.12
   get_it: ^8.0.3
+  path_provider: ^2.1.5
   
   
   # Firebase
   firebase_core: ^3.14.0
   firebase_auth: ^5.6.0
   cloud_firestore: ^5.6.9
+  firebase_storage: ^12.4.8
   
   # RevenueCat
   purchases_flutter: ^8.10.2
+
+  # Google Maps
+  google_maps_flutter: ^2.12.3
+  geocoding: ^4.0.0
 
   #Hive CE
   hive_ce: ^2.11.3
@@ -44,6 +49,9 @@ dependencies:
   #Shared Preferences and Secure Storage
   flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.5.3
+
+  # Image Picker
+  image_picker: ^1.1.2
   
   vosk_flutter:
     git:

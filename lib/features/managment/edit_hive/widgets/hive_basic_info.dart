@@ -1,14 +1,11 @@
-import 'package:apiarium/core/core.dart';
-import 'package:apiarium/features/managment/edit_hive/widgets/add_hive_type_modal.dart';
-import 'package:apiarium/features/managment/edit_hive/widgets/hive_type_input_item.dart';
-import 'package:apiarium/features/managment/edit_hive/widgets/hive_type_list_item.dart';
-import 'package:apiarium/shared/widgets/dropdown/searchable_rounded_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:apiarium/features/managment/edit_hive/bloc/edit_hive_bloc.dart';
 import 'package:apiarium/features/managment/edit_hive/widgets/edit_hive_card.dart';
 import 'package:apiarium/shared/shared.dart';
+import 'package:apiarium/shared/widgets/dropdown/hive_type_dropdown_item.dart';
+import 'package:apiarium/shared/widgets/dropdown/rounded_dropdown.dart';
 
 class HiveBasicInfo extends StatefulWidget {
   const HiveBasicInfo({super.key});
@@ -20,41 +17,62 @@ class HiveBasicInfo extends StatefulWidget {
 class _HiveBasicInfoState extends State<HiveBasicInfo> {
   final _nameController = TextEditingController();
   bool _isDatePickerOpen = false;
+  bool _showColorPicker = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController.text = context.read<EditHiveBloc>().state.name;
+    final state = context.read<EditHiveBloc>().state;
+    // If name is empty, set a default generated name (for consistency)
+    if (state.name.isEmpty) {
+      // This will be replaced by the generated name event if needed
+      context.read<EditHiveBloc>().add(EditHiveGenerateName());
+    }
+    _nameController.text = state.name;
+    _showColorPicker = state.color != null;
   }
 
   @override
   Widget build(BuildContext context) {
-    return EditHiveCard(
-      title: 'Basic Information'.tr(),
-      icon: Icons.info_outline,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildName(),
-          const SizedBox(height: 16),
-          Text(
-            'Hive Type'.tr(),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _buildHiveType(),
-          const SizedBox(height: 16),
-          Text(
-            'Acquisition Date'.tr(),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _buildAcquisitionDate(),
-          const SizedBox(height: 16),
-          _buildColorPicker(),
-          const SizedBox(height: 16),
-          _buildStatus(),
-        ],
+    return BlocListener<EditHiveBloc, EditHiveState>(
+      listenWhen: (prev, curr) => prev.name != curr.name,
+      listener: (context, state) {
+        if (_nameController.text != state.name) {
+          _nameController.text = state.name;
+        }
+      },
+      child: EditHiveCard(
+        title: 'edit_hive.basic_information'.tr(),
+        icon: Icons.info_outline,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Add a section title above the name input for consistency
+            Text(
+              'edit_hive.name_title'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _buildName(),
+            const SizedBox(height: 16),
+            _buildHiveTypeDropdown(),
+            const SizedBox(height: 16),
+            Text(
+              'edit_hive.acquisition_date_title'.tr(),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _buildAcquisitionDate(),
+            const SizedBox(height: 16),
+            _buildColorToggle(),
+            if (_showColorPicker) ...[
+              const SizedBox(height: 8),
+              _buildColorPicker(),
+            ],
+            const SizedBox(height: 16),
+            _buildStatus(),
+          ],
+        ),
       ),
     );
   }
@@ -63,22 +81,22 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
     final nameError = context.select(
       (EditHiveBloc bloc) =>
           bloc.state.showValidationErrors && bloc.state.name.trim().isEmpty
-              ? 'Hive name is required'.tr()
+              ? 'edit_hive.name_required'.tr()
               : null,
     );
-
     return TextFormField(
       controller: _nameController,
       decoration: InputDecoration(
-        labelText: 'Hive Name/Number'.tr(),
+        labelText: 'edit_hive.name_label'.tr(),
         border: const OutlineInputBorder(),
         errorText: nameError,
-        errorBorder: nameError != null
-            ? OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
+        suffixIcon: IconButton(
+          icon: Icon(Icons.refresh, color: Colors.grey.shade600),
+          tooltip: 'edit_hive.generate_name'.tr(),
+          onPressed: () {
+            context.read<EditHiveBloc>().add(EditHiveGenerateName());
+          },
+        ),
       ),
       onChanged: (value) {
         context.read<EditHiveBloc>().add(EditHiveNameChanged(value.trim()));
@@ -86,61 +104,39 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
     );
   }
 
-  Widget _buildHiveType() {
-    final hiveTypes = context.select((EditHiveBloc bloc) => bloc.state.availableHiveTypes);
+  Widget _buildHiveTypeDropdown() {
+    final availableHiveTypes = context.select((EditHiveBloc bloc) => bloc.state.availableHiveTypes);
     final selectedHiveType = context.select((EditHiveBloc bloc) => bloc.state.hiveType);
 
-    final typeError = context.select(
-      (EditHiveBloc bloc) =>
-          bloc.state.showValidationErrors && bloc.state.hiveType == null
-              ? 'Hive type is required'.tr()
-              : null,
-    );
+    final hasTypes = availableHiveTypes.isNotEmpty;
+    final items = hasTypes
+        ? availableHiveTypes
+        : <HiveType?>[null];
 
-    // Create a key that changes whenever the hive type list or any type's star status changes
-    final dropdownKey = ValueKey(
-      'breeds-${hiveTypes.length}-${DateTime.now().millisecondsSinceEpoch}',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'edit_hive.hive_type'.tr(),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        RoundedDropdown<HiveType>(
+          value: hasTypes ? selectedHiveType : null,
+          items: hasTypes ? availableHiveTypes : <HiveType>[],
+          onChanged: hasTypes
+              ? (value) {
+                  if (value != null) {
+                    context.read<EditHiveBloc>().add(EditHiveTypeChanged(value));
+                  }
+                }
+              : (_) {}, // Provide a dummy function when disabled
+          hintText: hasTypes ? 'edit_hive.hive_type_hint' : 'edit_hive.no_hive_types',
+          itemBuilder: null,
+          buttonItemBuilder: null,
+        ),
+      ],
     );
-
-
-    return SearchableRoundedDropdown<HiveType>(
-      key: dropdownKey,
-      value: selectedHiveType,
-      items: hiveTypes,
-      hasError: typeError != null,
-      errorText: typeError,
-      maxHeight: 300,
-      onChanged: (value) {
-        if (value != null) {
-          context.read<EditHiveBloc>().add(EditHiveTypeChanged(value));
-        }
-      },
-      onAddNewItem: () {
-        _showAddHiveTypeModal();
-      },
-      itemBuilder: (context, item, isSelected) => HiveTypeListItem(
-        type: item, 
-        isSelected: isSelected, 
-        onToggleStar: () {
-          context.read<EditHiveBloc>().add(EditHiveToggleStarHiveType(item));
-        }
-      ),
-      buttonItemBuilder: (context, item) => HiveTypeInputItem(
-        type: item, 
-      ),
-    );
-  }
-  
-  void _showAddHiveTypeModal() async {
-    final hiveType = await showDialog<HiveType>(
-      context: context,
-      builder: (context) => const AddHiveTypeModal(),
-    );
-
-    if (hiveType != null && mounted) {
-      FocusManager.instance.primaryFocus?.unfocus();
-      context.read<EditHiveBloc>().add(EditHiveAddNewHiveType(hiveType));
-    }
   }
 
   Widget _buildAcquisitionDate() {
@@ -149,11 +145,11 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
     );
     final inputTheme = Theme.of(context).inputDecorationTheme;
     final borderRadius =
-        (inputTheme.border as OutlineInputBorder?)?.borderRadius ?? 
+        (inputTheme.border as OutlineInputBorder?)?.borderRadius ??
             BorderRadius.circular(12);
     final borderColor = _isDatePickerOpen
         ? Theme.of(context).colorScheme.primary
-        : (inputTheme.border as OutlineInputBorder?)?.borderSide.color ?? 
+        : (inputTheme.border as OutlineInputBorder?)?.borderSide.color ??
             Colors.grey.shade300;
 
     return InkWell(
@@ -162,26 +158,21 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
         setState(() {
           _isDatePickerOpen = true;
         });
-
         final date = await showDatePicker(
           context: context,
           initialDate: acquisitionDate,
           firstDate: DateTime(DateTime.now().year - 10),
           lastDate: DateTime.now(),
         );
-
         setState(() {
           _isDatePickerOpen = false;
         });
-
         if (date != null && mounted) {
-          context
-              .read<EditHiveBloc>()
-              .add(EditHiveAcquisitionDateChanged(date));
+          context.read<EditHiveBloc>().add(EditHiveAcquisitionDateChanged(date));
         }
       },
       child: Container(
-        padding: inputTheme.contentPadding ?? 
+        padding: inputTheme.contentPadding ??
             const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: inputTheme.fillColor,
@@ -206,6 +197,39 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
     );
   }
 
+  Widget _buildColorToggle() {
+    final color = context.select((EditHiveBloc bloc) => bloc.state.color);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Switch(
+              value: _showColorPicker,
+              onChanged: (val) {
+                setState(() {
+                  _showColorPicker = val;
+                  if (!val) {
+                    context.read<EditHiveBloc>().add(const EditHiveColorChanged(null));
+                  }
+                });
+              },
+            ),
+            Text('edit_hive.add_color'.tr()),
+          ],
+        ),
+        if (_showColorPicker && color == null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+            child: Text(
+              'edit_hive.no_color_selected'.tr(),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildColorPicker() {
     final color = context.select((EditHiveBloc bloc) => bloc.state.color);
     final predefinedColors = [
@@ -218,85 +242,59 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
       Colors.white,
       Colors.brown,
     ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Text(
-          'Hive Color'.tr(),
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            ...predefinedColors.map((predefinedColor) {
-              final isSelected = color?.value == predefinedColor.value;
-              return GestureDetector(
-                onTap: () {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  context
-                      .read<EditHiveBloc>()
-                      .add(EditHiveColorChanged(predefinedColor));
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: predefinedColor,
-                    border: Border.all(
-                      color: isSelected ? Colors.black : Colors.grey,
-                      width: isSelected ? 3 : 1,
+        ...predefinedColors.map((predefinedColor) {
+          final isSelected = color?.value == predefinedColor.value;
+          return GestureDetector(
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              context.read<EditHiveBloc>().add(EditHiveColorChanged(predefinedColor));
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: predefinedColor,
+                border: Border.all(
+                  color: isSelected ? Colors.black : Colors.grey,
+                  width: isSelected ? 3 : 1,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  if (predefinedColor == Colors.white)
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.3),
+                      blurRadius: 2,
+                      spreadRadius: 1,
                     ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      if (predefinedColor == Colors.white)
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.3),
-                          blurRadius: 2,
-                          spreadRadius: 1,
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            // No color option
-            GestureDetector(
-              onTap: () {
-                FocusManager.instance.primaryFocus?.unfocus();
-                context.read<EditHiveBloc>().add(const EditHiveColorChanged(null));
-              },
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: color == null ? Colors.black : Colors.grey,
-                    width: color == null ? 3 : 1,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(Icons.not_interested, size: 24),
-                ),
+                ],
               ),
+              child: isSelected
+                  ? Icon(
+                      Icons.check,
+                      color: predefinedColor == Colors.white || predefinedColor == Colors.yellow
+                          ? Colors.black
+                          : Colors.white,
+                      size: 20,
+                    )
+                  : null,
             ),
-          ],
-        ),
+          );
+        }),
       ],
     );
   }
 
   Widget _buildStatus() {
     final status = context.select((EditHiveBloc bloc) => bloc.state.status);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Status'.tr(),
+          'edit_hive.status'.tr(),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
@@ -308,9 +306,23 @@ class _HiveBasicInfoState extends State<HiveBasicInfo> {
               context.read<EditHiveBloc>().add(EditHiveStatusChanged(value));
             }
           },
+          translate: true,
+          itemBuilder: null,
+          buttonItemBuilder: null,
         ),
       ],
     );
+  }
+
+  String _formatStatus(HiveStatus status) {
+    switch (status) {
+      case HiveStatus.active:
+        return 'edit_hive.status_active'.tr();
+      case HiveStatus.inactive:
+        return 'edit_hive.status_inactive'.tr();
+      case HiveStatus.archived:
+        return 'edit_hive.status_archived'.tr();
+    }
   }
 
   @override

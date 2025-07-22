@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:apiarium/core/di/dependency_injection.dart';
 import 'package:apiarium/shared/shared.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -37,6 +39,9 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
       on<EditApiaryReorderHives>(_onReorderHives);
       on<EditApiarySubmitted>(_onSubmitted);
       on<EditApiaryAddHiveWithQueen>(_onAddHiveWithQueen);
+      on<EditApiaryGenerateName>(_onGenerateName);
+      on<EditApiaryImageChanged>(_onImageChanged);
+      on<EditApiaryImageDeleted>(_onImageDeleted);
     }
 
   FutureOr<void> _onLoadRequest(EditApiaryLoadData event, Emitter<EditApiaryState> emit) async {
@@ -45,40 +50,47 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     ));
     
     try {
-      // Check if we can create default queen and default hive directly
-      final canCreateDefaultQueen = await _queenService.canCreateDefaultQueen();
-      final canCreateDefaultHive = await _hiveService.canCreateDefaultHive();
-      
-      // Get hives without an apiary for adding to this apiary
-      final availableHives = await _hiveService.getHivesWithoutApiary(includeQueen: true);
-      
+      final allHives = await _hiveService.getAllHives();
+      final availableHives = allHives.where((hive) => 
+        hive.apiaryId == null || 
+        hive.apiaryId?.isEmpty == true ||
+        hive.apiaryId == event.apiaryId
+      ).toList();
+
       if (event.apiaryId != null) {
         // Load existing apiary data if we're editing
         final apiary = await _apiaryService.getApiaryById(event.apiaryId!);
         if (apiary != null) {
-          // Get hives for this apiary to show summary
-          final hives = await _hiveService.getByApiaryId(event.apiaryId!, includeQueen: true);
+          String? imagePath;
+          if (apiary.imageName != null) {
+            imagePath = await apiary.getLocalImagePath();
+            // Optionally, check if file exists, else use cloud URL
+            if (imagePath == null || !(await File(imagePath).exists())) {
+              // If you want to fallback to cloud, you can add logic here
+              imagePath = null;
+            }
+          }
+
+          // Load hives currently assigned to this apiary
+          final apiaryHives = await _hiveService.getHivesByApiaryId(event.apiaryId!);
+          
           emit(state.copyWith(
-            availableHives: () => availableHives,
             apiaryId: () => apiary.id,
             name: () => apiary.name,
             description: () => apiary.description,
             location: () => apiary.location,
             createdAt: () => apiary.createdAt,
-            imageUrl: () => apiary.imageUrl,
+            imageUrl: () => imagePath,
             latitude: () => apiary.latitude,
             longitude: () => apiary.longitude,
             isMigratory: () => apiary.isMigratory,
             color: () => apiary.color,
             status: () => apiary.status,
             formStatus: () => EditApiaryStatus.loaded,
-            apiarySummaryHives: () => hives,
             originalApiary: () => apiary,
-            originalHives: () => hives,
-            canCreateDefaultQueen: () => canCreateDefaultQueen,
-            canCreateDefaultHive: () => canCreateDefaultHive,
+            apiarySummaryHives: () => apiaryHives,
+            availableHives: () => availableHives.where((h) => h.apiaryId != event.apiaryId).toList(),
           ));
-          
         } else {
           emit(state.copyWith(
             errorMessage: () => 'Apiary not found',
@@ -86,17 +98,19 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
           ));
         }
       } else {
-        // Create new apiary
+        // Create new apiary and generate name
+        final nameService = getIt<NameGeneratorService>();
+        await nameService.initialize();
+        final generatedName = await nameService.generateApiaryName();
+
         emit(state.copyWith(
           apiaryId: () => null,
+          name: () => generatedName,
           formStatus: () => EditApiaryStatus.loaded,
           originalApiary: () => null,
-          originalHives: () => List<Hive>.empty(),
+          apiarySummaryHives: () => <Hive>[],
           availableHives: () => availableHives,
-          canCreateDefaultQueen: () => canCreateDefaultQueen,
-          canCreateDefaultHive: () => canCreateDefaultHive,
         ));
-        
       }
     } catch (e) {
       emit(state.copyWith(
@@ -143,6 +157,28 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     emit(state.copyWith(addQueensWithHives: () => event.addQueensWithHives));
   }
 
+  Future<void> _onGenerateName(EditApiaryGenerateName event, Emitter<EditApiaryState> emit) async {
+    try {
+      final nameService = getIt<NameGeneratorService>();
+      await nameService.initialize();
+      final generatedName = await nameService.generateApiaryName();
+      emit(state.copyWith(name: () => generatedName));
+    } catch (e) {
+      final fallbackName = "Apiary ${DateTime.now().millisecondsSinceEpoch % 1000}";
+      emit(state.copyWith(name: () => fallbackName));
+    }
+  }
+
+  Future<void> _onImageChanged(EditApiaryImageChanged event, Emitter<EditApiaryState> emit) async {
+    emit(state.copyWith(imageUrl: () => event.imagePath));
+  }
+
+  Future<void> _onImageDeleted(EditApiaryImageDeleted event, Emitter<EditApiaryState> emit) async {
+    emit(state.copyWith(
+      imageUrl: () => null,
+    ));
+  }
+
   FutureOr<void> _onSubmitted(EditApiarySubmitted event, Emitter<EditApiaryState> emit) async {
     // Show validation errors if the form is invalid
     if (!state.isValid) {
@@ -153,63 +189,36 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     emit(state.copyWith(formStatus: () => EditApiaryStatus.submitting));
     
     try {
-      // Create a group ID to link related operations in history
-      final String groupId = _apiaryService.createGroupId();
-      
-      final apiary = Apiary(
-        id: state.apiaryId ?? '',
-        name: state.name,
-        description: state.description,
-        location: state.location,
-        position: 0, // This would need to be handled properly in a real app
-        createdAt: state.apiaryId == null ? DateTime.now() : state.createdAt,
-        imageUrl: state.imageUrl,
-        latitude: state.latitude,
-        longitude: state.longitude,
-        isMigratory: state.isMigratory,
-        color: state.color,
-        status: state.status,
-      );
-      
-      // Check if apiary data has changed
-      final bool hasApiaryChanged = state.hasApiaryChanged;
-      final bool haveHivesChanged = state.haveHivesChanged;
-      
-      Apiary savedApiary = apiary;
-      
-      if (hasApiaryChanged) {
-        if (state.apiaryId == null || state.apiaryId?.isEmpty == true) {
-          savedApiary = await _apiaryService.insertApiary(apiary, groupId: groupId);
-        } else {
-          savedApiary = await _apiaryService.updateApiary(
-            apiary: apiary, 
-            groupId: groupId
-          );
-        }
-      }
-      
-      // Update hives if they've changed
-      if (haveHivesChanged && savedApiary.id.isNotEmpty) {
-        // Handle removed hives
-        for (final originalHive in state.originalHives) {
-          if (!state.apiarySummaryHives.any((h) => h.id == originalHive.id)) {
-            // This hive was removed, update it to remove apiary reference
-            // Skip history log as it's a bulk operation
-            await _hiveService.updateHive(
-              hive: originalHive.copyWith(apiary: null),
-              skipHistoryLog: true,
-              groupId: groupId
-            );
-          }
-        }
-        
-        // Update hives with positions and apiary
-        final hives = state.apiarySummaryHives.map((h) => h.copyWith(apiary: () => savedApiary)).toList();
-        await _hiveService.updateHivesBatch(
-          hives,
-          groupId: groupId,
-          skipHistoryLog: false  // Log the batch update
+      if (state.apiaryId == null || state.apiaryId?.isEmpty == true) {
+        // Create new apiary - image will be saved in service
+        await _apiaryService.createApiary(
+          name: state.name,
+          description: state.description,
+          location: state.location,
+          imageName: state.imageUrl,
+          latitude: state.latitude,
+          longitude: state.longitude,
+          isMigratory: state.isMigratory,
+          color: state.color,
+          status: state.status,
         );
+      } else {
+        // Update existing apiary
+        final originalApiary = state.originalApiary!;
+        
+        final updatedApiary = originalApiary.copyWith(
+          name: () => state.name,
+          description: () => state.description,
+          location: () => state.location,
+          latitude: () => state.latitude,
+          longitude: () => state.longitude,
+          isMigratory: () => state.isMigratory,
+          color: () => state.color,
+          status: () => state.status,
+          imageName: () => state.imageUrl,
+        );
+        
+        await _apiaryService.updateApiary(updatedApiary);
       }
       
       emit(state.copyWith(formStatus: () => EditApiaryStatus.success));
@@ -221,126 +230,47 @@ class EditApiaryBloc extends Bloc<EditApiaryEvent, EditApiaryState> {
     }
   }
 
+  // Simplified hive management methods - just for UI navigation
   FutureOr<void> _onAddHive(EditApiaryAddHive event, Emitter<EditApiaryState> emit) async {
-    if (state.addQueensWithHives) {
-      // Only use groupId when we're creating both a queen and a hive together
-      final String groupId = _apiaryService.createGroupId();
-      
-      // Create a new queen - this should be logged in history
-      final queen = await _queenService.createDefaultQueen(
-        groupId: groupId, 
-        skipHistoryLog: false
-      );
-      
-      // Create a new hive with the queen - this should be logged in history
-      final newHive = await _hiveService.createDefaultHive(
-        apiaryId: state.apiaryId, 
-        queenId: queen.id,
-        name: 'New Hive',
-        groupId: groupId,
-        skipHistoryLog: false
-      );
-      
-      emit(state.copyWith(
-        apiarySummaryHives: () => [...state.apiarySummaryHives, newHive],
-      ));
-      return;
-    }
-    
-    // Creating just a hive - no need for groupId as it's a single operation
-    final newHive = await _hiveService.createDefaultHive(
-      apiaryId: state.apiaryId,
-      name: 'New Hive',
-      skipHistoryLog: false
-    );
-    
-    emit(state.copyWith(
-      apiarySummaryHives: () => [...state.apiarySummaryHives, newHive],
-    ));
+    // This event is no longer used since we always navigate to edit pages
+    // Kept for compatibility but does nothing
   }
   
   FutureOr<void> _onAddHiveWithQueen(EditApiaryAddHiveWithQueen event, Emitter<EditApiaryState> emit) async {
-    // No groupId needed here as we're just creating a single hive
-    // (we're not creating a queen, just associating with an existing one)
-    var newHive = await _hiveService.createDefaultHive(
-      apiaryId: state.apiaryId, 
-      queenId: event.queen.id,
-      name: 'New Hive',
-      skipHistoryLog: false
-    );
-    
-    newHive = newHive.copyWith(queen:() => event.queen);
-    emit(state.copyWith(
-      apiarySummaryHives: () => [...state.apiarySummaryHives, newHive],
-      canCreateDefaultQueen: () => true,
-    ));
+    // This event is no longer used since we always navigate to edit pages
+    // Kept for compatibility but does nothing
   }
 
   FutureOr<void> _onAddExistingHive(
       EditApiaryAddExistingHive event, Emitter<EditApiaryState> emit) async {
-    try {
-      // Do not perform actual database updates until form submission
-      // Just update the UI state
-      emit(state.copyWith(
-        apiarySummaryHives: () => [...state.apiarySummaryHives, event.hive],
-        availableHives: () => state.availableHives
-            .where((h) => h.id != event.hive.id)
-            .toList(),
-        canCreateDefaultHive: () => true,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        errorMessage: () => 'Failed to add existing hive: ${e.toString()}',
-      ));
-    }
+    // Add hive to the apiary's hive list
+    final updatedHives = [...state.apiarySummaryHives, event.hive];
+    // Remove hive from available hives
+    final updatedAvailableHives = state.availableHives.where((h) => h.id != event.hive.id).toList();
+    
+    emit(state.copyWith(
+      apiarySummaryHives: () => updatedHives,
+      availableHives: () => updatedAvailableHives,
+    ));
   }
 
   FutureOr<void> _onRemoveHive(
       EditApiaryRemoveHive event, Emitter<EditApiaryState> emit) async {
-    try {
-      if (state.apiaryId != null) {
-        // Only update the hive to unassign it, don't delete it
-        // This is an intermediate operation, so we skip history logging
-        // No groupId needed as it's a single operation
-        final updatedHive = event.hive.copyWith(apiary: null);
-        await _hiveService.updateHive(
-          hive: updatedHive,
-          skipHistoryLog: true
-        );
-      }
-      
-      // Remove from summary and add to available hives
-      emit(state.copyWith(
-        apiarySummaryHives: () => state.apiarySummaryHives
-            .where((h) => h.id != event.hive.id)
-            .toList(),
-        availableHives: () => [...state.availableHives, event.hive],
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        errorMessage: () => 'Failed to remove hive: ${e.toString()}',
-      ));
-    }
+    // Remove hive from the apiary's hive list
+    final updatedHives = state.apiarySummaryHives.where((h) => h.id != event.hive.id).toList();
+    // Add hive back to available hives
+    final updatedAvailableHives = [...state.availableHives, event.hive];
+    
+    emit(state.copyWith(
+      apiarySummaryHives: () => updatedHives,
+      availableHives: () => updatedAvailableHives,
+    ));
   }
 
   FutureOr<void> _onReorderHives(
       EditApiaryReorderHives event, Emitter<EditApiaryState> emit) async {
-    
-    // Assign consecutive position values to all hives in the reordered list
-    final hivesWithNewPositions = List<Hive>.generate(
-      event.reorderedHives.length,
-      (index) => event.reorderedHives[index].copyWith(
-        position: () => index,
-      ),
-    );
-    
-    // Emit the new state with reordered hives
     emit(state.copyWith(
-      apiarySummaryHives: () => hivesWithNewPositions,
+      apiarySummaryHives: () => event.reorderedHives,
     ));
-    
-    // We don't save changes to the database here - that will happen when the form is submitted
-    // This keeps all changes in the form state until explicitly saved
   }
-
 }

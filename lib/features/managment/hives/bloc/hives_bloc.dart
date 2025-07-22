@@ -29,13 +29,11 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     on<LoadHives>(_onLoadHives);
     on<DeleteHive>(_onDeleteHive);
     on<FilterByApiaryId>(_onFilterByApiaryId);
-    on<FilterByStrength>(_onFilterByStrength);
     on<FilterByHiveTypeId>(_onFilterByHiveTypeId);
     on<FilterByQueenStatus>(_onFilterByQueenStatus);
     on<FilterByHiveStatus>(_onFilterByHiveStatus);
     on<ResetFilters>(_onResetFilters);
     on<ReorderHives>(_onReorderHives);
-    on<AddHive>(_onAddHive);
     on<SortHives>(_onSortHives);
   }
 
@@ -46,8 +44,9 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     emit(state.copyWith(status: HivesStatus.loading));
     
     try {
-      final hives = await _hiveService.getAllHives(includeApiary: true, includeQueen: true);
+      final hives = await _hiveService.getAllHives();
       final apiaries = await _apiaryService.getAllApiaries();
+      final hiveTypes = await _hiveService.getAllHiveTypes();
       
       final filteredHives = _applyFilters(hives);
       
@@ -56,11 +55,12 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
         allHives: hives,
         filteredHives: filteredHives,
         availableApiaries: apiaries,
+        availableHiveTypes: hiveTypes,
       ));
     } catch (e) {
       emit(state.copyWith(
         status: HivesStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: () => e.toString(),
       ));
     }
   }
@@ -70,13 +70,11 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     Emitter<HivesState> emit,
   ) async {
     try {
-      await _hiveService.deleteHive(hiveId: event.hiveId);
-      
-      // Refresh the list
+      await _hiveService.deleteHive(event.hiveId);
       add(const LoadHives());
     } catch (e) {
       emit(state.copyWith(
-        errorMessage: 'Failed to delete hive: ${e.toString()}',
+        errorMessage: () => 'Failed to delete hive: ${e.toString()}',
       ));
     }
   }
@@ -87,22 +85,6 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
   ) {
     final newFilter = state.filter.copyWith(
       apiaryId: () => event.apiaryId,
-    );
-    
-    final filteredHives = _applyFilters(state.allHives, newFilter);
-    
-    emit(state.copyWith(
-      filter: newFilter,
-      filteredHives: filteredHives,
-    ));
-  }
-
-  void _onFilterByStrength(
-    FilterByStrength event,
-    Emitter<HivesState> emit,
-  ) {
-    final newFilter = state.filter.copyWith(
-      strength: () => event.strength,
     );
     
     final filteredHives = _applyFilters(state.allHives, newFilter);
@@ -194,7 +176,7 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     final hivesWithNewPositions = List<Hive>.generate(
       updatedHives.length,
       (index) => updatedHives[index].copyWith(
-        position: () => index,
+        order: () => index,
       ),
     );
     
@@ -211,7 +193,7 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
           : hive;
     }).toList();
 
-    // Use the batch update method to efficiently save all changes
+    // Save changes
     try {
       emit(
         state.copyWith(
@@ -220,15 +202,14 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
         ),
       );
       
-      
-      await _hiveService.updateHivesBatch(
-        hivesWithNewPositions,
-        skipHistoryLog: true  
-      );
+      // Update each hive individually
+      for (final hive in hivesWithNewPositions) {
+        await _hiveService.updateHive(hive);
+      }
 
     } catch (e) {
       emit(state.copyWith(
-        errorMessage: 'Failed to save the new order: ${e.toString()}',
+        errorMessage: () => 'Failed to save the new order: ${e.toString()}',
       ));
       
       // Reload the original order on error
@@ -246,14 +227,9 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
             : b.name.compareTo(a.name));
         break;
       case HiveSortOption.apiary:
-        // Get apiary names for sorting
-        final apiaries = Map.fromEntries(
-          state.availableApiaries.map((a) => MapEntry(a.id, a.name)),
-        );
-        
         sortedHives.sort((a, b) {
-          final apiaryNameA = a.apiary != null ? a.apiary!.name : '';
-          final apiaryNameB = b.apiary != null ? a.apiary!.name : '';
+          final apiaryNameA = a.apiaryName ?? '';
+          final apiaryNameB = b.apiaryName ?? '';
           return event.ascending
               ? apiaryNameA.compareTo(apiaryNameB)
               : apiaryNameB.compareTo(apiaryNameA);
@@ -261,8 +237,8 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
         break;
       case HiveSortOption.type:
         sortedHives.sort((a, b) {
-          final typeNameA = a.hiveType.name;
-          final typeNameB = b.hiveType.name;
+          final typeNameA = a.hiveType;
+          final typeNameB = b.hiveType;
           return event.ascending
               ? typeNameA.compareTo(typeNameB)
               : typeNameB.compareTo(typeNameA);
@@ -271,8 +247,8 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
       case HiveSortOption.queenStatus:
         sortedHives.sort((a, b) {
           // Hives with queens come first (if ascending)
-          final hasQueenA = a.queen != null;
-          final hasQueenB = b.queen != null;
+          final hasQueenA = a.queenId != null;
+          final hasQueenB = b.queenId != null;
           
           if (hasQueenA != hasQueenB) {
             return event.ascending
@@ -280,11 +256,13 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
                 : (hasQueenA ? 1 : -1);
           }
           
-          // If both have queens, sort by queen status
+          // If both have queens, sort by queen name
           if (hasQueenA && hasQueenB) {
+            final queenNameA = a.queenName ?? '';
+            final queenNameB = b.queenName ?? '';
             return event.ascending
-                ? a.queen!.status.name.compareTo(b.queen!.status.name)
-                : b.queen!.status.name.compareTo(a.queen!.status.name);
+                ? queenNameA.compareTo(queenNameB)
+                : queenNameB.compareTo(queenNameA);
           }
           
           return 0;
@@ -309,40 +287,24 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     
     return hives.where((hive) {
       // Filter by apiary
-      if (filter!.apiaryId != null && hive.apiary?.id != filter.apiaryId) {
+      if (filter!.apiaryId != null && hive.apiaryId != filter.apiaryId) {
         return false;
       }
       
-      // Filter by strength
-      if (filter.strength != null) {
-        // Assuming we derive strength from the current frame count
-        final strength = _determineStrength(hive);
-        if (strength != filter.strength) {
-          return false;
-        }
-      }
       
       // Filter by hive type
-      if (filter.hiveTypeId != null && hive.hiveType.id != filter.hiveTypeId) {
+      if (filter.hiveTypeId != null && hive.hiveTypeId != filter.hiveTypeId) {
         return false;
       }
       
       // Filter by queen status
       if (filter.queenStatus != null) {
-        if (filter.queenStatus == 'withQueen' && hive.queen == null) {
+        if (filter.queenStatus == 'withQueen' && hive.queenId == null) {
           return false;
-        } else if (filter.queenStatus == 'noQueen' && hive.queen != null) {
-          return false;
-        } else if (filter.queenStatus == 'mated' && 
-                  (hive.queen == null || hive.queen!.status != QueenStatus.lost)) {
-          return false;
-        } else if (filter.queenStatus == 'unmated' && 
-                  (hive.queen == null || hive.queen!.status != QueenStatus.active)) {
-          return false;
-        } else if (filter.queenStatus == 'marked' && 
-                  (hive.queen == null || !hive.queen!.marked)) {
+        } else if (filter.queenStatus == 'noQueen' && hive.queenId != null) {
           return false;
         }
+        // Note: Other queen status filters would need queen details loaded separately
       }
       
       // Filter by hive status
@@ -354,34 +316,4 @@ class HivesBloc extends Bloc<HivesEvent, HivesState> {
     }).toList();
   }
 
-  // Helper method to determine hive strength based on frame count
-  String _determineStrength(Hive hive) {
-    if (hive.currentFrameCount == null) return 'Unknown';
-    
-    final frameCount = hive.currentFrameCount!;
-    if (frameCount >= 8) return 'Strong';
-    if (frameCount >= 5) return 'Medium';
-    return 'Weak';
-  }
-
-  FutureOr<void> _onAddHive(AddHive event, Emitter<HivesState> emit) async {
-    try {
-      final newHive = await _hiveService.createDefaultHive(
-        name: 'New Hive',
-      );
-      
-      // Add the new hive to both allHives and filteredHives
-      final updatedAllHives = List<Hive>.from(state.allHives)..add(newHive);
-      final updatedFilteredHives = List<Hive>.from(state.filteredHives)..add(newHive);
-      
-      emit(state.copyWith(
-        allHives: updatedAllHives,
-        filteredHives: updatedFilteredHives,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        errorMessage: 'Failed to add new hive: ${e.toString()}',
-      ));
-    }
-  }
 }

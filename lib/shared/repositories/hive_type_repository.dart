@@ -1,102 +1,312 @@
-import 'package:apiarium/shared/shared.dart';
-import 'package:uuid/uuid.dart';
+import 'dart:io';
+import 'package:hive_ce/hive.dart' as hive_ce;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import '../shared.dart';
 
-/// Repository for managing hive types in the database
 class HiveTypeRepository {
-  final DatabaseHelper _databaseHelper;
-  final Uuid _uuid = const Uuid();
+  static const String _boxName = 'hive_types';
+  static const String _tag = 'HiveTypeRepository';
+  
+  late hive_ce.Box<Map<dynamic, dynamic>> _box;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  HiveTypeRepository({DatabaseHelper? databaseHelper})
-      : _databaseHelper = databaseHelper ?? DatabaseHelper();
-
-  /// Retrieves all queen breeds from the database
-  Future<List<HiveType>> getAllTypes() async {
-    final db = await _databaseHelper.database;
-    final hiveTypeTable = _databaseHelper.hiveTypeTable;
-
-    final results = await db.query(
-      hiveTypeTable.tableName,
-      where: '${hiveTypeTable.isDeleted} = 0',
-      orderBy: '${hiveTypeTable.isStarred} DESC, ${hiveTypeTable.priority} DESC, ${hiveTypeTable.name} ASC',
-    );
-
-    return results.map((map) {
-      final type = HiveTypeDto.fromMap(map);
-      return type.toModel();
-    }).toList();
+  Future<void> initialize() async {
+    try {
+      _box = await hive_ce.Hive.openBox<Map<dynamic, dynamic>>(_boxName);
+      Logger.i('HiveType repository initialized', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to initialize hive type repository', tag: _tag, error: e);
+      rethrow;
+    }
   }
 
-  /// Gets a hive type by ID
-  Future<HiveType?> getTypeById(String id) async {
-    final db = await _databaseHelper.database;
-    final hiveTypeTable = _databaseHelper.hiveTypeTable;
+  Future<List<HiveType>> _getHiveTypes({required bool deleted}) async {
+    try {
+      final hiveTypes = <HiveType>[];
+      for (final data in _box.values) {
+        final hiveType = HiveType.fromMap(Map<String, dynamic>.from(data));
+        if (hiveType.deleted == deleted) {
+          hiveTypes.add(hiveType);
+        }
+      }
+      return hiveTypes;
+    } catch (e) {
+      Logger.e('Failed to get hive types', tag: _tag, error: e);
+      return [];
+    }
+  }
 
-    final results = await db.query(
-      hiveTypeTable.tableName,
-      where: '${hiveTypeTable.id} = ? AND ${hiveTypeTable.isDeleted} = 0',
-      whereArgs: [id],
-    );
+  Future<List<HiveType>> getAllHiveTypes() async {
+    final hiveTypes = await _getHiveTypes(deleted: false);
+    hiveTypes.sort((a, b) {
+      if (a.isStarred != b.isStarred) {
+        return a.isStarred ? -1 : 1; // Starred first
+      }
+      return a.name.compareTo(b.name); // Then by name
+    });
+    return hiveTypes;
+  }
 
-    if (results.isEmpty) {
+  Future<List<HiveType>> getDeletedHiveTypes() async {
+    final deletedHiveTypes = await _getHiveTypes(deleted: true);
+    deletedHiveTypes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt)); // Most recent first
+    return deletedHiveTypes;
+  }
+
+  Future<HiveType?> getHiveTypeById(String id) async {
+    try {
+      final data = _box.get(id);
+      return data != null ? HiveType.fromMap(Map<String, dynamic>.from(data)) : null;
+    } catch (e) {
+      Logger.e('Failed to get hive type by id: $id', tag: _tag, error: e);
       return null;
     }
-
-    final map = results.first;
-    final type = HiveTypeDto.fromMap(map, prefix: '${hiveTypeTable.alias}_');
-    return type.toModel();
   }
 
-  /// Inserts a new hive type into the database or updates an existing one.
-  /// 
-  /// If the type doesn't have an ID, one will be generated.
-  /// Returns the inserted/updated hive type with its ID.
-  Future<HiveType> insertType(HiveType type) async {
-    final db = await _databaseHelper.database;
-    final hiveTypeTable = _databaseHelper.hiveTypeTable;
+  Future<void> saveHiveType(HiveType hiveType) async {
+    try {
+      String? imageName = hiveType.imageName;
+      final appDir = await getApplicationDocumentsDirectory();
+      final hiveTypeImagesDir = Directory('${appDir.path}/images/hive_types');
 
-    final typeId = type.id.isEmpty ? _uuid.v4() : type.id;
+      if (imageName == null) {
+        // Remove all possible images for this hive type (by id)
+        final files = hiveTypeImagesDir.existsSync()
+            ? hiveTypeImagesDir.listSync().whereType<File>().where((f) => f.path.contains(hiveType.id)).toList()
+            : [];
+        for (final file in files) {
+          try {
+            await file.delete();
+          } catch (_) {}
+        }
+      } else if (p.basename(imageName) != imageName) {
+        // If imageName is a path (not just a filename), copy it locally and set imageName
+        if (!await hiveTypeImagesDir.exists()) {
+          await hiveTypeImagesDir.create(recursive: true);
+        }
+        final fileName = '${hiveType.id}.jpg';
+        final localFile = File('${hiveTypeImagesDir.path}/$fileName');
 
-    HiveTypeDto dto = HiveTypeDto.fromModel(
-      type.copyWith(id: () => typeId),
-      isDeleted: false,
-      isSynced: false,
-      updatedAt: DateTime.now(),
-    );
+        if (await localFile.exists()) {
+          await localFile.delete();
+        }
 
-    await db.insert(
-      hiveTypeTable.tableName,
-      dto.toMap(),
-    );
+        await File(hiveType.imageName!).copy(localFile.path);
+        imageName = fileName;
+      }
 
-    return type.copyWith(id: () => typeId);
-  }
-
-  /// Updates an existing hive type in the database.
-  /// 
-  /// The hive type must have a valid ID.
-  /// Returns the updated hive type.
-  Future<HiveType> updateType(HiveType type) async {
-    final db = await _databaseHelper.database;
-    final hiveTypeTable = _databaseHelper.hiveTypeTable;
-    
-    if (type.id.isEmpty) {
-      throw ArgumentError('Cannot update a hive type without an ID');
+      await _box.put(hiveType.id, hiveType.copyWith(imageName: () => imageName).toMap());
+      Logger.i('Saved hive type: ${hiveType.name}', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to save hive type: ${hiveType.id}', tag: _tag, error: e);
+      rethrow;
     }
-    
-    HiveTypeDto dto = HiveTypeDto.fromModel(
-      type,
-      isDeleted: false,
-      isSynced: false,
-      updatedAt: DateTime.now(),
-    );
-    
-    await db.update(
-      hiveTypeTable.tableName,
-      dto.toMap(),
-      where: '${hiveTypeTable.id} = ?',
-      whereArgs: [type.id],
-    );
-    
-    return type;
+  }
+
+  Future<void> saveHiveTypesBatch(List<HiveType> hiveTypes) async {
+    try {
+      final Map<String, Map<String, dynamic>> batchData = {};
+      
+      for (final hiveType in hiveTypes) {
+        String? imageName = hiveType.imageName;
+        final appDir = await getApplicationDocumentsDirectory();
+        final hiveTypeImagesDir = Directory('${appDir.path}/images/hive_types');
+
+        if (imageName == null) {
+          // Remove all possible images for this hive type (by id)
+          final files = hiveTypeImagesDir.existsSync()
+              ? hiveTypeImagesDir.listSync().whereType<File>().where((f) => f.path.contains(hiveType.id)).toList()
+              : [];
+          for (final file in files) {
+            try {
+              await file.delete();
+            } catch (_) {}
+          }
+        } else if (p.basename(imageName) != imageName) {
+          // If imageName is a path (not just a filename), copy it locally and set imageName
+          if (!await hiveTypeImagesDir.exists()) {
+            await hiveTypeImagesDir.create(recursive: true);
+          }
+          final fileName = '${hiveType.id}.jpg';
+          final localFile = File('${hiveTypeImagesDir.path}/$fileName');
+
+          if (await localFile.exists()) {
+            await localFile.delete();
+          }
+
+          await File(hiveType.imageName!).copy(localFile.path);
+          imageName = fileName;
+        }
+
+        batchData[hiveType.id] = hiveType.copyWith(imageName: () => imageName).toMap();
+      }
+
+      await _box.putAll(batchData);
+      Logger.i('Saved ${hiveTypes.length} hive types in batch', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to save hive types batch', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncToFirestore(HiveType hiveType, String userId) async {
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users')
+          .child(userId)
+          .child('hive_types');
+
+      if (hiveType.imageName != null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final localPath = '${appDir.path}/images/hive_types/${hiveType.imageName}';
+        final file = File(localPath);
+        if (await file.exists()) {
+          final ref = storageRef.child(hiveType.imageName!);
+          await ref.putFile(file);
+        }
+      } else {
+        // Delete image from Firebase Storage if imageName is null
+        final all = await storageRef.listAll();
+        for (final item in all.items) {
+          if (item.name.contains(hiveType.id)) {
+            try {
+              await item.delete();
+            } catch (_) {}
+          }
+        }
+      }
+
+      // Update sync metadata BEFORE sending to Firestore
+      final hiveTypeToSync = hiveType.copyWith(
+        syncStatus: () => SyncStatus.synced,
+        lastSyncedAt: () => DateTime.now(),
+      );
+
+      final docRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('hive_types')
+          .doc(hiveType.id);
+
+      await docRef.set(hiveTypeToSync.toMap(), SetOptions(merge: true));
+
+      // Save the updated version locally
+      await saveHiveType(hiveTypeToSync);
+
+      Logger.i('Synced hive type to Firestore: ${hiveType.id}', tag: _tag);
+    } catch (e) {
+      // Update sync status to failed
+      final failedHiveType = hiveType.copyWith(syncStatus: () => SyncStatus.failed);
+      await saveHiveType(failedHiveType);
+
+      Logger.e('Failed to sync hive type to Firestore: ${hiveType.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncBatchToFirestore(List<HiveType> hiveTypes, String userId) async {
+    try {
+      final batch = _firestore.batch();
+      final hiveTypesToUpdate = <HiveType>[];
+
+      for (final hiveType in hiveTypes) {
+        final hiveTypeToSync = hiveType.copyWith(
+          syncStatus: () => SyncStatus.synced,
+          lastSyncedAt: () => DateTime.now(),
+        );
+
+        final docRef = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('hive_types')
+            .doc(hiveType.id);
+
+        batch.set(docRef, hiveTypeToSync.toMap(), SetOptions(merge: true));
+        hiveTypesToUpdate.add(hiveTypeToSync);
+      }
+
+      await batch.commit();
+      await saveHiveTypesBatch(hiveTypesToUpdate);
+
+      Logger.i('Synced ${hiveTypes.length} hive types to Firestore in batch', tag: _tag);
+    } catch (e) {
+      final failedHiveTypes = hiveTypes.map((h) => h.copyWith(syncStatus: () => SyncStatus.failed)).toList();
+      await saveHiveTypesBatch(failedHiveTypes);
+
+      Logger.e('Failed to sync hive types batch to Firestore', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncFromFirestore(String userId, {DateTime? lastSyncTime}) async {
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('hive_types');
+
+      if (lastSyncTime != null) {
+        query = query.where(
+          'lastSyncedAt', isGreaterThan: lastSyncTime.toIso8601String(),
+        );
+      }
+
+      final snapshot = await query.get();
+
+      for (final doc in snapshot.docs) {
+        final firestoreHiveType = HiveType.fromMap(doc.data());
+        final localHiveType = await getHiveTypeById(doc.id);
+
+        if (firestoreHiveType.imageName != null && firestoreHiveType.imageName!.isNotEmpty) {
+          try {
+            final ref = FirebaseStorage.instance
+                .ref()
+                .child('users')
+                .child(userId)
+                .child('hive_types')
+                .child(firestoreHiveType.imageName!);
+            final appDir = await getApplicationDocumentsDirectory();
+            final hiveTypeImagesDir = Directory('${appDir.path}/images/hive_types');
+            if (!await hiveTypeImagesDir.exists()) {
+              await hiveTypeImagesDir.create(recursive: true);
+            }
+            final localFile = File('${hiveTypeImagesDir.path}/${firestoreHiveType.imageName!}');
+            await ref.writeToFile(localFile);
+          } catch (e) {
+            Logger.e('Failed to download image for hive type ${firestoreHiveType.id}', tag: _tag, error: e);
+          }
+        }
+
+        if (localHiveType == null || 
+            firestoreHiveType.updatedAt.isAfter(localHiveType.updatedAt) || 
+            (firestoreHiveType.updatedAt.isAtSameMomentAs(localHiveType.updatedAt) && 
+             firestoreHiveType.serverVersion > localHiveType.serverVersion)) {
+          final syncedHiveType = firestoreHiveType.copyWith(
+            syncStatus: () => SyncStatus.synced,
+            lastSyncedAt: () => DateTime.now(),
+            serverVersion: () => firestoreHiveType.serverVersion + 1,
+          );
+          await saveHiveType(syncedHiveType);
+        }
+      }
+
+      Logger.i('Synced ${snapshot.docs.length} hive types from Firestore', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> dispose() async {
+    try {
+      await _box.close();
+      Logger.i('HiveType repository disposed', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to dispose hive type repository', tag: _tag, error: e);
+    }
   }
 }

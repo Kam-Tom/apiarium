@@ -1,369 +1,673 @@
-// import 'dart:ui';
+import 'package:uuid/uuid.dart';
+import 'package:flutter/material.dart';
+import '../shared.dart';
 
-// import 'package:apiarium/shared/shared.dart';
-// import 'package:uuid/uuid.dart';
+class HiveService {
+  static const String _tag = 'HiveService';
+  static const Uuid _uuid = Uuid();
+  
+  final HiveRepository _hiveRepository;
+  final HiveTypeRepository _hiveTypeRepository;
+  final ApiaryRepository _apiaryRepository;
+  final QueenRepository _queenRepository;
+  final UserRepository _userRepository;
+  final HistoryService _historyService;
+  
+  HiveService({
+    required HiveRepository hiveRepository,
+    required HiveTypeRepository hiveTypeRepository,
+    required ApiaryRepository apiaryRepository,
+    required QueenRepository queenRepository,
+    required UserRepository userRepository,
+    required HistoryService historyService,
+  }) : _hiveRepository = hiveRepository, 
+       _hiveTypeRepository = hiveTypeRepository,
+       _apiaryRepository = apiaryRepository,
+       _queenRepository = queenRepository,
+       _userRepository = userRepository,
+       _historyService = historyService;
+  
+  Future<void> initialize() async {
+    await _hiveRepository.initialize();
+    await _hiveTypeRepository.initialize();
+    Logger.i('Hive service initialized', tag: _tag);
+  }
 
-// /// Service class that handles business logic related to hives and hive types,
-// /// including tracking changes through history logs and sync.
-// class HiveService {
-//   final HiveRepository _hiveRepository;
-//   final HiveTypeRepository _hiveTypeRepository;
-//   final HistoryLogRepository _historyLogRepository;
-//   final Uuid _uuid = const Uuid();
+  Future<List<Hive>> getAllHives() async {
+    return await _hiveRepository.getAllHives();
+  }
 
-//   HiveService({
-//     required HiveRepository hiveRepository,
-//     required HiveTypeRepository hiveTypeRepository,
-//     required HistoryLogRepository historyLogRepository,
-//   }) : 
-//     _hiveRepository = hiveRepository,
-//     _hiveTypeRepository = hiveTypeRepository,
-//     _historyLogRepository = historyLogRepository;
+  Future<List<Hive>> getHivesByApiaryId(String? apiaryId) async {
+    final hives = await _hiveRepository.getAllHives();
+    return hives.where((h) => h.apiaryId == apiaryId).toList();
+  }
 
-//   // MARK: - Hive Query Operations
+  Future<List<Hive>> getActiveHives() async {
+    final hives = await getAllHives();
+    return hives.where((h) => h.status == HiveStatus.active).toList();
+  }
 
-//   /// Retrieves all hives with optional related data.
-//   /// 
-//   /// Parameters:
-//   /// - [includeApiary]: Whether to include apiary information
-//   /// - [includeQueen]: Whether to include queen and breed information
-//   Future<List<Hive>> getAllHives({
-//     bool includeApiary = false,
-//     bool includeQueen = false,
-//   }) async {
-//     return _hiveRepository.getAllHives(
-//       includeApiary: includeApiary,
-//       includeQueen: includeQueen,
-//     );
-//   }
+  Future<List<Hive>> getHivesWithQueens() async {
+    final hives = await getAllHives();
+    return hives.where((h) => h.hasQueen).toList();
+  }
 
-//   /// Gets a hive by ID with optional related data.
-//   /// 
-//   /// Parameters:
-//   /// - [id]: The ID of the hive to retrieve
-//   /// - [includeApiary]: Whether to include apiary information
-//   /// - [includeQueen]: Whether to include queen and breed information
-//   Future<Hive?> getHiveById(
-//     String id, {
-//     bool includeApiary = false,
-//     bool includeQueen = false,
-//   }) async {
-//     return _hiveRepository.getHiveById(
-//       id,
-//       includeApiary: includeApiary,
-//       includeQueen: includeQueen,
-//     );
-//   }
+  Future<Hive?> getHiveById(String id) async {
+    return await _hiveRepository.getHiveById(id);
+  }
 
-//   /// Retrieves hives belonging to a specific apiary.
-//   /// 
-//   /// Parameters:
-//   /// - [apiaryId]: The ID of the apiary to filter hives by
-//   /// - [includeQueen]: Whether to include queen information
-//   Future<List<Hive>> getByApiaryId(
-//     String apiaryId, {
-//     bool includeQueen = false,
-//   }) async {
-//     return _hiveRepository.getByApiaryId(apiaryId, includeQueen: includeQueen);
-//   }
+  Future<Hive> updateHive(Hive hive) async {
+    try {
+      final oldHive = await getHiveById(hive.id);
+      if (oldHive == null) {
+        throw Exception('Hive not found: ${hive.id}');
+      }
 
-//   /// Retrieves all hives that don't belong to any apiary.
-//   /// 
-//   /// Parameters:
-//   /// - [includeQueen]: Whether to include queen information
-//   Future<List<Hive>> getHivesWithoutApiary({
-//     bool includeQueen = false,
-//   }) async {
-//     return _hiveRepository.getHivesWithoutApiary(includeQueen: includeQueen);
-//   }
+      var updatedHive = hive.copyWith(
+        updatedAt: () => DateTime.now(),
+        apiaryLocation: () => null,
+        apiaryName: () => null,
+        queenBirthDate: () => null,
+        queenMarked: () => null,
+        queenMarkColor: () => null,
+        queenName: () => null,
+        breed: () => null,
+        lastTimeQueenSeen: () => null,
+      );
 
-//   /// Checks if there are hives in the database that can be used as templates.
-//   Future<bool> canCreateDefaultHive() async {
-//     return _hiveRepository.canCreateDefaultHive();
-//   }
+      if (oldHive.apiaryId != null && oldHive.apiaryId != updatedHive.apiaryId) {
+        await _updateApiary(oldHive.apiaryId!, null);
+      }
+      if (updatedHive.apiaryId != null) {
+        final apiary = await _updateApiary(updatedHive.apiaryId!, updatedHive);
+        updatedHive = updatedHive.copyWith(
+          apiaryName: () => apiary?.name,
+          apiaryLocation: () => apiary?.location,
+        );
+      }
+      if (oldHive.queenId != null && oldHive.queenId != updatedHive.queenId) {
+        await _updateQueen(oldHive.queenId!, null);
+      }
+      if (updatedHive.queenId != null) {
+        final queen = await _updateQueen(updatedHive.queenId!, updatedHive);
+        updatedHive = updatedHive.copyWith(
+          queenName: () => queen?.name,
+          breed: () => queen?.breedName,
+          queenBirthDate: () => queen?.birthDate,
+          queenMarked: () => queen?.marked,
+          queenMarkColor: () => queen?.markColor,
+          lastTimeQueenSeen: () => queen?.lastTimeSeen,
+        );
+      }
+      
+      await _hiveRepository.saveHive(updatedHive);
+      Logger.i('Updated hive: ${updatedHive.name}', tag: _tag);
+      
+      // Log the update with entity name
+      await _historyService.logEntityUpdate(
+        entityId: updatedHive.id,
+        entityType: 'hive',
+        entityName: updatedHive.name,
+        oldData: oldHive.toMap(),
+        newData: updatedHive.toMap(),
+      );
+      
+      await _syncHive(updatedHive);
 
-//   // MARK: - Hive CRUD Operations
+      return updatedHive;
+    } catch (e) {
+      Logger.e('Failed to update hive: ${hive.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
 
-//   /// Inserts a new hive into the database and logs the action.
-//   /// 
-//   /// Parameters:
-//   /// - [hive]: The hive to insert
-//   /// - [groupId]: Optional group ID for history logging
-//   /// - [skipHistoryLog]: If true, no history log will be created
-//   Future<Hive> insertHive(
-//     Hive hive, {
-//     String? groupId,
-//     bool skipHistoryLog = false,
-//   }) async {
-//     final createdHive = await _hiveRepository.insertHive(hive);
+  Future<Hive> createHive({
+    required String name,
+    String? apiaryId,
+    required HiveStatus status,
+    required DateTime acquisitionDate,
+    required String hiveTypeId,
+    int? broodFrameCount,
+    int? honeyFrameCount,
+    int? boxCount,
+    int? superBoxCount,
+    int? framesPerBox,
+    int? maxBroodFrameCount,
+    int? maxHoneyFrameCount,
+    int? maxBoxCount,
+    int? maxSuperBoxCount,
+    List<String>? accessories,
+    int? currentBroodFrameCount,
+    int? currentHoneyFrameCount,
+    int? currentBoxCount,
+    int? currentSuperBoxCount,
+    String? queenId,
+    String? imageUrl,
+    Color? color,
+    double? cost,
+  }) async {
+    try {
+      final now = DateTime.now();
+
+      final hiveType = await _hiveTypeRepository.getHiveTypeById(hiveTypeId);
+      if (hiveType == null) {
+        throw Exception('Hive type not found: $hiveTypeId');
+      }
+
+      final order = await _getNextHivePosition(apiaryId);
+
+      var hive = Hive(
+        id: _uuid.v4(),
+        createdAt: now,
+        updatedAt: now,
+        name: name,
+        apiaryId: apiaryId,
+        status: status,
+        acquisitionDate: acquisitionDate,
+        imageUrl: imageUrl,
+        order: order,
+        color: color,
+        hiveTypeId: hiveTypeId,
+        hiveType: hiveType.name,
+        material: hiveType.material,
+        hasFrames: hiveType.hasFrames,
+        broodFrameCount: broodFrameCount ?? hiveType.broodFrameCount,
+        honeyFrameCount: honeyFrameCount ?? hiveType.honeyFrameCount,
+        boxCount: boxCount ?? hiveType.boxCount,
+        superBoxCount: superBoxCount ?? hiveType.superBoxCount,
+        framesPerBox: framesPerBox ?? hiveType.framesPerBox,
+        maxBroodFrameCount: maxBroodFrameCount ?? hiveType.maxBroodFrameCount,
+        maxHoneyFrameCount: maxHoneyFrameCount ?? hiveType.maxHoneyFrameCount,
+        maxBoxCount: maxBoxCount ?? hiveType.maxBoxCount,
+        maxSuperBoxCount: maxSuperBoxCount ?? hiveType.maxSuperBoxCount,
+        accessories: accessories ?? hiveType.accessories,
+        currentBroodFrameCount: currentBroodFrameCount,
+        currentHoneyFrameCount: currentHoneyFrameCount,
+        currentBoxCount: currentBoxCount,
+        currentSuperBoxCount: currentSuperBoxCount,
+        cost: cost,
+      );
+
+      if (apiaryId != null) {
+        final apiary = await _updateApiary(apiaryId, hive);
+        hive = hive.copyWith(
+          apiaryName: () => apiary?.name,
+          apiaryLocation: () => apiary?.location,
+        );
+      }
+      
+      if (queenId != null) {
+        final queen = await _updateQueen(queenId, hive);
+        hive = hive.copyWith(
+          queenName: () => queen?.name,
+          breed: () => queen?.breedName,
+          queenBirthDate: () => queen?.birthDate,
+          queenMarked: () => queen?.marked,
+          queenMarkColor: () => queen?.markColor,
+          lastTimeQueenSeen: () => queen?.lastTimeSeen,
+        );
+      }
+
+      await _hiveRepository.saveHive(hive);
+      Logger.i('Created hive: ${hive.name}', tag: _tag);
+      
+      // Log the creation with entity name
+      await _historyService.logEntityCreate(
+        entityId: hive.id,
+        entityType: 'hive',
+        entityName: hive.name,
+        entityData: hive.toMap(),
+      );
+      
+      await _syncHive(hive);
+
+      return hive;
+    } catch (e) {
+      Logger.e('Failed to create hive: $name', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<int> _getNextHivePosition(String? apiaryId) async {
+    if (apiaryId == null) {
+      final hives = await _hiveRepository.getAllHives();
+      return hives.where((h) => h.apiaryId == null).length + 1;
+    }
+
+    final apiary = await _apiaryRepository.getApiaryById(apiaryId);
+    if (apiary == null) {
+      throw Exception('Apiary not found: $apiaryId');
+    }
+
+    return apiary.hiveCount + 1;
+  }
+  
+  Future<void> deleteHive(String id) async {
+    try {
+      final hive = await getHiveById(id);
+      if (hive == null) return;
+
+      var deletedHive = hive.copyWith(
+        deleted: () => true,
+        updatedAt: () => DateTime.now(),
+        apiaryLocation: () => null,
+        apiaryName: () => null,
+        queenBirthDate: () => null,
+        queenMarked: () => null,
+        queenMarkColor: () => null,
+        queenName: () => null,
+        breed: () => null,
+        lastTimeQueenSeen: () => null,
+      );
+
+      if (hive.queenId != null) {
+        await _updateQueen(hive.queenId!, null);
+        deletedHive = deletedHive.copyWith(queenId: () => null);
+      }
+      
+      if (hive.apiaryId != null) {
+        await _updateApiary(hive.apiaryId!, null);
+        deletedHive = deletedHive.copyWith(apiaryId: () => null);
+      }
+
+      await _hiveRepository.saveHive(deletedHive);
+      Logger.i('Deleted hive: $id', tag: _tag);
+      
+      // Log the deletion with entity name
+      await _historyService.logEntityDelete(
+        entityId: hive.id,
+        entityType: 'hive',
+        entityName: hive.name,
+      );
+      
+      await _syncHive(deletedHive);
+    } catch (e) {
+      Logger.e('Failed to delete hive: $id', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<Apiary?> _updateApiary(String apiaryId, Hive? hive) async {
+    final apiary = await _apiaryRepository.getApiaryById(apiaryId);
+    if (apiary == null) {
+      Logger.w('Apiary not found: $apiaryId', tag: _tag);
+      return null;
+    }
+
+    final updatedApiary = apiary.copyWith(
+      hiveCount: () => apiary.hiveCount + (hive != null ? 1 : -1),
+      activeHiveCount: () => apiary.activeHiveCount + (hive == null ? -1 : (hive.status == HiveStatus.active ? 1 : 0)),
+      updatedAt: () => DateTime.now(),
+    );
+
+    await _apiaryRepository.saveApiary(updatedApiary);
+    await _syncApiary(updatedApiary);
+
+    return updatedApiary;
+  }
+
+  Future<Queen?> _updateQueen(String queenId, Hive? hive) async {
+    final queen = await _queenRepository.getQueenById(queenId);
+    if (queen == null) {
+      Logger.w('Queen not found: $queenId', tag: _tag);
+      return null;
+    }
     
-//     if (!skipHistoryLog) {
-//       await _logHiveAction(
-//         hiveId: createdHive.id,
-//         hiveName: createdHive.name,
-//         action: HistoryAction.create,
-//         description: 'Hive created: ${createdHive.name}',
-//         groupId: groupId,
-//       );
-//     }
-    
-//     return createdHive;
-//   }
+    if (hive != null && hive.queenId != null && hive.queenId != queen.id) {
+      throw Exception('Hive already has a queen: ${hive.queenName}');
+    }
 
-//   /// Updates an existing hive in the database and logs the changes.
-//   /// 
-//   /// Parameters:
-//   /// - [hive]: The hive with updated values
-//   /// - [skipHistoryLog]: If true, no history log will be created
-//   /// - [groupId]: Optional group ID for history logging
-//   Future<Hive> updateHive({
-//     required Hive hive,
-//     bool skipHistoryLog = false,
-//     String? groupId,
-//   }) async {
-//     final oldHive = await _hiveRepository.getHiveById(hive.id);
-//     if (oldHive == null) {
-//       throw Exception('Hive not found for update: ${hive.id}');
-//     }
+    final updatedQueen = queen.copyWith(
+      hiveId: () => hive?.id,
+      hiveName: () => hive?.name,
+      apiaryId: () => hive?.apiaryId,
+      apiaryName: () => hive?.apiaryName,
+      apiaryLocation: () => hive?.apiaryLocation,
+      updatedAt: () => DateTime.now(),
+    );
     
-//     final updatedHive = await _hiveRepository.updateHive(hive);
-//     final changes = oldHive.toMap().differenceWith(updatedHive.toMap());
+    await _queenRepository.saveQueen(updatedQueen);
+    await _syncQueen(updatedQueen);
 
-//     if (!skipHistoryLog) {
-//       await _logHiveAction(
-//         hiveId: updatedHive.id,
-//         hiveName: updatedHive.name,
-//         action: HistoryAction.update,
-//         description: 'Hive updated: ${updatedHive.name}',
-//         groupId: groupId,
-//         changes: changes,
-//       );
-//     }
-    
-//     return updatedHive;
-//   }
+    return updatedQueen;
+  }
 
-//   /// Updates multiple hives in a batch operation and logs the action.
-//   /// 
-//   /// Parameters:
-//   /// - [hives]: The list of hives to update
-//   /// - [groupId]: Optional group ID for history logging
-//   /// - [skipHistoryLog]: If true, no history log will be created
-//   Future<List<Hive>> updateHivesBatch(
-//     List<Hive> hives, {
-//     String? groupId,
-//     bool skipHistoryLog = false,
-//   }) async {
-//     final updatedHives = await _hiveRepository.updateHivesBatch(hives);
-    
-//     if (!skipHistoryLog) {
-//       await _logHiveAction(
-//         hiveId: 'batch',
-//         hiveName: '',
-//         action: HistoryAction.updateBatch,
-//         description: 'Reorder hives',
-//         groupId: groupId,
-//       );
-//     }
-    
-//     return updatedHives;
-//   }
+  // HiveType Operations
+  Future<List<HiveType>> getAllHiveTypes() async {
+    return await _hiveTypeRepository.getAllHiveTypes();
+  }
 
-//   /// Creates a new hive with default or specified values and logs the action.
-//   /// 
-//   /// See [HiveRepository.createDefaultHive] for parameter details.
-//   Future<Hive> createDefaultHive({
-//     String? apiaryId,
-//     String? queenId,
-//     required String name,
-//     HiveStatus? status,
-//     Color? color,
-//     String? hiveTypeId,
-//     String? imageUrl,
-//     int? currentFrameCount,
-//     int? currentBroodFrameCount,
-//     int? currentBroodBoxCount,
-//     int? currentHoneySuperBoxCount,
-//     DateTime? acquisitionDate,
-//     String? groupId,
-//     bool skipHistoryLog = false,
-//   }) async {
-//     final hive = await _hiveRepository.createDefaultHive(
-//       apiaryId: apiaryId,
-//       queenId: queenId,
-//       name: name,
-//       status: status,
-//       color: color,
-//       hiveTypeId: hiveTypeId,
-//       imageUrl: imageUrl,
-//       currentFrameCount: currentFrameCount,
-//       currentBroodFrameCount: currentBroodFrameCount,
-//       currentBroodBoxCount: currentBroodBoxCount,
-//       currentHoneySuperBoxCount: currentHoneySuperBoxCount,
-//       acquisitionDate: acquisitionDate,
-//     );
-    
-//     if (!skipHistoryLog) {
-//       await _logHiveAction(
-//         hiveId: hive.id,
-//         hiveName: hive.name,
-//         action: HistoryAction.create,
-//         description: 'Default hive created: ${hive.name}',
-//         groupId: groupId,
-//       );
-//     }
-    
-//     return hive;
-//   }
+  Future<HiveType?> getHiveTypeById(String id) async {
+    return await _hiveTypeRepository.getHiveTypeById(id);
+  }
 
-//   /// Deletes a hive (marks as deleted) and logs the action.
-//   /// 
-//   /// Parameters:
-//   /// - [hiveId]: The ID of the hive to delete
-//   /// - [groupId]: Optional group ID for history logging
-//   /// - [skipHistoryLog]: If true, no history log will be created
-//   Future<bool> deleteHive({
-//     required String hiveId,
-//     String? groupId,
-//     bool skipHistoryLog = false,
-//   }) async {
-//     final hive = await _hiveRepository.getHiveById(hiveId);
-//     if (hive == null) {
-//       throw Exception('Hive not found for deletion: $hiveId');
-//     }
-    
-//     final result = await _hiveRepository.deleteHive(hiveId);
-    
-//     if (result && !skipHistoryLog) {
-//       await _logHiveAction(
-//         hiveId: hiveId,
-//         hiveName: hive.name,
-//         action: HistoryAction.delete,
-//         description: 'Hive deleted: ${hive.name}',
-//         groupId: groupId,
-//       );
-//     }
-    
-//     return result;
-//   }
+  Future<HiveType> createHiveType({
+    required String name,
+    String? manufacturer,
+    required HiveMaterial material,
+    required bool hasFrames,
+    int? broodFrameCount,
+    int? honeyFrameCount,
+    String? frameStandard,
+    int? boxCount,
+    int? superBoxCount,
+    int? framesPerBox,
+    int? maxBroodFrameCount,
+    int? maxHoneyFrameCount,
+    int? maxBoxCount,
+    int? maxSuperBoxCount,
+    List<String>? accessories,
+    String? country,
+    bool isLocal = true,
+    double? cost,
+    String? imageName,
+    IconData? icon,
+  }) async {
+    try {
+      final now = DateTime.now();
+      
+      final hiveType = HiveType(
+        id: _uuid.v4(),
+        createdAt: now,
+        updatedAt: now,
+        name: name,
+        manufacturer: manufacturer,
+        material: material,
+        hasFrames: hasFrames,
+        broodFrameCount: broodFrameCount,
+        honeyFrameCount: honeyFrameCount,
+        frameStandard: frameStandard,
+        boxCount: boxCount,
+        superBoxCount: superBoxCount,
+        framesPerBox: framesPerBox,
+        maxBroodFrameCount: maxBroodFrameCount,
+        maxHoneyFrameCount: maxHoneyFrameCount,
+        maxBoxCount: maxBoxCount,
+        maxSuperBoxCount: maxSuperBoxCount,
+        accessories: accessories,
+        country: country,
+        isLocal: isLocal,
+        cost: cost,
+        imageName: imageName,
+        icon: icon ?? Icons.home,
+      );
 
-//   // MARK: - Hive Type Operations
+      await _hiveTypeRepository.saveHiveType(hiveType);
+      Logger.i('Created hive type: ${hiveType.name}', tag: _tag);
+      
+      // Log the creation with entity name
+      await _historyService.logEntityCreate(
+        entityId: hiveType.id,
+        entityType: 'hiveType',
+        entityName: hiveType.name,
+        entityData: hiveType.toMap(),
+      );
+      
+      await _syncHiveType(hiveType);
+      
+      return hiveType;
+    } catch (e) {
+      Logger.e('Failed to create hive type: $name', tag: _tag, error: e);
+      rethrow;
+    }
+  }
 
-//   /// Gets all hive types.
-//   Future<List<HiveType>> getAllTypes() async {
-//     return _hiveTypeRepository.getAllTypes();
-//   }
+  Future<HiveType> updateHiveType(HiveType hiveType) async {
+    try {
+      final oldHiveType = await getHiveTypeById(hiveType.id);
+      if (oldHiveType == null) {
+        throw Exception('Hive type not found: ${hiveType.id}');
+      }
 
-//   /// Gets a hive type by ID.
-//   /// 
-//   /// Parameters:
-//   /// - [id]: The ID of the hive type to retrieve
-//   Future<HiveType?> getTypeById(String id) async {
-//     return _hiveTypeRepository.getTypeById(id);
-//   }
+      final updatedHiveType = hiveType.copyWith(updatedAt: () => DateTime.now());
+      await _hiveTypeRepository.saveHiveType(updatedHiveType);
+      Logger.i('Updated hive type: ${updatedHiveType.name}', tag: _tag);
+      
+      // Log the update with entity name
+      await _historyService.logEntityUpdate(
+        entityId: updatedHiveType.id,
+        entityType: 'hiveType',
+        entityName: updatedHiveType.name,
+        oldData: oldHiveType.toMap(),
+        newData: updatedHiveType.toMap(),
+      );
+      
+      await _syncHiveType(updatedHiveType);
+      
+      return updatedHiveType;
+    } catch (e) {
+      Logger.e('Failed to update hive type: ${hiveType.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
 
-//   /// Inserts a new hive type and logs the action.
-//   /// 
-//   /// Parameters:
-//   /// - [type]: The hive type to insert
-//   /// - [groupId]: Optional group ID for history logging
-//   /// - [skipHistoryLog]: If true, no history log will be created
-//   Future<HiveType> insertType({
-//     required HiveType type,
-//     String? groupId,
-//     bool skipHistoryLog = false,
-//   }) async {
-//     final createdType = await _hiveTypeRepository.insertType(type);
-    
-//     if (!skipHistoryLog) {
-//       await _logHiveTypeAction(
-//         typeId: createdType.id,
-//         typeName: createdType.name,
-//         action: HistoryAction.create,
-//         description: 'Hive type created: ${createdType.name}',
-//         groupId: groupId,
-//       );
-//     }
-    
-//     return createdType;
-//   }
+  Future<void> deleteHiveType(String id) async {
+    try {
+      final hiveType = await getHiveTypeById(id);
+      if (hiveType != null) {
+        final deletedHiveType = hiveType.copyWith(
+          deleted: () => true,
+          updatedAt: () => DateTime.now(),
+        );
+        await _hiveTypeRepository.saveHiveType(deletedHiveType);
+        Logger.i('Deleted hive type: $id', tag: _tag);
+        
+        // Log the deletion with entity name
+        await _historyService.logEntityDelete(
+          entityId: hiveType.id,
+          entityType: 'hiveType',
+          entityName: hiveType.name,
+        );
+        
+        await _syncHiveType(deletedHiveType);
+      }
+    } catch (e) {
+      Logger.e('Failed to delete hive type: $id', tag: _tag, error: e);
+      rethrow;
+    }
+  }
 
-//   /// Updates a hive type and logs the changes.
-//   /// 
-//   /// Parameters:
-//   /// - [type]: The hive type with updated values
-//   /// - [groupId]: Optional group ID for history logging
-//   /// - [skipHistoryLog]: If true, no history log will be created
-//   Future<HiveType> updateType({
-//     required HiveType type, 
-//     String? groupId,
-//     bool skipHistoryLog = false,
-//   }) async {
-//     final oldType = await _hiveTypeRepository.getTypeById(type.id);
-//     final updatedType = await _hiveTypeRepository.updateType(type);
-    
-//     if (oldType != null && !skipHistoryLog) {
-//       final changes = oldType.toMap().differenceWith(updatedType.toMap());
-//       if (changes.isNotEmpty) {
-//         await _logHiveTypeAction(
-//           typeId: updatedType.id,
-//           typeName: updatedType.name,
-//           action: HistoryAction.update,
-//           description: 'Hive type updated: ${updatedType.name}',
-//           groupId: groupId,
-//           changes: changes,
-//         );
-//       }
-//     }
-    
-//     return updatedType;
-//   }
+  Future<void> toggleHiveTypeStar(String id) async {
+    try {
+      final hiveType = await getHiveTypeById(id);
+      if (hiveType != null) {
+        final updatedHiveType = hiveType.copyWith(
+          isStarred: () => !hiveType.isStarred,
+          updatedAt: () => DateTime.now(),
+        );
+        await _hiveTypeRepository.saveHiveType(updatedHiveType);
+        await _syncHiveType(updatedHiveType);
+      }
+    } catch (e) {
+      Logger.e('Failed to toggle hive type star: $id', tag: _tag, error: e);
+      rethrow;
+    }
+  }
 
-//   // MARK: - Private Helper Methods
+  Future<void> syncFromFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) {
+      Logger.w('Firestore sync skipped - not premium or not logged in', tag: _tag);
+      return;
+    }
 
-//   /// Helper method to log hive-related actions to history.
-//   Future<void> _logHiveAction({
-//     required String hiveId,
-//     required String hiveName,
-//     required HistoryAction action,
-//     required String description,
-//     String? groupId,
-//     Map<String, dynamic>? changes,
-//   }) async {
-//     await _historyLogRepository.insertHistoryLog(
-//       HistoryLog(
-//         id: _uuid.v4(),
-//         entityId: hiveId,
-//         entityType: EntityType.hive,
-//         action: action,
-//         timestamp: DateTime.now(),
-//         description: description,
-//         groupId: groupId,
-//         changes: changes,
-//       ),
-//     );
-//   }
+    try {
+      final userId = _userRepository.currentUser!.id;
+      final lastSync = await _userRepository.getLastSyncTime();
+      
+      await _hiveRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
+      await _hiveTypeRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
+      
+      Logger.i('Synced hives and hive types from Firestore', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
+    }
+  }
 
-//   /// Helper method to log hive type-related actions to history.
-//   Future<void> _logHiveTypeAction({
-//     required String typeId,
-//     required String typeName,
-//     required HistoryAction action,
-//     required String description,
-//     String? groupId,
-//     Map<String, dynamic>? changes,
-//   }) async {
-//     await _historyLogRepository.insertHistoryLog(
-//       HistoryLog(
-//         id: _uuid.v4(),
-//         entityId: typeId,
-//         entityType: EntityType.hiveType,
-//         action: action,
-//         timestamp: DateTime.now(),
-//         description: description,
-//         groupId: groupId,
-        changes: changes,
-//       ),
-//     );
-//   }
-// }
+  Future<void> _syncHive(Hive hive) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _hiveRepository.syncToFirestore(hive, userId);
+      } catch (e) {
+        Logger.e('Failed to sync hive to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping hive sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> _syncHiveType(HiveType hiveType) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _hiveTypeRepository.syncToFirestore(hiveType, userId);
+      } catch (e) {
+        Logger.e('Failed to sync hive type to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping hive type sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> _syncQueen(Queen queen) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _queenRepository.syncToFirestore(queen, userId);
+      } catch (e) {
+        Logger.e('Failed to sync queen to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping queen sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> _syncApiary(Apiary apiary) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _apiaryRepository.syncToFirestore(apiary, userId);
+      } catch (e) {
+        Logger.e('Failed to sync apiary to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping apiary sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> dispose() async {
+    await _hiveRepository.dispose();
+    await _hiveTypeRepository.dispose();
+    Logger.i('Hive service disposed', tag: _tag);
+  }
+
+  Future<void> updateHivesBatch(List<Hive> hives, {bool deepUpdate = false}) async {
+    try {
+      await _hiveRepository.saveHivesBatch(hives);
+      Logger.i('Updated ${hives.length} hives in batch', tag: _tag);
+      
+      if (deepUpdate) {
+        final queensToUpdate = <Queen>[];
+        final apiariesToUpdate = <Apiary>[];
+        
+        for (final hive in hives) {
+          if (hive.queenId != null) {
+            final queen = await _queenRepository.getQueenById(hive.queenId!);
+            if (queen != null) {
+              final updatedQueen = queen.copyWith(
+                hiveName: () => hive.name,
+                apiaryId: () => hive.apiaryId,
+                apiaryName: () => hive.apiaryName,
+                apiaryLocation: () => hive.apiaryLocation,
+                updatedAt: () => DateTime.now(),
+              );
+              queensToUpdate.add(updatedQueen);
+            }
+          }
+          
+          if (hive.apiaryId != null) {
+            final apiary = await _apiaryRepository.getApiaryById(hive.apiaryId!);
+            if (apiary != null) {
+              final allHives = await _hiveRepository.getAllHives();
+              final apiaryHives = allHives.where((h) => h.apiaryId == hive.apiaryId).toList();
+              final activeCount = apiaryHives.where((h) => h.status == HiveStatus.active).length;
+              
+              final updatedApiary = apiary.copyWith(
+                hiveCount: () => apiaryHives.length,
+                activeHiveCount: () => activeCount,
+                updatedAt: () => DateTime.now(),
+              );
+              apiariesToUpdate.add(updatedApiary);
+            }
+          }
+        }
+        
+        if (queensToUpdate.isNotEmpty) {
+          await _queenRepository.saveQueensBatch(queensToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _queenRepository.syncBatchToFirestore(queensToUpdate, userId);
+          }
+        }
+        if (apiariesToUpdate.isNotEmpty) {
+          await _apiaryRepository.saveApiariesBatch(apiariesToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _apiaryRepository.syncBatchToFirestore(apiariesToUpdate, userId);
+          }
+        }
+      }
+      
+      if (_userRepository.isPremium && _userRepository.currentUser != null) {
+        final userId = _userRepository.currentUser!.id;
+        await _hiveRepository.syncBatchToFirestore(hives, userId);
+      }
+    } catch (e) {
+      Logger.e('Failed to update hives batch', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> updateHiveTypesBatch(List<HiveType> hiveTypes, {bool deepUpdate = false}) async {
+    try {
+      await _hiveTypeRepository.saveHiveTypesBatch(hiveTypes);
+      Logger.i('Updated ${hiveTypes.length} hive types in batch', tag: _tag);
+      
+      if (deepUpdate) {
+        final hivesToUpdate = <Hive>[];
+        
+        for (final hiveType in hiveTypes) {
+          final hives = await _hiveRepository.getAllHives();
+          final relatedHives = hives.where((h) => h.hiveTypeId == hiveType.id).toList();
+          
+          for (final hive in relatedHives) {
+            final updatedHive = hive.copyWith(
+              hiveType: () => hiveType.name,
+              manufacturer: () => hiveType.manufacturer,
+              material: () => hiveType.material,
+              hasFrames: () => hiveType.hasFrames,
+              updatedAt: () => DateTime.now(),
+            );
+            hivesToUpdate.add(updatedHive);
+          }
+        }
+        
+        if (hivesToUpdate.isNotEmpty) {
+          await _hiveRepository.saveHivesBatch(hivesToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _hiveRepository.syncBatchToFirestore(hivesToUpdate, userId);
+          }
+        }
+      }
+      
+      if (_userRepository.isPremium && _userRepository.currentUser != null) {
+        final userId = _userRepository.currentUser!.id;
+        await _hiveTypeRepository.syncBatchToFirestore(hiveTypes, userId);
+      }
+    } catch (e) {
+      Logger.e('Failed to update hive types batch', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+}

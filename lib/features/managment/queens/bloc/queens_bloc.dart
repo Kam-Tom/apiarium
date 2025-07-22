@@ -1,21 +1,18 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/queens/bloc/queens_event.dart';
 import 'package:apiarium/features/managment/queens/bloc/queens_state.dart';
 import 'package:apiarium/shared/shared.dart';
-import 'package:apiarium/shared/extensions/date_compare.dart';
 
 class QueensBloc extends Bloc<QueensEvent, QueensState> {
   final QueenService _queenService;
-  final ApiaryService _apiaryService;
   
   QueensBloc({
     required QueenService queenService,
-    required ApiaryService apiaryService,
   }) : 
     _queenService = queenService,
-    _apiaryService = apiaryService,
     super(const QueensState()) {
     on<LoadQueens>(_onLoadQueens);
     on<SortQueens>(_onSortQueens);
@@ -25,34 +22,28 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     on<FilterByApiary>(_onFilterByApiary);
     on<FilterByDateRange>(_onFilterByDateRange);
     on<ResetFilters>(_onResetFilters);
-    on<AddQueen>(_onAddQueen);
   }
 
-  Future<void> _onLoadQueens(
-    LoadQueens event,
-    Emitter<QueensState> emit,
-  ) async {
+  Future<void> _onLoadQueens(LoadQueens event, Emitter<QueensState> emit) async {
     emit(state.copyWith(status: QueensStatus.loading));
     
     try {
-      // Load all necessary data
-      final queens = await _queenService.getAllQueens(includeApiary: true, includeHive: true);
-      final breeds = await _queenService.getAllBreeds();
-      final apiaries = await _apiaryService.getAllApiaries();
+      final results = await Future.wait([
+        _queenService.getAllQueens(),
+        _queenService.getAllQueenBreeds(),
+      ]);
+      
+      final queens = results[0] as List<Queen>;
+      final breeds = results[1] as List<QueenBreed>;
       
       final filteredQueens = _applyFilters(queens);
-      final sortedQueens = _applySorting(
-        filteredQueens, 
-        state.sortOption, 
-        state.ascending
-      );
+      final sortedQueens = _applySorting(filteredQueens, state.sortOption, state.ascending);
       
       emit(state.copyWith(
         status: QueensStatus.loaded,
         allQueens: queens,
         filteredQueens: sortedQueens,
         availableBreeds: breeds,
-        availableApiaries: apiaries,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -62,15 +53,8 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     }
   }
 
-  void _onSortQueens(
-    SortQueens event,
-    Emitter<QueensState> emit,
-  ) {
-    final sortedQueens = _applySorting(
-      state.filteredQueens,
-      event.sortOption,
-      event.ascending,
-    );
+  void _onSortQueens(SortQueens event, Emitter<QueensState> emit) {
+    final sortedQueens = _applySorting(state.filteredQueens, event.sortOption, event.ascending);
     
     emit(state.copyWith(
       sortOption: event.sortOption,
@@ -79,14 +63,9 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     ));
   }
 
-  Future<void> _onDeleteQueen(
-    DeleteQueen event,
-    Emitter<QueensState> emit,
-  ) async {
+  Future<void> _onDeleteQueen(DeleteQueen event, Emitter<QueensState> emit) async {
     try {
-      await _queenService.deleteQueen(queenId: event.queenId);
-      
-      // Refresh the list
+      await _queenService.deleteQueen(event.queenId);
       add(const LoadQueens());
     } catch (e) {
       emit(state.copyWith(
@@ -95,190 +74,82 @@ class QueensBloc extends Bloc<QueensEvent, QueensState> {
     }
   }
 
-  void _onFilterByBreed(
-    FilterByBreed event,
-    Emitter<QueensState> emit,
-  ) {
-    final newFilter = state.filter.copyWith(
-      breedId: () => event.breedId,
-    );
-    
-    final filteredQueens = _applyFilters(state.allQueens, newFilter);
-    final sortedQueens = _applySorting(
-      filteredQueens, 
-      state.sortOption, 
-      state.ascending
-    );
-    
-    emit(state.copyWith(
-      filter: newFilter,
-      filteredQueens: sortedQueens,
-    ));
+  void _onFilterByBreed(FilterByBreed event, Emitter<QueensState> emit) {
+    _applyFilter(emit, state.filter.copyWith(breedId: () => event.breedId));
   }
 
-  void _onFilterByStatus(
-    FilterByStatus event,
-    Emitter<QueensState> emit,
-  ) {
-    final newFilter = state.filter.copyWith(
-      status: () => event.status,
-    );
-    
-    final filteredQueens = _applyFilters(state.allQueens, newFilter);
-    final sortedQueens = _applySorting(
-      filteredQueens, 
-      state.sortOption, 
-      state.ascending
-    );
-    
-    emit(state.copyWith(
-      filter: newFilter,
-      filteredQueens: sortedQueens,
-    ));
+  void _onFilterByStatus(FilterByStatus event, Emitter<QueensState> emit) {
+    _applyFilter(emit, state.filter.copyWith(status: () => event.status));
   }
 
-  void _onFilterByApiary(
-    FilterByApiary event,
-    Emitter<QueensState> emit,
-  ) {
-    final newFilter = state.filter.copyWith(
-      apiaryId: () => event.apiaryId,
-    );
-    
-    final filteredQueens = _applyFilters(state.allQueens, newFilter);
-    final sortedQueens = _applySorting(
-      filteredQueens, 
-      state.sortOption, 
-      state.ascending
-    );
-    
-    emit(state.copyWith(
-      filter: newFilter,
-      filteredQueens: sortedQueens,
-    ));
+  void _onFilterByApiary(FilterByApiary event, Emitter<QueensState> emit) {
+    _applyFilter(emit, state.filter.copyWith(apiaryId: () => event.apiaryId));
   }
 
-  void _onFilterByDateRange(
-    FilterByDateRange event,
-    Emitter<QueensState> emit,
-  ) {
-    final newFilter = state.filter.copyWith(
+  void _onFilterByDateRange(FilterByDateRange event, Emitter<QueensState> emit) {
+    _applyFilter(emit, state.filter.copyWith(
       fromDate: () => event.fromDate,
       toDate: () => event.toDate,
-    );
-    
+    ));
+  }
+
+  void _onResetFilters(ResetFilters event, Emitter<QueensState> emit) {
+    _applyFilter(emit, const QueenFilter());
+  }
+
+  void _applyFilter(Emitter<QueensState> emit, QueenFilter newFilter) {
     final filteredQueens = _applyFilters(state.allQueens, newFilter);
-    final sortedQueens = _applySorting(
-      filteredQueens, 
-      state.sortOption, 
-      state.ascending
-    );
+    final sortedQueens = _applySorting(filteredQueens, state.sortOption, state.ascending);
     
     emit(state.copyWith(
       filter: newFilter,
       filteredQueens: sortedQueens,
     ));
-  }
-
-  void _onResetFilters(
-    ResetFilters event,
-    Emitter<QueensState> emit,
-  ) {
-    final newFilter = const QueenFilter();
-    final filteredQueens = _applyFilters(state.allQueens);
-    final sortedQueens = _applySorting(
-      filteredQueens, 
-      state.sortOption, 
-      state.ascending
-    );
-    
-    emit(state.copyWith(
-      filter: newFilter,
-      filteredQueens: sortedQueens,
-    ));
-  }
-
-  FutureOr<void> _onAddQueen(
-    AddQueen event, 
-    Emitter<QueensState> emit
-  ) async {
-    try {
-      final newQueen = await _queenService.createDefaultQueen();
-      
-      // Add the new queen to both allQueens and filteredQueens
-      final updatedAllQueens = List<Queen>.from(state.allQueens)..add(newQueen);
-      final updatedFilteredQueens = List<Queen>.from(state.filteredQueens)..add(newQueen);
-      
-      // Apply sorting to maintain consistency
-      final sortedFilteredQueens = _applySorting(
-        updatedFilteredQueens,
-        state.sortOption,
-        state.ascending
-      );
-      
-      emit(state.copyWith(
-        allQueens: updatedAllQueens,
-        filteredQueens: sortedFilteredQueens,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        errorMessage: () => 'Failed to add queen: ${e.toString()}',
-      ));
-    }
   }
 
   List<Queen> _applyFilters(List<Queen> queens, [QueenFilter? filter]) {
     filter ??= state.filter;
     
-    return queens.where((queen) {
-      // Filter by status
-      if (filter!.status != null && queen.status != filter.status) {
-        return false;
-      }
-      
-      // Filter by breed
-      if (filter.breedId != null && queen.breed.id != filter.breedId) {
-        return false;
-      }
-      
-      // Filter by apiary
-      if (filter.apiaryId != null && queen.apiary?.id != filter.apiaryId) {
-        return false;
-      }
-      
-      // Filter by date range
-      if (filter.fromDate != null && queen.birthDate.isBeforeDay(filter.fromDate!)) {
-        return false;
-      }
-      
-      if (filter.toDate != null && queen.birthDate.isAfterDay(filter.toDate!)) {
-        return false;
-      }
-      
-      return true;
-    }).toList();
+    return queens.where((queen) => 
+      _matchesStatusFilter(queen, filter!.status) &&
+      _matchesBreedFilter(queen, filter.breedId) &&
+      _matchesApiaryFilter(queen, filter.apiaryId) &&
+      _matchesDateRangeFilter(queen, filter.fromDate, filter.toDate)
+    ).toList();
   }
 
-  List<Queen> _applySorting(
-    List<Queen> queens,
-    QueenSortOption sortOption,
-    bool ascending,
-  ) {
-    final sortedList = List<Queen>.from(queens);
+  bool _matchesStatusFilter(Queen queen, QueenStatus? status) {
+    return status == null || queen.status == status;
+  }
+
+  bool _matchesBreedFilter(Queen queen, String? breedId) {
+    return breedId == null || queen.breedId == breedId;
+  }
+
+  bool _matchesApiaryFilter(Queen queen, String? apiaryId) {
+    if (apiaryId == null) return true;
+    if (apiaryId == 'none') return queen.apiaryId == null;
+    return queen.apiaryId == apiaryId;
+  }
+
+  bool _matchesDateRangeFilter(Queen queen, DateTime? fromDate, DateTime? toDate) {
+    if (fromDate != null && queen.birthDate.isBeforeDay(fromDate)) return false;
+    if (toDate != null && queen.birthDate.isAfterDay(toDate)) return false;
+    return true;
+  }
+
+  List<Queen> _applySorting(List<Queen> queens, QueenSortOption sortOption, bool ascending) {
+    final sortedList = [...queens];
     
     switch (sortOption) {
       case QueenSortOption.name:
         sortedList.sort((a, b) => a.name.compareTo(b.name));
-        break;
       case QueenSortOption.birthDate:
         sortedList.sort((a, b) => a.birthDate.compareTo(b.birthDate));
-        break;
       case QueenSortOption.breedName:
-        sortedList.sort((a, b) => a.breed.name.compareTo(b.breed.name));
-        break;
+        sortedList.sort((a, b) => a.breedName.compareTo(b.breedName));
       case QueenSortOption.status:
         sortedList.sort((a, b) => a.status.name.compareTo(b.status.name));
-        break;
     }
     
     return ascending ? sortedList : sortedList.reversed.toList();

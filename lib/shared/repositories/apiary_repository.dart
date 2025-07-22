@@ -1,355 +1,308 @@
-import 'package:apiarium/shared/shared.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:uuid/uuid.dart';
+import 'dart:io';
 
-/// Repository for managing apiaries in the database
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:hive_ce/hive.dart' as hive_ce;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import '../shared.dart';
+
 class ApiaryRepository {
-  final DatabaseHelper _databaseHelper;
-  final Uuid _uuid = const Uuid();
-
-  ApiaryRepository({DatabaseHelper? databaseHelper})
-      : _databaseHelper = databaseHelper ?? DatabaseHelper();
-
-  /// Retrieves all apiaries from the database
-  Future<List<Apiary>> getAllApiaries() async {
-    final db = await _databaseHelper.database;
-    final apiaryTable = _databaseHelper.apiaryTable;
-    final hiveTable = _databaseHelper.hiveTable;
-
-    final query = '''
-      SELECT a.*, 
-        (SELECT COUNT(*) 
-         FROM ${hiveTable.tableName} h 
-         WHERE h.${hiveTable.apiaryId} = a.${apiaryTable.id} 
-         AND h.${hiveTable.isDeleted} = 0) as hive_count
-      FROM ${apiaryTable.tableName} a
-      WHERE a.${apiaryTable.isDeleted} = 0
-      ORDER BY a.${apiaryTable.position} ASC, a.${apiaryTable.createdAt} DESC
-    ''';
-
-    final results = await db.rawQuery(query);
-
-    return results.map((map) {
-      final dto = ApiaryDto.fromMap(map);
-      return dto.toModel().copyWith(
-        hiveCount: () => map['hive_count'] as int? ?? 0,
-      );
-    }).toList();
-  }
-
-  /// Retrieves all apiaries from the database with their hives
-  Future<List<Apiary>> getAllApiariesWithHives({bool includeQueen = false}) async {
-    final apiaries = await getAllApiaries();
-    
-    // Load hives for each apiary
-    final List<Apiary> apiariesWithHives = [];
-    for (final apiary in apiaries) {
-      final hives = await getHivesByApiaryId(apiary.id, includeQueen: includeQueen);
-      apiariesWithHives.add(apiary.copyWith(hives: () => hives));
-    }
-    
-    return apiariesWithHives;
-  }
+  static const String _boxName = 'apiaries';
+  static const String _tag = 'ApiaryRepository';
   
-  /// Unified method to get all apiaries with optional hive inclusion
-  ///
-  /// If [includeHives] is true, hives will be loaded for each apiary
-  /// If [includeQueen] is true, queen information will be loaded for each hive
-  Future<List<Apiary>> getApiaries({
-    bool includeHives = false,
-    bool includeQueen = false
-  }) async {
-    if (includeHives) {
-      return getAllApiariesWithHives(includeQueen: includeQueen);
-    } else {
-      return getAllApiaries();
+  late hive_ce.Box<Map<dynamic, dynamic>> _box;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> initialize() async {
+    try {
+      _box = await hive_ce.Hive.openBox<Map<dynamic, dynamic>>(_boxName);
+      Logger.i('Apiary repository initialized', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to initialize apiary repository', tag: _tag, error: e);
+      rethrow;
     }
   }
 
-  /// Retrieves a specific apiary by ID with its current hive count
-  Future<Apiary?> getApiaryById(String id) async {
-    final db = await _databaseHelper.database;
-    final apiaryTable = _databaseHelper.apiaryTable;
-    final hiveTable = _databaseHelper.hiveTable;
-
-    final query = '''
-      SELECT a.*, 
-        (SELECT COUNT(*) 
-         FROM ${hiveTable.tableName} h 
-         WHERE h.${hiveTable.apiaryId} = a.${apiaryTable.id} 
-         AND h.${hiveTable.isDeleted} = 0) as hive_count
-      FROM ${apiaryTable.tableName} a
-      WHERE a.${apiaryTable.id} = ?
-      AND a.${apiaryTable.isDeleted} = 0
-    ''';
-
-    final results = await db.rawQuery(query, [id]);
-
-    if (results.isEmpty) {
-      return null;
-    }
-
-    final map = results.first;
-    final dto = ApiaryDto.fromMap(map);
-    return dto.toModel().copyWith(
-      hiveCount: () => map['hive_count'] as int? ?? 0,
-    );
-  }
-
-  /// Retrieves a specific apiary by ID with its hives
-  Future<Apiary?> getApiaryWithHives(String id, {bool includeQueen = false}) async {
-    final apiary = await getApiaryById(id);
-    if (apiary == null) return null;
-    
-    final hives = await getHivesByApiaryId(id, includeQueen: includeQueen);
-    return apiary.copyWith(
-      hives: () => hives,
-    );
-  }
-  
-  /// Unified method to get a specific apiary with optional hive inclusion
-  ///
-  /// If [includeHives] is true, hives will be loaded for the apiary
-  /// If [includeQueen] is true, queen information will be loaded for each hive
-  Future<Apiary?> getApiary(String id, {
-    bool includeHives = false,
-    bool includeQueen = false
-  }) async {
-    if (includeHives) {
-      return getApiaryWithHives(id, includeQueen: includeQueen);
-    } else {
-      return getApiaryById(id);
-    }
-  }
-
-  /// Retrieves all hives for a specific apiary
-  Future<List<Hive>> getHivesByApiaryId(String apiaryId, {bool includeQueen = false}) async {
-    final db = await _databaseHelper.database;
-    final hiveTable = _databaseHelper.hiveTable;
-    final hiveTypeTable = _databaseHelper.hiveTypeTable;
-    
-    // Build SELECT clause
-    String selectClause = '''
-      SELECT h.* 
-      FROM ${hiveTable.tableName} h
-      WHERE h.${hiveTable.apiaryId} = ?
-      AND h.${hiveTable.isDeleted} = 0
-      ORDER BY h.${hiveTable.position} ASC
-    ''';
-    
-    final results = await db.rawQuery(selectClause, [apiaryId]);
-    
-    // We'll need to fetch the hive type for each hive
-    List<Hive> hives = [];
-    for (final map in results) {
-      final hiveDto = HiveDto.fromMap(map);
-      
-      // Get hive type
-      final hiveTypeQuery = '''
-        SELECT * FROM ${hiveTypeTable.tableName} 
-        WHERE id = ? AND is_deleted = 0
-      ''';
-      final hiveTypeResults = await db.rawQuery(
-        hiveTypeQuery, 
-        [hiveDto.hiveTypeId]
-      );
-      
-      if (hiveTypeResults.isNotEmpty) {
-        final hiveTypeDto = HiveTypeDto.fromMap(hiveTypeResults.first);
-        final hiveType = hiveTypeDto.toModel();
-        
-        Queen? queen = null;
-        // If includeQueen is true, get queen data
-        if (includeQueen && hiveDto.queenId != null) {
-          final queenTable = _databaseHelper.queenTable;
-          final queenBreedTable = _databaseHelper.queenBreedTable;
-          
-          final queenQuery = '''
-            SELECT q.*, b.*
-            FROM ${queenTable.tableName} q
-            LEFT JOIN ${queenBreedTable.tableName} b ON q.${queenTable.breedId} = b.id
-            WHERE q.id = ? AND q.is_deleted = 0
-          ''';
-          
-          final queenResults = await db.rawQuery(queenQuery, [hiveDto.queenId]);
-          
-          if (queenResults.isNotEmpty) {
-            final queenMap = queenResults.first;
-            final queenDto = QueenDto.fromMap(queenMap);
-            final queenBreedDto = QueenBreedDto.fromMap(queenMap);
-            queen = queenDto.toModel(breed: queenBreedDto.toModel());
-          }
+  Future<List<Apiary>> _getApiaries({required bool deleted}) async {
+    try {
+      final apiaries = <Apiary>[];
+      for (final data in _box.values) {
+        final apiary = Apiary.fromMap(Map<String, dynamic>.from(data));
+        if (apiary.deleted == deleted) {
+          apiaries.add(apiary);
         }
-        
-        // Create the hive model
-        hives.add(hiveDto.toModel(
-          hiveType: hiveType,
-          apiary: null,
-          queen: queen,
-        ));
       }
+      return apiaries;
+    } catch (e) {
+      Logger.e('Failed to get apiaries', tag: _tag, error: e);
+      return [];
     }
-    
-    return hives;
   }
 
-  /// Inserts a new apiary into the database.
-  /// 
-  /// If the apiary doesn't have an ID, one will be generated.
-  /// If position is 0, it will be set to max position + 1.
-  /// Returns the inserted apiary with its ID.
-  Future<Apiary> insertApiary(Apiary apiary) async {
-    final db = await _databaseHelper.database;
-    final apiaryTable = _databaseHelper.apiaryTable;
-
-    final apiaryId = apiary.id.isEmpty ? _uuid.v4() : apiary.id;
-    
-    // If position is 0, calculate the maximum position + 1
-    int position = apiary.position;
-    if (position == 0) {
-      final positionResult = await db.rawQuery(
-        'SELECT MAX(${apiaryTable.position}) as max_position FROM ${apiaryTable.tableName} WHERE ${apiaryTable.isDeleted} = 0'
-      );
-      
-      if (positionResult.isNotEmpty && positionResult.first['max_position'] != null) {
-        position = (positionResult.first['max_position'] as int) + 1;
-      } else {
-        position = 1; // First apiary
-      }
-    }
-
-    ApiaryDto dto = ApiaryDto.fromModel(
-      apiary.copyWith(
-        id: () => apiaryId,
-        position: () => position,
-      ),
-      isDeleted: false,
-      isSynced: false,
-      updatedAt: DateTime.now(),
-    );
-
-    await db.insert(
-      apiaryTable.tableName,
-      dto.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-
-    return apiary.copyWith(
-      id: () => apiaryId,
-      position: () => position,
-    );
-  }
-
-  /// Updates an existing apiary in the database.
-  /// 
-  /// The apiary must have a valid ID.
-  /// Returns the updated apiary.
-  Future<Apiary> updateApiary(Apiary apiary) async {
-    final db = await _databaseHelper.database;
-    final apiaryTable = _databaseHelper.apiaryTable;
-
-    if (apiary.id.isEmpty) {
-      throw Exception('Cannot update apiary without an ID');
-    }
-
-    ApiaryDto dto = ApiaryDto.fromModel(
-      apiary,
-      isDeleted: false,
-      isSynced: false,
-      updatedAt: DateTime.now(),
-    );
-
-    await db.update(
-      apiaryTable.tableName,
-      dto.toMap(),
-      where: '${apiaryTable.id} = ?',
-      whereArgs: [apiary.id],
-    );
-
-    return apiary;
-  }
-
-  /// Updates multiple apiaries in a single batch operation.
-  ///
-  /// This is more efficient than updating each apiary individually.
-  /// All apiaries must have valid IDs.
-  /// Returns the list of updated apiaries.
-  Future<List<Apiary>> updateApiariesBatch(List<Apiary> apiaries) async {
-    final db = await _databaseHelper.database;
-    final apiaryTable = _databaseHelper.apiaryTable;
-    
-    // Verify all apiaries have IDs
-    if (apiaries.any((apiary) => apiary.id.isEmpty)) {
-      throw ArgumentError('Cannot update apiaries without IDs');
-    }
-    
-    // Use a batch for more efficient updates
-    final batch = db.batch();
-    final now = DateTime.now();
-    
-    for (final apiary in apiaries) {
-      final dto = ApiaryDto.fromModel(
-        apiary,
-        isDeleted: false,
-        isSynced: false,
-        updatedAt: now,
-      );
-      
-      batch.update(
-        apiaryTable.tableName,
-        dto.toMap(),
-        where: '${apiaryTable.id} = ?',
-        whereArgs: [apiary.id],
-      );
-    }
-    
-    // Execute all updates in a single batch operation
-    await batch.commit(noResult: true);
-    
+  Future<List<Apiary>> getAllApiaries() async {
+    final apiaries = await _getApiaries(deleted: false);
+    apiaries.sort((a, b) => a.position.compareTo(b.position));
     return apiaries;
   }
 
-  /// Soft-deletes an apiary by marking it as deleted in the database.
-  /// 
-  /// The apiary will no longer be returned by regular queries but can be recovered
-  /// if needed by directly querying with isDeleted=1. All hives associated with
-  /// this apiary will have their apiary relationship cleared.
-  /// 
-  /// Parameters:
-  /// - [apiaryId]: The ID of the apiary to delete
-  /// 
-  /// Returns true if the delete was successful, false otherwise.
-  Future<bool> deleteApiary(String apiaryId) async {
-    final db = await _databaseHelper.database;
-    final apiaryTable = _databaseHelper.apiaryTable;
-    final hiveTable = _databaseHelper.hiveTable;
-    
-    // Start a transaction to ensure both operations complete
-    return await db.transaction((txn) async {
-      //Update all hives to remove the apiary reference
-      await txn.update(
-        hiveTable.tableName,
-        {
-          hiveTable.apiaryId: null,
-          hiveTable.updatedAt: DateTime.now().toIso8601String(),
-          hiveTable.isSynced: 0,
-        },
-        where: '${hiveTable.apiaryId} = ? AND ${hiveTable.isDeleted} = 0',
-        whereArgs: [apiaryId],
-      );
+  Future<List<Apiary>> getDeletedApiaries() async {
+    final deletedApiaries = await _getApiaries(deleted: true);
+    deletedApiaries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt)); // Most recent first
+    return deletedApiaries;
+  }
+
+  Future<Apiary?> getApiaryById(String id) async {
+    try {
+      final data = _box.get(id);
+      return data != null ? Apiary.fromMap(Map<String, dynamic>.from(data)) : null;
+    } catch (e) {
+      Logger.e('Failed to get apiary by id: $id', tag: _tag, error: e);
+      return null;
+    }
+  }
+
+  Future<void> saveApiary(Apiary apiary) async {
+    try {
+      String? imageName = apiary.imageName;
+      final appDir = await getApplicationDocumentsDirectory();
+      final apiaryImagesDir = Directory('${appDir.path}/images/apiaries');
+
+      if (imageName == null) {
+        // Remove all possible images for this apiary (by id)
+        final files = apiaryImagesDir.existsSync()
+            ? apiaryImagesDir.listSync().whereType<File>().where((f) => f.path.contains(apiary.id)).toList()
+            : [];
+        for (final file in files) {
+          try {
+            await file.delete();
+          } catch (_) {}
+        }
+      } else if (p.basename(imageName) != imageName) {
+        // If imageName is a path (not just a filename), copy it locally and set imageName
+        if (!await apiaryImagesDir.exists()) {
+          await apiaryImagesDir.create(recursive: true);
+        }
+        final fileName = '${apiary.id}.jpg';
+        final localFile = File('${apiaryImagesDir.path}/$fileName');
+
+        if (await localFile.exists()) {
+          await localFile.delete();
+        }
+
+        await File(apiary.imageName!).copy(localFile.path);
+        imageName = fileName;
+      }
+
+      await _box.put(apiary.id, apiary.copyWith(imageName: () => imageName).toMap());
+      Logger.i('Saved apiary: ${apiary.name}', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to save apiary: ${apiary.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> saveApiariesBatch(List<Apiary> apiaries) async {
+    try {
+      final Map<String, Map<String, dynamic>> batchData = {};
       
-      // Handle 
-      final updateCount = await txn.update(
-        apiaryTable.tableName,
-        {
-          apiaryTable.isDeleted: 1,
-          apiaryTable.updatedAt: DateTime.now().toIso8601String(), 
-          apiaryTable.isSynced: 0,  
-        },
-        where: '${apiaryTable.id} = ?',
-        whereArgs: [apiaryId],
+      for (final apiary in apiaries) {
+        String? imageName = apiary.imageName;
+        final appDir = await getApplicationDocumentsDirectory();
+        final apiaryImagesDir = Directory('${appDir.path}/images/apiaries');
+
+        if (imageName == null) {
+          // Remove all possible images for this apiary (by id)
+          final files = apiaryImagesDir.existsSync()
+              ? apiaryImagesDir.listSync().whereType<File>().where((f) => f.path.contains(apiary.id)).toList()
+              : [];
+          for (final file in files) {
+            try {
+              await file.delete();
+            } catch (_) {}
+          }
+        } else if (p.basename(imageName) != imageName) {
+          // If imageName is a path (not just a filename), copy it locally and set imageName
+          if (!await apiaryImagesDir.exists()) {
+            await apiaryImagesDir.create(recursive: true);
+          }
+          final fileName = '${apiary.id}.jpg';
+          final localFile = File('${apiaryImagesDir.path}/$fileName');
+
+          if (await localFile.exists()) {
+            await localFile.delete();
+          }
+
+          await File(apiary.imageName!).copy(localFile.path);
+          imageName = fileName;
+        }
+
+        batchData[apiary.id] = apiary.copyWith(imageName: () => imageName).toMap();
+      }
+
+      await _box.putAll(batchData);
+      Logger.i('Saved ${apiaries.length} apiaries in batch', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to save apiaries batch', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncToFirestore(Apiary apiary, String userId) async {
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users')
+          .child(userId)
+          .child('apiaries');
+
+      if (apiary.imageName != null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final localPath = '${appDir.path}/images/apiaries/${apiary.imageName}';
+        final file = File(localPath);
+        if (await file.exists()) {
+          final ref = storageRef.child(apiary.imageName!);
+          await ref.putFile(file);
+        }
+      } else {
+        // Delete image from Firebase Storage if imageName is null
+        final all = await storageRef.listAll();
+        for (final item in all.items) {
+          if (item.name.contains(apiary.id)) {
+            try {
+              await item.delete();
+            } catch (_) {}
+          }
+        }
+      }
+
+      // Update sync metadata BEFORE sending to Firestore
+      final apiaryToSync = apiary.copyWith(
+        syncStatus: () => SyncStatus.synced,
+        lastSyncedAt: () => DateTime.now(),
       );
-      return updateCount == 1;
-    });
+
+      final docRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('apiaries')
+          .doc(apiary.id);
+
+      await docRef.set(apiaryToSync.toMap(), SetOptions(merge: true));
+
+      // Save the updated version locally
+      await saveApiary(apiaryToSync);
+
+      Logger.i('Synced apiary to Firestore: ${apiary.id}', tag: _tag);
+    } catch (e) {
+      // Update sync status to failed
+      final failedApiary = apiary.copyWith(syncStatus: () => SyncStatus.failed);
+      await saveApiary(failedApiary);
+
+      Logger.e('Failed to sync apiary to Firestore: ${apiary.id}', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncBatchToFirestore(List<Apiary> apiaries, String userId) async {
+    try {
+      final batch = _firestore.batch();
+      final apiariesToUpdate = <Apiary>[];
+
+      for (final apiary in apiaries) {
+        final apiaryToSync = apiary.copyWith(
+          syncStatus: () => SyncStatus.synced,
+          lastSyncedAt: () => DateTime.now(),
+        );
+
+        final docRef = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('apiaries')
+            .doc(apiary.id);
+
+        batch.set(docRef, apiaryToSync.toMap(), SetOptions(merge: true));
+        apiariesToUpdate.add(apiaryToSync);
+      }
+
+      await batch.commit();
+      await saveApiariesBatch(apiariesToUpdate);
+
+      Logger.i('Synced ${apiaries.length} apiaries to Firestore in batch', tag: _tag);
+    } catch (e) {
+      final failedApiaries = apiaries.map((a) => a.copyWith(syncStatus: () => SyncStatus.failed)).toList();
+      await saveApiariesBatch(failedApiaries);
+
+      Logger.e('Failed to sync apiaries batch to Firestore', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> syncFromFirestore(String userId, {DateTime? lastSyncTime}) async {
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('apiaries');
+
+      if (lastSyncTime != null) {
+        query = query.where(
+          'lastSyncedAt', isGreaterThan: lastSyncTime.toIso8601String(),
+        );
+      }
+
+      final snapshot = await query.get();
+
+      for (final doc in snapshot.docs) {
+        final firestoreApiary = Apiary.fromMap(doc.data());
+        final localApiary = await getApiaryById(doc.id);
+
+        if (firestoreApiary.imageName != null && firestoreApiary.imageName!.isNotEmpty) {
+          try {
+            final ref = FirebaseStorage.instance
+                .ref()
+                .child('users')
+                .child(userId)
+                .child('apiaries')
+                .child(firestoreApiary.imageName!);
+            final appDir = await getApplicationDocumentsDirectory();
+            final apiaryImagesDir = Directory('${appDir.path}/images/apiaries');
+            if (!await apiaryImagesDir.exists()) {
+              await apiaryImagesDir.create(recursive: true);
+            }
+            final localFile = File('${apiaryImagesDir.path}/${firestoreApiary.imageName!}');
+            await ref.writeToFile(localFile);
+          } catch (e) {
+            Logger.e('Failed to download image for apiary ${firestoreApiary.id}', tag: _tag, error: e);
+          }
+        }
+
+        if (localApiary == null || 
+            firestoreApiary.updatedAt.isAfter(localApiary.updatedAt) || 
+            (firestoreApiary.updatedAt.isAtSameMomentAs(localApiary.updatedAt) && 
+             firestoreApiary.serverVersion > localApiary.serverVersion)) {
+          final syncedApiary = firestoreApiary.copyWith(
+            syncStatus: () => SyncStatus.synced,
+            lastSyncedAt: () => DateTime.now(),
+            serverVersion: () => firestoreApiary.serverVersion + 1,
+          );
+          await saveApiary(syncedApiary);
+        }
+      }
+
+      Logger.i('Synced ${snapshot.docs.length} apiaries from Firestore', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> dispose() async {
+    try {
+      await _box.close();
+      Logger.i('Apiary repository disposed', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to dispose apiary repository', tag: _tag, error: e);
+    }
   }
 }

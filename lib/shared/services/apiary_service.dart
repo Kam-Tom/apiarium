@@ -1,211 +1,318 @@
-import 'package:apiarium/shared/shared.dart';
+import 'dart:ui';
 import 'package:uuid/uuid.dart';
+import '../shared.dart';
 
-/// Service class that handles business logic related to apiaries,
-/// including tracking changes through history logs.
 class ApiaryService {
+  static const String _tag = 'ApiaryService';
+  static const Uuid _uuid = Uuid();
+
   final ApiaryRepository _apiaryRepository;
-  final HistoryLogRepository _historyLogRepository;
-  final Uuid _uuid = const Uuid();
-  
+  final HiveRepository _hiveRepository;
+  final QueenRepository _queenRepository;
+  final UserRepository _userRepository;
+  final HistoryService _historyService;
+
   ApiaryService({
     required ApiaryRepository apiaryRepository,
-    required HistoryLogRepository historyLogRepository,
-  }) : 
-    _apiaryRepository = apiaryRepository,
-    _historyLogRepository = historyLogRepository;
-  
-  /// Creates a unique group ID for grouping related history log entries
-  String createGroupId() => _uuid.v4();
+    required HiveRepository hiveRepository,
+    required QueenRepository queenRepository,
+    required UserRepository userRepository,
+    required HistoryService historyService,
+  }) : _apiaryRepository = apiaryRepository,
+       _hiveRepository = hiveRepository,
+       _queenRepository = queenRepository,
+       _userRepository = userRepository,
+       _historyService = historyService;
 
-  // MARK: - Apiary Query Operations
-
-  /// Retrieves all apiaries with optional related data.
-  /// 
-  /// Parameters:
-  /// - [includeHives]: Whether to include hives for each apiary
-  /// - [includeQueen]: Whether to include queen information for each hive
-  Future<List<Apiary>> getAllApiaries({
-    bool includeHives = false,
-    bool includeQueen = false
-  }) async {
-    return _apiaryRepository.getApiaries(
-      includeHives: includeHives,
-      includeQueen: includeQueen
-    );
-  }
-  
-  /// Gets an apiary by ID with optional related data.
-  /// 
-  /// Parameters:
-  /// - [id]: The ID of the apiary to retrieve
-  /// - [includeHives]: Whether to include hives for the apiary
-  /// - [includeQueen]: Whether to include queen information for each hive
-  Future<Apiary?> getApiaryById(
-    String id, {
-    bool includeHives = false,
-    bool includeQueen = false
-  }) async {
-    return _apiaryRepository.getApiary(
-      id,
-      includeHives: includeHives,
-      includeQueen: includeQueen
-    );
+  Future<void> initialize() async {
+    await _apiaryRepository.initialize();
+    Logger.i('Apiary service initialized', tag: _tag);
   }
 
-  // MARK: - Apiary CRUD Operations
-  
-  /// Inserts a new apiary into the database and logs the action.
-  /// 
-  /// Parameters:
-  /// - [apiary]: The apiary to insert
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<Apiary> insertApiary(
-    Apiary apiary, {
-    String? groupId,
-    bool skipHistoryLog = false
+  Future<List<Apiary>> getAllApiaries() async {
+    return await _apiaryRepository.getAllApiaries();
+  }
+
+  Future<Apiary?> getApiaryById(String id) async {
+    return await _apiaryRepository.getApiaryById(id);
+  }
+
+  Future<Apiary> createApiary({
+    required String name,
+    String? description,
+    String? location,
+    String? imageName,
+    double? latitude,
+    double? longitude,
+    bool isMigratory = false,
+    Color? color,
+    ApiaryStatus status = ApiaryStatus.active,
+    List<Hive>? hives = const [],
   }) async {
-    final createdApiary = await _apiaryRepository.insertApiary(apiary);
-    
-    if (!skipHistoryLog) {
-      await _logApiaryAction(
-        apiaryId: createdApiary.id,
-        apiaryName: createdApiary.name,
-        action: HistoryAction.create,
-        description: 'Apiary created: ${createdApiary.name}',
-        groupId: groupId,
+    try {
+      final now = DateTime.now();
+      final apiaryId = _uuid.v4();
+      final position = await _getNextApiaryPosition();
+
+      final apiary = Apiary(
+        id: apiaryId,
+        createdAt: now,
+        updatedAt: now,
+        name: name,
+        description: description,
+        location: location,
+        position: position,
+        imageName: imageName,
+        latitude: latitude,
+        longitude: longitude,
+        isMigratory: isMigratory,
+        color: color,
+        status: status,
       );
+
+      await _apiaryRepository.saveApiary(apiary);
+      await _updateHives(apiary, hives: hives);
+
+      Logger.i('Created apiary: ${apiary.name}', tag: _tag);
+      
+      // Log the creation with entity name
+      await _historyService.logEntityCreate(
+        entityId: apiary.id,
+        entityType: 'apiary',
+        entityName: apiary.name,
+        entityData: apiary.toMap(),
+      );
+      
+      await _syncApiary(apiary);
+      
+      return apiary;
+    } catch (e) {
+      Logger.e('Failed to create apiary: $name', tag: _tag, error: e);
+      rethrow;
     }
-    
-    return createdApiary;
   }
   
-  /// Updates an existing apiary in the database and logs the changes.
-  /// 
-  /// Parameters:
-  /// - [apiary]: The apiary with updated values
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<Apiary> updateApiary({
-    required Apiary apiary,
-    String? groupId,
-    bool skipHistoryLog = false
-  }) async {
-    final oldApiary = await _apiaryRepository.getApiaryById(apiary.id);
-    if (oldApiary == null) {
-      throw Exception('Apiary not found for update: ${apiary.id}');
+  Future<int> _getNextApiaryPosition() async {
+    return (await _apiaryRepository.getAllApiaries()).length + 1;
+  }
+  
+  Future<Apiary> updateApiary(Apiary apiary) async {
+    try {
+      final oldApiary = await getApiaryById(apiary.id);
+      if (oldApiary == null) {
+        throw Exception('Apiary not found: ${apiary.id}');
+      }
+
+      final updatedApiary = apiary.copyWith(updatedAt: () => DateTime.now());
+      await _apiaryRepository.saveApiary(updatedApiary);
+      await _updateHives(updatedApiary);
+
+      Logger.i('Updated apiary: ${updatedApiary.name}', tag: _tag);
+      
+      // Log the update with entity name
+      await _historyService.logEntityUpdate(
+        entityId: updatedApiary.id,
+        entityType: 'apiary',
+        entityName: updatedApiary.name,
+        oldData: oldApiary.toMap(),
+        newData: updatedApiary.toMap(),
+      );
+      
+      await _syncApiary(updatedApiary);
+      
+      return updatedApiary;
+    } catch (e) {
+      Logger.e('Failed to update apiary: ${apiary.id}', tag: _tag, error: e);
+      rethrow;
     }
+  }
+
+  Future<void> deleteApiary(String id) async {
+    try {
+      final apiary = await getApiaryById(id);
+      if (apiary == null) return;
+
+      final hives = await _hiveRepository.getAllHives()
+          .then((hives) => hives.where((h) => h.apiaryId == apiary.id).toList());
+      
+      if (hives.isNotEmpty) {
+        throw Exception('Cannot delete apiary with existing hives. Move or delete hives first.');
+      }
+
+      final deletedApiary = apiary.copyWith(
+        deleted: () => true,
+        updatedAt: () => DateTime.now(),
+      );
+      
+      await _apiaryRepository.saveApiary(deletedApiary);
+      await _syncApiary(deletedApiary);
+      
+      Logger.i('Deleted apiary: $id', tag: _tag);
+      
+      await _historyService.logEntityDelete(
+        entityId: apiary.id,
+        entityType: 'apiary',
+        entityName: apiary.name,
+      );
+    } catch (e) {
+      Logger.e('Failed to delete apiary: $id', tag: _tag, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> _updateHives(Apiary apiary, {List<Hive>? hives}) async {
+    final hiveList = hives ?? await _hiveRepository.getAllHives()
+        .then((hives) => hives.where((h) => h.apiaryId == apiary.id).toList()) ?? [];
     
-    final updatedApiary = await _apiaryRepository.updateApiary(apiary);
+    for (final hive in hiveList) {
+      await _updateHive(apiary, hive);
+    }
+  }
+
+  Future<void> _updateHive(Apiary apiary, Hive hive) async {
+    final updatedHive = hive.copyWith(
+      apiaryName: () => apiary.name,
+      apiaryLocation: () => apiary.location,
+      updatedAt: () => DateTime.now(),
+    );
     
-    if (!skipHistoryLog) {
-      final changes = oldApiary.toMap().differenceWith(updatedApiary.toMap());
-      if (changes.isNotEmpty) {
-        await _logApiaryAction(
-          apiaryId: updatedApiary.id,
-          apiaryName: updatedApiary.name,
-          action: HistoryAction.update,
-          description: 'Apiary updated: ${updatedApiary.name}',
-          groupId: groupId,
-          changes: changes,
+    await _hiveRepository.saveHive(updatedHive);
+    await _syncHive(updatedHive);
+
+    if (updatedHive.queenId != null) {
+      final queen = await _queenRepository.getQueenById(updatedHive.queenId!);
+      if (queen != null) {
+        final updatedQueen = queen.copyWith(
+          apiaryName: () => apiary.name,
+          apiaryLocation: () => apiary.location,
+          updatedAt: () => DateTime.now(),
         );
+        await _queenRepository.saveQueen(updatedQueen);
+        await _syncQueen(updatedQueen);
       }
     }
-    
-    return updatedApiary;
-  }
-  
-  /// Updates multiple apiaries in a batch operation and logs the action.
-  /// 
-  /// Parameters:
-  /// - [apiaries]: The list of apiaries to update
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<List<Apiary>> updateApiariesBatch(
-    List<Apiary> apiaries, {
-    String? groupId,
-    bool skipHistoryLog = false
-  }) async {
-    final updatedApiaries = await _apiaryRepository.updateApiariesBatch(apiaries);
-    
-    if (!skipHistoryLog) {
-      await _logApiaryAction(
-        apiaryId: 'batch',
-        apiaryName: '',
-        action: HistoryAction.updateBatch,
-        description: 'Reorder apiaries',
-        groupId: groupId,
-      );
-    }
-    
-    return updatedApiaries;
-  }
-  
-  /// Deletes an apiary (marks as deleted) and logs the action.
-  /// 
-  /// Parameters:
-  /// - [apiaryId]: The ID of the apiary to delete
-  /// - [groupId]: Optional group ID for history logging
-  /// - [skipHistoryLog]: If true, no history log will be created
-  Future<bool> deleteApiary({
-    required String apiaryId,
-    String? groupId,
-    bool skipHistoryLog = false
-  }) async {
-    final apiary = await _apiaryRepository.getApiaryById(apiaryId);
-    if (apiary == null) {
-      throw Exception('Apiary not found for deletion: $apiaryId');
-    }
-    
-    final result = await _apiaryRepository.deleteApiary(apiaryId);
-    
-    if (result && !skipHistoryLog) {
-      await _logApiaryAction(
-        apiaryId: apiaryId,
-        apiaryName: apiary.name,
-        action: HistoryAction.delete,
-        description: 'Apiary deleted: ${apiary.name}',
-        groupId: groupId,
-      );
-    }
-    
-    return result;
   }
 
-  /// Gets an apiary with its hives by ID.
-  ///
-  /// This is a convenience method specifically for the edit flow.
-  /// 
-  /// Parameters:
-  /// - [id]: The ID of the apiary to retrieve
-  /// - [includeQueen]: Whether to include queen information for hives
-  Future<Apiary?> getApiaryWithHives(String id, {bool includeQueen = false}) async {
-    return _apiaryRepository.getApiaryWithHives(id, includeQueen: includeQueen);
+  Future<void> syncFromFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) {
+      Logger.w('Firestore sync skipped - not premium or not logged in', tag: _tag);
+      return;
+    }
+
+    try {
+      final userId = _userRepository.currentUser!.id;
+      final lastSync = await _userRepository.getLastSyncTime();
+      
+      await _apiaryRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
+      
+      Logger.i('Synced apiaries from Firestore', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
+    }
   }
 
-  // MARK: - Private Helper Methods
+  Future<void> _syncApiary(Apiary apiary) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _apiaryRepository.syncToFirestore(apiary, userId);
+      } catch (e) {
+        Logger.e('Failed to sync apiary to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping apiary sync - not premium or not logged in', tag: _tag);
+    }
+  }
 
-  /// Helper method to log apiary-related actions to history.
-  Future<void> _logApiaryAction({
-    required String apiaryId,
-    required String apiaryName,
-    required HistoryAction action,
-    required String description,
-    String? groupId,
-    Map<String, dynamic>? changes,
-  }) async {
-    await _historyLogRepository.insertHistoryLog(
-      HistoryLog(
-        id: _uuid.v4(),
-        entityId: apiaryId,
-        entityType: EntityType.apiary,
-        action: action,
-        timestamp: DateTime.now(),
-        description: description,
-        groupId: groupId,
-        changes: changes,
-      ),
-    );
+  Future<void> _syncHive(Hive hive) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _hiveRepository.syncToFirestore(hive, userId);
+      } catch (e) {
+        Logger.e('Failed to sync hive to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping hive sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> _syncQueen(Queen queen) async {
+    if (_userRepository.isPremium && _userRepository.currentUser != null) {
+      try {
+        final userId = _userRepository.currentUser!.id;
+        await _queenRepository.syncToFirestore(queen, userId);
+      } catch (e) {
+        Logger.e('Failed to sync queen to Firestore', tag: _tag, error: e);
+      }
+    } else {
+      Logger.d('Skipping queen sync - not premium or not logged in', tag: _tag);
+    }
+  }
+
+  Future<void> dispose() async {
+    await _apiaryRepository.dispose();
+    Logger.i('Apiary service disposed', tag: _tag);
+  }
+
+  Future<void> updateApiariesBatch(List<Apiary> apiaries, {bool deepUpdate = false}) async {
+    try {
+      await _apiaryRepository.saveApiariesBatch(apiaries);
+      Logger.i('Updated ${apiaries.length} apiaries in batch', tag: _tag);
+      
+      if (deepUpdate) {
+        final hivesToUpdate = <Hive>[];
+        final queensToUpdate = <Queen>[];
+        
+        for (final apiary in apiaries) {
+          final hives = await _hiveRepository.getAllHives();
+          final apiaryHives = hives.where((h) => h.apiaryId == apiary.id).toList();
+          
+          for (final hive in apiaryHives) {
+            final updatedHive = hive.copyWith(
+              apiaryName: () => apiary.name,
+              apiaryLocation: () => apiary.location,
+              updatedAt: () => DateTime.now(),
+            );
+            hivesToUpdate.add(updatedHive);
+          }
+          
+          final queens = await _queenRepository.getAllQueens();
+          final apiaryQueens = queens.where((q) => q.apiaryId == apiary.id).toList();
+          
+          for (final queen in apiaryQueens) {
+            final updatedQueen = queen.copyWith(
+              apiaryName: () => apiary.name,
+              apiaryLocation: () => apiary.location,
+              updatedAt: () => DateTime.now(),
+            );
+            queensToUpdate.add(updatedQueen);
+          }
+        }
+        
+        if (hivesToUpdate.isNotEmpty) {
+          await _hiveRepository.saveHivesBatch(hivesToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _hiveRepository.syncBatchToFirestore(hivesToUpdate, userId);
+          }
+        }
+        if (queensToUpdate.isNotEmpty) {
+          await _queenRepository.saveQueensBatch(queensToUpdate);
+          if (_userRepository.isPremium && _userRepository.currentUser != null) {
+            final userId = _userRepository.currentUser!.id;
+            await _queenRepository.syncBatchToFirestore(queensToUpdate, userId);
+          }
+        }
+      }
+      
+      if (_userRepository.isPremium && _userRepository.currentUser != null) {
+        final userId = _userRepository.currentUser!.id;
+        await _apiaryRepository.syncBatchToFirestore(apiaries, userId);
+      }
+    } catch (e) {
+      Logger.e('Failed to update apiaries batch', tag: _tag, error: e);
+      rethrow;
+    }
   }
 }

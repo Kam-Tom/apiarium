@@ -1,11 +1,11 @@
 import 'package:apiarium/core/core.dart';
+import 'package:apiarium/core/di/dependency_injection.dart';
 import 'package:apiarium/features/managment/queens/bloc/queens_bloc.dart';
 import 'package:apiarium/features/managment/queens/bloc/queens_event.dart';
-import 'package:apiarium/features/managment/queens/bloc/queens_state.dart';
-import 'package:apiarium/features/managment/queens/widgets/queen_filter_modal.dart';
-import 'package:apiarium/features/managment/queens/widgets/queen_sort_modal.dart';
-import 'package:apiarium/shared/repositories/queen_breed_repository.dart';
+import 'package:apiarium/shared/cubits/apiary_filter_cubit.dart';
 import 'package:apiarium/shared/shared.dart';
+import 'package:apiarium/shared/widgets/apiary_filter_app_bar.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -17,81 +17,65 @@ class QueensPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => QueensBloc(
-        queenService: context.read<QueenService>(),
-        apiaryService: context.read<ApiaryService>(),
-      )..add(const LoadQueens()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => QueensBloc(
+            queenService: getIt<QueenService>(),
+          )..add(const LoadQueens()),
+        ),
+        BlocProvider(
+          create: (context) => ApiaryFilterCubit(
+            getIt<ApiaryService>()
+          )..loadApiaries(),
+        ),
+      ],
       child: Builder(
         builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Queens'),
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.amber.shade800, Colors.amber.shade500],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-            actions: [
-              // Add filter and sort actions
-              IconButton(
-                icon: const Icon(Icons.filter_list),
-                onPressed: () => _showFilterDialog(context),
-                tooltip: 'Filter',
-              ),
-              IconButton(
-                icon: const Icon(Icons.sort),
-                onPressed: () => _showSortDialog(context),
-                tooltip: 'Sort',
-              ),
-            ],
+          appBar: ApiaryFilterAppBar(
+            title: 'management.queens.title'.tr(),
+            onFilterPressed: () => _showFilterDialog(context),
+            onSortPressed: () => _showSortDialog(context),
+            onApiaryChanged: (apiaryId) => context.read<QueensBloc>().add(FilterByApiary(apiaryId)),
           ),
           body: const QueensView(),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () async {
-              final allQueens = context.read<QueensBloc>().state.allQueens;
-              if(allQueens.isNotEmpty) {
-                // If queens exist, create a default queen using the bloc
-                context.read<QueensBloc>().add(const AddQueen());
-              } else {
-                // If no queens exist, navigate to edit queen page
-                await context.push(AppRouter.editQueen);
-                if(context.mounted) {
-                  context.read<QueensBloc>().add(const LoadQueens());
-                }
-              }
-            },
-            backgroundColor: Colors.amber,
-            child: const Icon(Icons.add),
-          ),
+          floatingActionButton: _buildFAB(context),
         ),
       ),
     );
   }
 
+  Widget _buildFAB(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () => _handleAddQueen(context),
+      backgroundColor: Colors.amber,
+      child: const Icon(Icons.add),
+    );
+  }
+
+  Future<void> _handleAddQueen(BuildContext context) async {
+    Queen? queen = await context.push(AppRouter.editQueen) as Queen?;
+    if (context.mounted) {
+      context.read<QueensBloc>().add(const LoadQueens());
+      context.read<ApiaryFilterCubit>().selectApiary(queen?.apiaryId);
+    }
+  }
 
   void _showFilterDialog(BuildContext context) {
-    final queensBloc = context.read<QueensBloc>();
-    
     showDialog(
       context: context,
       builder: (dialogContext) => BlocProvider.value(
-        value: queensBloc,
+        value: context.read<QueensBloc>(),
         child: const QueenFilterModal(),
       ),
     );
   }
 
   void _showSortDialog(BuildContext context) {
-    final queensBloc = context.read<QueensBloc>();
-    
     showDialog(
       context: context,
       builder: (dialogContext) => BlocProvider.value(
-        value: queensBloc, 
+        value: context.read<QueensBloc>(), 
         child: const QueenSortModal(),
       ),
     );

@@ -19,8 +19,6 @@ class ApiaryStatusInfo extends StatelessWidget {
           Text('Apiary Status'.tr(), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           _buildStatus(context),
-          const SizedBox(height: 16),
-          _buildHiveSummary(context),
         ],
       ),
     );
@@ -29,9 +27,18 @@ class ApiaryStatusInfo extends StatelessWidget {
   Widget _buildStatus(BuildContext context) {
     final status = context.select((EditApiaryBloc bloc) => bloc.state.status);
 
-    return RoundedDropdown<ApiaryStatus>(
+    return DropdownButtonFormField<ApiaryStatus>(
       value: status,
-      items: ApiaryStatus.values,
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+      items: ApiaryStatus.values.map((status) {
+        return DropdownMenuItem(
+          value: status,
+          child: Text(_formatStatus(status)),
+        );
+      }).toList(),
       onChanged: (value) {
         if (value != null) {
           context.read<EditApiaryBloc>().add(EditApiaryStatusChanged(value));
@@ -40,84 +47,14 @@ class ApiaryStatusInfo extends StatelessWidget {
     );
   }
 
-  Widget _buildHiveSummary(BuildContext context) {
-    final hives = context.select((EditApiaryBloc bloc) => bloc.state.apiarySummaryHives);
-    
-    if (hives.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Text(
-          'No hives in this apiary yet'.tr(),
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-      );
+  String _formatStatus(ApiaryStatus status) {
+    switch (status) {
+      case ApiaryStatus.active:
+        return 'Active';
+      case ApiaryStatus.inactive:
+        return 'Inactive';
+      case ApiaryStatus.archived:
+        return 'Archived';
     }
-    
-    // Group hives by type
-    final hivesByType = <HiveType, List<Hive>>{};
-    for (final hive in hives) {
-      if (!hivesByType.containsKey(hive.hiveType)) {
-        hivesByType[hive.hiveType] = [];
-      }
-      hivesByType[hive.hiveType]!.add(hive);
-    }
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Summary of Hives'.tr(),
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        ...hivesByType.entries.map((entry) {
-          final hiveType = entry.key;
-          final typeHives = entry.value;
-          
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    '${hiveType.name}:',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${typeHives.length} ${typeHives.length == 1 ? "hive" : "hives"}',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ],
-            ),
-          );
-        }),
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                flex: 2,
-                child: Text(
-                  'Total:',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${hives.length} ${hives.length == 1 ? "hive" : "hives"}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }

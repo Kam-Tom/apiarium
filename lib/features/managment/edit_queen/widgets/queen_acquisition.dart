@@ -1,8 +1,10 @@
 import 'package:apiarium/features/managment/edit_queen/widgets/edit_queen_card.dart';
 import 'package:apiarium/shared/shared.dart';
+import 'package:apiarium/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/features/managment/edit_queen/bloc/edit_queen_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class QueenAcquisition extends StatefulWidget {
   const QueenAcquisition({super.key});
@@ -26,12 +28,12 @@ class _QueenAcquisitionState extends State<QueenAcquisition> {
   @override
   Widget build(BuildContext context) {
     return EditQueenCard(
-      title: 'Acquisition',
+      title: 'edit_queen.acquisition'.tr(),
       icon: Icons.shopping_bag_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Source', style: Theme.of(context).textTheme.titleMedium),
+          Text('edit_queen.source'.tr(), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           _buildSource(),
           const SizedBox(height: 16),
@@ -47,26 +49,26 @@ class _QueenAcquisitionState extends State<QueenAcquisition> {
     return RoundedDropdown<QueenSource>(
       value: source,
       items: QueenSource.values,
+      hintText: 'edit_queen.source_hint'.tr(),
       onChanged: (value) {
         if (value != null) {
           context.read<EditQueenBloc>().add(EditQueenSourceChanged(value));
         }
       },
+      translate: true,
     );
   }
 
   Widget _buildOrigin() {
     return TextFormField(
       controller: _originController,
-      decoration: const InputDecoration(
-        labelText: 'Origin (Optional)',
-        hintText: 'Enter where the queen came from',
+      decoration: InputDecoration(
+        labelText: 'edit_queen.origin'.tr(),
+        hintText: 'edit_queen.origin_hint'.tr(),
       ),
       onChanged: (value) {
         final trimmedValue = value.trim();
-        if (trimmedValue.isNotEmpty) {
-          context.read<EditQueenBloc>().add(EditQueenOriginChanged(trimmedValue));
-        }
+        context.read<EditQueenBloc>().add(EditQueenOriginChanged(trimmedValue));
       },
     );
   }
