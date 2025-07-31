@@ -1,8 +1,7 @@
 import 'dart:math';
 import 'dart:convert';
-import 'package:apiarium/shared/services/services.dart';
-import 'package:apiarium/shared/services/settings_repository.dart';
 import 'package:flutter/services.dart';
+import 'package:apiarium/shared/shared.dart';
 
 class NameGeneratorService {
   final Random _random = Random();
@@ -49,6 +48,7 @@ class NameGeneratorService {
   Future<void> _ensureInitialized() async {
     if (!_isInitialized) await initialize();
   }
+
   String _generateName(String nounCategory) {
     String language = _settingsRepository.settings.language;
     
@@ -65,22 +65,16 @@ class NameGeneratorService {
     
     final gender = availableGenders[_random.nextInt(availableGenders.length)];
     
-    // Get random noun
     final noun = _getRandomWord(nounCategory, language, gender);
     
-    // For adjectives, use masculine gender for English (since that's where the adjectives are)
     final adjectiveGender = language == 'en' ? 'masculine' : gender;
-    
     // Check if adjectives exist for this language and gender
     if (!_nameData['adjectives'].containsKey(language) || 
         !_nameData['adjectives'][language].containsKey(adjectiveGender) ||
         (_nameData['adjectives'][language][adjectiveGender] as List).isEmpty) {
-      // No adjectives available, return just the noun
       return noun;
     }
-    
     final adjective = _getRandomWord('adjectives', language, adjectiveGender);
-    
     return '$adjective $noun';
   }
   

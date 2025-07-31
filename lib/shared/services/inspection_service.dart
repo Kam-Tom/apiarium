@@ -4,11 +4,11 @@ import '../shared.dart';
 class InspectionService {
   static const String _tag = 'InspectionService';
   static const Uuid _uuid = Uuid();
-  
+
   final InspectionRepository _inspectionRepository;
   final UserRepository _userRepository;
   final HistoryService _historyService;
-  
+
   InspectionService({
     required InspectionRepository inspectionRepository,
     required UserRepository userRepository,
@@ -16,13 +16,12 @@ class InspectionService {
   }) : _inspectionRepository = inspectionRepository,
        _userRepository = userRepository,
        _historyService = historyService;
-  
+
   Future<void> initialize() async {
     await _inspectionRepository.initialize();
     Logger.i('Inspection service initialized', tag: _tag);
   }
 
-  // Basic CRUD operations
   Future<List<Inspection>> getAllInspections() async {
     return await _inspectionRepository.getAllInspections();
   }
@@ -47,7 +46,6 @@ class InspectionService {
     return await _inspectionRepository.getInspectionsByDateRange(start, end);
   }
 
-  // Get all available attributes
   List<Attribute> getAllAttributes() {
     return Attribute.values;
   }
@@ -64,7 +62,7 @@ class InspectionService {
   }) async {
     try {
       final now = DateTime.now();
-      
+
       final inspection = Inspection(
         id: _uuid.v4(),
         createdAt: now,
@@ -81,16 +79,16 @@ class InspectionService {
 
       await _inspectionRepository.saveInspection(inspection);
       Logger.i('Created inspection for hive: $hiveName', tag: _tag);
-      
+
       await _historyService.logEntityCreate(
         entityId: inspection.id,
         entityType: 'inspection',
         entityName: 'Inspection for $hiveName',
         entityData: inspection.toJson(),
       );
-      
+
       await _syncInspection(inspection);
-      
+
       return inspection;
     } catch (e) {
       Logger.e('Failed to create inspection for hive: $hiveName', tag: _tag, error: e);
@@ -111,7 +109,7 @@ class InspectionService {
 
       await _inspectionRepository.saveInspection(updatedInspection);
       Logger.i('Updated inspection: ${updatedInspection.id}', tag: _tag);
-      
+
       await _historyService.logEntityUpdate(
         entityId: updatedInspection.id,
         entityType: 'inspection',
@@ -119,9 +117,9 @@ class InspectionService {
         oldData: oldInspection.toJson(),
         newData: updatedInspection.toJson(),
       );
-      
+
       await _syncInspection(updatedInspection);
-      
+
       return updatedInspection;
     } catch (e) {
       Logger.e('Failed to update inspection: ${inspection.id}', tag: _tag, error: e);
@@ -137,16 +135,16 @@ class InspectionService {
           deleted: () => true,
           updatedAt: () => DateTime.now(),
         );
-        
+
         await _inspectionRepository.saveInspection(deletedInspection);
         Logger.i('Deleted inspection: $id', tag: _tag);
-        
+
         await _historyService.logEntityDelete(
           entityId: inspection.id,
           entityType: 'inspection',
           entityName: 'Inspection for ${inspection.hiveName}',
         );
-        
+
         await _syncInspection(deletedInspection);
       }
     } catch (e) {
@@ -155,7 +153,6 @@ class InspectionService {
     }
   }
 
-  // Aggregation methods
   Future<Map<String, int>> countAttributeValues({
     required Attribute attribute,
     List<String>? hiveIds,
@@ -173,7 +170,7 @@ class InspectionService {
     );
 
     final counts = <String, int>{};
-    
+
     for (final inspection in inspections) {
       final value = inspection.data?[attribute.name];
       if (value != null) {
@@ -181,7 +178,7 @@ class InspectionService {
         counts[valueStr] = (counts[valueStr] ?? 0) + 1;
       }
     }
-    
+
     return counts;
   }
 
@@ -206,16 +203,16 @@ class InspectionService {
     );
 
     final values = <double>[];
-    
+
     for (final inspection in inspections) {
       final value = inspection.data?[attribute.name];
       if (value != null && value is num) {
         values.add(value.toDouble());
       }
     }
-    
+
     if (values.isEmpty) return null;
-    
+
     return values.reduce((a, b) => a + b) / values.length;
   }
 
@@ -240,24 +237,24 @@ class InspectionService {
     );
 
     final values = <double>[];
-    
+
     for (final inspection in inspections) {
       final value = inspection.data?[attribute.name];
       if (value != null && value is num) {
         values.add(value.toDouble());
       }
     }
-    
+
     if (values.isEmpty) return {};
-    
+
     values.sort();
-    
+
     return {
       'count': values.length.toDouble(),
       'min': values.first,
       'max': values.last,
       'average': values.reduce((a, b) => a + b) / values.length,
-      'median': values.length.isOdd 
+      'median': values.length.isOdd
           ? values[values.length ~/ 2]
           : (values[values.length ~/ 2 - 1] + values[values.length ~/ 2]) / 2,
     };
@@ -271,27 +268,27 @@ class InspectionService {
     DateTime? endDate,
   }) async {
     var inspections = await getAllInspections();
-    
+
     if (hiveIds != null && hiveIds.isNotEmpty) {
       inspections = inspections.where((i) => hiveIds.contains(i.hiveId)).toList();
     }
-    
+
     if (apiaryIds != null && apiaryIds.isNotEmpty) {
       inspections = inspections.where((i) => apiaryIds.contains(i.apiaryId)).toList();
     }
-    
+
     if (queenIds != null && queenIds.isNotEmpty) {
       inspections = inspections.where((i) => queenIds.contains(i.queenId)).toList();
     }
-    
+
     if (startDate != null) {
       inspections = inspections.where((i) => i.createdAt.isAfter(startDate.subtract(const Duration(days: 1)))).toList();
     }
-    
+
     if (endDate != null) {
       inspections = inspections.where((i) => i.createdAt.isBefore(endDate.add(const Duration(days: 1)))).toList();
     }
-    
+
     return inspections;
   }
 
@@ -304,9 +301,9 @@ class InspectionService {
     try {
       final userId = _userRepository.currentUser!.id;
       final lastSync = await _userRepository.getLastSyncTime();
-      
+
       await _inspectionRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
-      
+
       Logger.i('Synced inspections from Firestore', tag: _tag);
     } catch (e) {
       Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
@@ -335,7 +332,7 @@ class InspectionService {
     try {
       await _inspectionRepository.saveInspectionsBatch(inspections);
       Logger.i('Updated ${inspections.length} inspections in batch', tag: _tag);
-      
+
       if (_userRepository.isPremium && _userRepository.currentUser != null) {
         final userId = _userRepository.currentUser!.id;
         await _inspectionRepository.syncBatchToFirestore(inspections, userId);
@@ -343,6 +340,17 @@ class InspectionService {
     } catch (e) {
       Logger.e('Failed to update inspections batch', tag: _tag, error: e);
       rethrow;
+    }
+  }
+
+  Future<void> syncPendingToFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) return;
+    
+    final inspections = await getAllInspections();
+    final pending = inspections.where((i) => i.syncStatus == SyncStatus.pending).toList();
+    
+    for (final inspection in pending) {
+      await _inspectionRepository.syncToFirestore(inspection, _userRepository.currentUser!.id);
     }
   }
 }

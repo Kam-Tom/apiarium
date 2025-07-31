@@ -27,7 +27,7 @@ class SearchableRoundedDropdown<T> extends StatefulWidget {
     this.itemBuilder,
     this.buttonItemBuilder,
     this.searchMatchFn,
-    this.maxHeight,
+    this.maxHeight = 300.0,
     this.minHeight = 48.0,
     this.onAddNewItem,
     this.searchHintText = 'Search for an item...',
@@ -155,8 +155,8 @@ class _SearchableRoundedDropdownState<T>
               ),
             ),
           ),
-          dropdownStyleData: DropdownStyleData(
-            maxHeight: widget.maxHeight,
+        dropdownStyleData: DropdownStyleData(
+            maxHeight: widget.maxHeight ?? 300.0, // Ensure we always have a max height
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: Colors.grey.shade50,

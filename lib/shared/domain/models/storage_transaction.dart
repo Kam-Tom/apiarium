@@ -1,7 +1,12 @@
 import 'package:apiarium/shared/shared.dart';
 import 'package:path_provider/path_provider.dart';
 
-enum TransactionType { expense, income, use }
+enum TransactionType {
+  expense, // Purchase/cost
+  income,  // Sale/revenue  
+  use,     // Consumption/usage
+  remove,  // Removal from storage
+}
 
 class StorageTransaction extends BaseModel {
   final String? apiaryId;
@@ -16,6 +21,7 @@ class StorageTransaction extends BaseModel {
   final String? notes;
   final String? receiptImageName; // Filename for receipt image (like imageName in Apiary)
   final bool affectsStorage; // Whether this transaction affects storage
+  final String? storageItemId; // Reference to the storage item this affects
 
   const StorageTransaction({
     required super.id,
@@ -36,6 +42,7 @@ class StorageTransaction extends BaseModel {
     this.notes,
     this.receiptImageName,
     this.affectsStorage = true,
+    this.storageItemId,
   });
 
   double get totalCost => unitPrice != null ? unitPrice! * amount : 0;
@@ -73,6 +80,7 @@ class StorageTransaction extends BaseModel {
       notes: map['notes'] as String?,
       receiptImageName: map['receiptImageName'] as String?,
       affectsStorage: map['affectsStorage'] as bool? ?? true,
+      storageItemId: map['storageItemId'] as String?,
     );
   }
 
@@ -91,46 +99,49 @@ class StorageTransaction extends BaseModel {
       'notes': notes,
       'receiptImageName': receiptImageName,
       'affectsStorage': affectsStorage,
+      'storageItemId': storageItemId,
     };
   }
 
   StorageTransaction copyWith({
-    String? apiaryId,
-    String? group,
-    String? item,
-    String? variant,
-    double? amount,
-    TransactionType? type,
-    String? sourceOrTarget,
-    DateTime? date,
-    double? unitPrice,
-    String? notes,
+    String? Function()? apiaryId,
+    String Function()? group,
+    String Function()? item,
+    String? Function()? variant,
+    double Function()? amount,
+    TransactionType Function()? type,
+    String? Function()? sourceOrTarget,
+    DateTime Function()? date,
+    double? Function()? unitPrice,
+    String? Function()? notes,
     String? Function()? receiptImageName,
-    bool? affectsStorage,
-    DateTime? updatedAt,
-    SyncStatus? syncStatus,
-    DateTime? lastSyncedAt,
-    bool? deleted,
+    bool Function()? affectsStorage,
+    String? Function()? storageItemId,
+    DateTime Function()? updatedAt,
+    SyncStatus Function()? syncStatus,
+    DateTime? Function()? lastSyncedAt,
+    bool Function()? deleted,
   }) {
     return StorageTransaction(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
-      syncStatus: syncStatus ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
-      deleted: deleted ?? this.deleted,
-      apiaryId: apiaryId ?? this.apiaryId,
-      group: group ?? this.group,
-      item: item ?? this.item,
-      variant: variant ?? this.variant,
-      amount: amount ?? this.amount,
-      type: type ?? this.type,
-      sourceOrTarget: sourceOrTarget ?? this.sourceOrTarget,
-      date: date ?? this.date,
-      unitPrice: unitPrice ?? this.unitPrice,
-      notes: notes ?? this.notes,
-      receiptImageName: receiptImageName?.call() ?? this.receiptImageName,
-      affectsStorage: affectsStorage ?? this.affectsStorage,
+      updatedAt: updatedAt != null ? updatedAt() : DateTime.now(),
+      syncStatus: syncStatus != null ? syncStatus() : SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt != null ? lastSyncedAt() : this.lastSyncedAt,
+      deleted: deleted != null ? deleted() : this.deleted,
+      apiaryId: apiaryId != null ? apiaryId() : this.apiaryId,
+      group: group != null ? group() : this.group,
+      item: item != null ? item() : this.item,
+      variant: variant != null ? variant() : this.variant,
+      amount: amount != null ? amount() : this.amount,
+      type: type != null ? type() : this.type,
+      sourceOrTarget: sourceOrTarget != null ? sourceOrTarget() : this.sourceOrTarget,
+      date: date != null ? date() : this.date,
+      unitPrice: unitPrice != null ? unitPrice() : this.unitPrice,
+      notes: notes != null ? notes() : this.notes,
+      receiptImageName: receiptImageName != null ? receiptImageName() : this.receiptImageName,
+      affectsStorage: affectsStorage != null ? affectsStorage() : this.affectsStorage,
+      storageItemId: storageItemId != null ? storageItemId() : this.storageItemId,
     );
   }
 
@@ -138,6 +149,6 @@ class StorageTransaction extends BaseModel {
   List<Object?> get props => [
     ...baseSyncProps,
     apiaryId, group, item, variant, amount, type,
-    sourceOrTarget, date, unitPrice, notes, receiptImageName, affectsStorage,
+    sourceOrTarget, date, unitPrice, notes, receiptImageName, affectsStorage, storageItemId,
   ];
 }

@@ -1,24 +1,11 @@
+
 import 'package:apiarium/features/auth/auth.dart';
 import 'package:apiarium/features/home/home.dart';
-import 'package:apiarium/features/managment/managment_page.dart';
-import 'package:apiarium/features/managment/apiaries/apiaries_page.dart';
-import 'package:apiarium/features/managment/hives/hives_page.dart';
-import 'package:apiarium/features/managment/queens/queens_page.dart';
-import 'package:apiarium/features/managment/hive_types/hive_types_page.dart';
-import 'package:apiarium/features/managment/queen_breeds/queen_breeds_page.dart';
-import 'package:apiarium/features/managment/edit_apiary/edit_apiary.dart';
-import 'package:apiarium/features/managment/edit_queen/edit_queen.dart';
-import 'package:apiarium/features/managment/edit_queen_breed/edit_queen_breed_page.dart';
-import 'package:apiarium/features/managment/edit_hive_type/edit_hive_type_page.dart';
-import 'package:apiarium/features/managment/queen_breed_detail/queen_breed_detail_page.dart';
-import 'package:apiarium/features/managment/queen_detail/queen_detail_page.dart';
-import 'package:apiarium/features/managment/hive_type_detail/hive_type_detail_page.dart';
-import 'package:apiarium/features/managment/edit_hive/edit_hive.dart';
-import 'package:apiarium/shared/layouts/main_layout.dart';
-import 'package:apiarium/shared/services/auth_service.dart';
 import 'package:apiarium/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../features/management/management.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -37,6 +24,8 @@ class AppRouter {
   static const String queenBreeds = '/queen-breeds';
   static const String hiveTypes = '/hive-types';
   static const String management = '/management';
+  static const String apiaryDetail = '/apiary-detail';
+  static const String hiveDetail = '/hive-detail';
 
   final AuthService authService;
 
@@ -54,7 +43,7 @@ class AppRouter {
       ),
       GoRoute(
         path: management,
-        builder: (context, state) => const ManagmentPage(),
+        builder: (context, state) => const DashboardPage(),
       ),      GoRoute(
         path: apiaries,
         builder: (context, state) => const ApiariesPage(),
@@ -104,67 +93,63 @@ class AppRouter {
       ),      GoRoute(
         path: editQueenBreed,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final breedId = extra?['breedId'] as String?;
+          final extra = state.extra as String?; // Now expects just the ID string
           
           return EditQueenBreedPage(
-            breedId: breedId,
+            breedId: extra,
           );
         },
       ),
       GoRoute(
         path: editHiveType,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final hiveTypeId = extra?['hiveTypeId'] as String?;
+          final extra = state.extra as String?; // Now expects just the ID string
           
           return EditHiveTypePage(
-            hiveTypeId: hiveTypeId,
+            hiveTypeId: extra,
           );
         },
       ),      GoRoute(
         path: queenBreedDetail,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final breed = extra?['breed'] as QueenBreed?;
+          final extra = state.extra as String?; // Now expects just the ID string
           
-          if (breed == null) {
+          if (extra == null) {
             return const Scaffold(
-              body: Center(child: Text('Breed not found')),
+              body: Center(child: Text('Breed ID not provided')),
             );
           }
           
-          return QueenBreedDetailPage(breed: breed);
+          return QueenBreedDetailPage(breedId: extra);
         },
       ),
       GoRoute(
         path: queenDetail,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final queen = extra?['queen'] as Queen?;
+          final queenId = extra?['queenId'] as String?;
           
-          if (queen == null) {
+          if (queenId == null) {
             return const Scaffold(
-              body: Center(child: Text('Queen not found')),
+              body: Center(child: Text('Queen ID not provided')),
             );
           }
           
-          return QueenDetailPage(queen: queen);
+          return QueenDetailPage(queenId: queenId);
         },
       ),
       GoRoute(
         path: hiveTypeDetail,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final hiveType = extra?['hiveType'] as HiveType?;
+          final extra = state.extra as String?; // Now expects just the ID string
           
-          if (hiveType == null) {
+          if (extra == null) {
             return const Scaffold(
-              body: Center(child: Text('Hive Type not found')),
+              body: Center(child: Text('Hive Type ID not provided')),
             );
           }
           
-          return HiveTypeDetailPage(hiveType: hiveType);
+          return HiveTypeDetailPage(hiveTypeId: extra);
         },
       ),
       GoRoute(
@@ -180,6 +165,36 @@ class AppRouter {
             hideLocation: hideLocation,
             queenId: queenId,
           );
+        },
+      ),
+      GoRoute(
+        path: apiaryDetail,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final apiaryId = extra?['apiaryId'] as String?;
+          
+          if (apiaryId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Apiary ID not provided')),
+            );
+          }
+          
+          return ApiaryDetailPage(apiaryId: apiaryId);
+        },
+      ),
+      GoRoute(
+        path: hiveDetail,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final hiveId = extra?['hiveId'] as String?;
+          
+          if (hiveId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Hive ID not provided')),
+            );
+          }
+          
+          return HiveDetailPage(hiveId: hiveId);
         },
       ),
       ShellRoute(

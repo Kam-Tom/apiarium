@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hive_ce/hive.dart' as hive_ce;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,10 +9,11 @@ import '../shared.dart';
 class ApiaryRepository {
   static const String _boxName = 'apiaries';
   static const String _tag = 'ApiaryRepository';
-  
+
   late hive_ce.Box<Map<dynamic, dynamic>> _box;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Initializes the local Hive box for apiaries.
   Future<void> initialize() async {
     try {
       _box = await hive_ce.Hive.openBox<Map<dynamic, dynamic>>(_boxName);
@@ -40,18 +40,21 @@ class ApiaryRepository {
     }
   }
 
+  /// Returns all non-deleted apiaries, sorted by order.
   Future<List<Apiary>> getAllApiaries() async {
     final apiaries = await _getApiaries(deleted: false);
-    apiaries.sort((a, b) => a.position.compareTo(b.position));
+    apiaries.sort((a, b) => a.order.compareTo(b.order));
     return apiaries;
   }
 
+  /// Returns all deleted apiaries, sorted by most recently updated.
   Future<List<Apiary>> getDeletedApiaries() async {
     final deletedApiaries = await _getApiaries(deleted: true);
-    deletedApiaries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt)); // Most recent first
+    deletedApiaries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return deletedApiaries;
   }
 
+  /// Gets an apiary by its ID.
   Future<Apiary?> getApiaryById(String id) async {
     try {
       final data = _box.get(id);
@@ -62,6 +65,7 @@ class ApiaryRepository {
     }
   }
 
+  /// Saves an apiary locally, handling image storage.
   Future<void> saveApiary(Apiary apiary) async {
     try {
       String? imageName = apiary.imageName;
@@ -69,7 +73,7 @@ class ApiaryRepository {
       final apiaryImagesDir = Directory('${appDir.path}/images/apiaries');
 
       if (imageName == null) {
-        // Remove all possible images for this apiary (by id)
+        // Remove all images for this apiary by id
         final files = apiaryImagesDir.existsSync()
             ? apiaryImagesDir.listSync().whereType<File>().where((f) => f.path.contains(apiary.id)).toList()
             : [];
@@ -79,7 +83,7 @@ class ApiaryRepository {
           } catch (_) {}
         }
       } else if (p.basename(imageName) != imageName) {
-        // If imageName is a path (not just a filename), copy it locally and set imageName
+        // If imageName is a path, copy it locally and set imageName
         if (!await apiaryImagesDir.exists()) {
           await apiaryImagesDir.create(recursive: true);
         }
@@ -102,17 +106,18 @@ class ApiaryRepository {
     }
   }
 
+  /// Saves a batch of apiaries locally.
   Future<void> saveApiariesBatch(List<Apiary> apiaries) async {
     try {
       final Map<String, Map<String, dynamic>> batchData = {};
-      
+
       for (final apiary in apiaries) {
         String? imageName = apiary.imageName;
         final appDir = await getApplicationDocumentsDirectory();
         final apiaryImagesDir = Directory('${appDir.path}/images/apiaries');
 
         if (imageName == null) {
-          // Remove all possible images for this apiary (by id)
+          // Remove all images for this apiary by id
           final files = apiaryImagesDir.existsSync()
               ? apiaryImagesDir.listSync().whereType<File>().where((f) => f.path.contains(apiary.id)).toList()
               : [];
@@ -122,7 +127,7 @@ class ApiaryRepository {
             } catch (_) {}
           }
         } else if (p.basename(imageName) != imageName) {
-          // If imageName is a path (not just a filename), copy it locally and set imageName
+          // If imageName is a path, copy it locally and set imageName
           if (!await apiaryImagesDir.exists()) {
             await apiaryImagesDir.create(recursive: true);
           }
@@ -148,6 +153,7 @@ class ApiaryRepository {
     }
   }
 
+  /// Syncs a single apiary to Firestore and Firebase Storage.
   Future<void> syncToFirestore(Apiary apiary, String userId) async {
     try {
       final storageRef = FirebaseStorage.instance
@@ -166,17 +172,30 @@ class ApiaryRepository {
         }
       } else {
         // Delete image from Firebase Storage if imageName is null
-        final all = await storageRef.listAll();
-        for (final item in all.items) {
-          if (item.name.contains(apiary.id)) {
-            try {
-              await item.delete();
-            } catch (_) {}
+         try {
+          final all = await storageRef.listAll();
+          for (final item in all.items) {
+            if (item.name.contains(apiary.id)) {
+              try {
+                await item.delete();
+              } catch (e) {
+                Logger.e('Failed to delete image: ${item.name}, error: $e');
+              }
+            }
           }
+        } on FirebaseException catch (e) {
+          if (e.code == 'object-not-found') {
+            // The directory doesn't exist; nothing to delete.
+            Logger.i('No storage objects found to delete for user $userId');
+          } else {
+            Logger.e('Unexpected Firebase error while listing: ${e.message}');
+          }
+        } catch (e) {
+          Logger.e('Unexpected error while listing storage: $e');
         }
       }
 
-      // Update sync metadata BEFORE sending to Firestore
+      // Update sync metadata before sending to Firestore
       final apiaryToSync = apiary.copyWith(
         syncStatus: () => SyncStatus.synced,
         lastSyncedAt: () => DateTime.now(),
@@ -204,6 +223,7 @@ class ApiaryRepository {
     }
   }
 
+  /// Syncs a batch of apiaries to Firestore.
   Future<void> syncBatchToFirestore(List<Apiary> apiaries, String userId) async {
     try {
       final batch = _firestore.batch();
@@ -238,6 +258,7 @@ class ApiaryRepository {
     }
   }
 
+  /// Syncs apiaries from Firestore to local storage.
   Future<void> syncFromFirestore(String userId, {DateTime? lastSyncTime}) async {
     try {
       Query<Map<String, dynamic>> query = _firestore
@@ -277,9 +298,9 @@ class ApiaryRepository {
           }
         }
 
-        if (localApiary == null || 
-            firestoreApiary.updatedAt.isAfter(localApiary.updatedAt) || 
-            (firestoreApiary.updatedAt.isAtSameMomentAs(localApiary.updatedAt) && 
+        if (localApiary == null ||
+            firestoreApiary.updatedAt.isAfter(localApiary.updatedAt) ||
+            (firestoreApiary.updatedAt.isAtSameMomentAs(localApiary.updatedAt) &&
              firestoreApiary.serverVersion > localApiary.serverVersion)) {
           final syncedApiary = firestoreApiary.copyWith(
             syncStatus: () => SyncStatus.synced,
@@ -297,6 +318,7 @@ class ApiaryRepository {
     }
   }
 
+  /// Disposes the repository and closes the Hive box.
   Future<void> dispose() async {
     try {
       await _box.close();

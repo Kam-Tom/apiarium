@@ -1,27 +1,8 @@
 import 'package:apiarium/shared/shared.dart';
-import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class HiveType extends BaseModel {
-  static const List<IconData> availableIcons = [
-    Icons.home,
-    Icons.house,
-    Icons.cottage,
-    Icons.cabin,
-    Icons.villa,
-    Icons.apartment,
-    Icons.domain,
-    Icons.foundation,
-    Icons.roofing,
-    Icons.warehouse,
-    Icons.store,
-    Icons.storefront,
-    Icons.business,
-    Icons.corporate_fare,
-    Icons.holiday_village,
-  ];
-
   final String name;
   final String? manufacturer;
   final HiveMaterial material;
@@ -42,7 +23,7 @@ class HiveType extends BaseModel {
   final bool isStarred;
   final double? cost;
   final String? imageName;
-  final IconData icon;
+  final HiveIconType iconType;
 
   const HiveType({
     required super.id,
@@ -72,7 +53,7 @@ class HiveType extends BaseModel {
     this.isStarred = false,
     this.cost,
     this.imageName,
-    this.icon = Icons.home,
+    this.iconType = HiveIconType.beehive1,
   });
 
   factory HiveType.fromMap(Map<String, dynamic> data) {
@@ -112,15 +93,9 @@ class HiveType extends BaseModel {
       isStarred: data['isStarred'] ?? false,
       cost: data['cost']?.toDouble(),
       imageName: data['imageName'],
-      icon: _getIconFromCodePoint(data['iconCodePoint']) ?? Icons.home,
-    );
-  }
-
-  static IconData? _getIconFromCodePoint(int? codePoint) {
-    if (codePoint == null) return null;
-    return availableIcons.firstWhere(
-      (icon) => icon.codePoint == codePoint,
-      orElse: () => Icons.home,
+      iconType: data['iconType'] != null
+        ? HiveIconTypeExtension.fromString(data['iconType'])
+        : HiveIconType.beehive1,
     );
   }
 
@@ -130,7 +105,7 @@ class HiveType extends BaseModel {
   List<Object?> get props => [
     ...baseSyncProps, name, manufacturer, material, hasFrames, broodFrameCount, honeyFrameCount,
     frameStandard, boxCount, superBoxCount, framesPerBox, maxBroodFrameCount,
-    maxHoneyFrameCount, maxBoxCount, maxSuperBoxCount, accessories, country, isLocal, isStarred, cost, imageName, icon
+    maxHoneyFrameCount, maxBoxCount, maxSuperBoxCount, accessories, country, isLocal, isStarred, cost, imageName, iconType
   ];  
   
   Map<String, dynamic> toMap() {
@@ -156,15 +131,15 @@ class HiveType extends BaseModel {
       'isStarred': isStarred,
       'cost': cost,
       'imageName': imageName,
-      'iconCodePoint': icon.codePoint,
+      'iconType': iconType.name,
     };
   }
 
   HiveType copyWith({
-    String? Function()? name,
+    String Function()? name,
     String? Function()? manufacturer,
-    HiveMaterial? Function()? material,
-    bool? Function()? hasFrames,
+    HiveMaterial Function()? material,
+    bool Function()? hasFrames,
     int? Function()? broodFrameCount,
     int? Function()? honeyFrameCount,
     String? Function()? frameStandard,
@@ -177,46 +152,46 @@ class HiveType extends BaseModel {
     int? Function()? maxSuperBoxCount,
     List<String>? Function()? accessories,
     String? Function()? country,
-    bool? Function()? isLocal,
-    bool? Function()? isStarred,
+    bool Function()? isLocal,
+    bool Function()? isStarred,
     double? Function()? cost,
     String? Function()? imageName,
-    IconData? Function()? icon,
-    DateTime? Function()? updatedAt,
-    SyncStatus? Function()? syncStatus,
+    HiveIconType Function()? iconType,
+    DateTime Function()? updatedAt,
+    SyncStatus Function()? syncStatus,
     DateTime? Function()? lastSyncedAt,
-    bool? Function()? deleted,
-    int? Function()? serverVersion,
+    bool Function()? deleted,
+    int Function()? serverVersion,
   }) {
     return HiveType(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt?.call() ?? DateTime.now(),
-      syncStatus: syncStatus?.call() ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
-      deleted: deleted?.call() ?? this.deleted,
-      serverVersion: serverVersion?.call() ?? this.serverVersion,
-      name: name?.call() ?? this.name,
-      manufacturer: manufacturer?.call() ?? this.manufacturer,
-      material: material?.call() ?? this.material,
-      hasFrames: hasFrames?.call() ?? this.hasFrames,
-      broodFrameCount: broodFrameCount?.call() ?? this.broodFrameCount,
-      honeyFrameCount: honeyFrameCount?.call() ?? this.honeyFrameCount,
-      frameStandard: frameStandard?.call() ?? this.frameStandard,
-      boxCount: boxCount?.call() ?? this.boxCount,
-      superBoxCount: superBoxCount?.call() ?? this.superBoxCount,
-      framesPerBox: framesPerBox?.call() ?? this.framesPerBox,
-      maxBroodFrameCount: maxBroodFrameCount?.call() ?? this.maxBroodFrameCount,
-      maxHoneyFrameCount: maxHoneyFrameCount?.call() ?? this.maxHoneyFrameCount,
-      maxBoxCount: maxBoxCount?.call() ?? this.maxBoxCount,
-      maxSuperBoxCount: maxSuperBoxCount?.call() ?? this.maxSuperBoxCount,
-      accessories: accessories?.call() ?? this.accessories,
-      country: country?.call() ?? this.country,
-      isLocal: isLocal?.call() ?? this.isLocal,
-      isStarred: isStarred?.call() ?? this.isStarred,
-      cost: cost?.call() ?? this.cost,
-      imageName: imageName?.call() ?? this.imageName,
-      icon: icon?.call() ?? this.icon,
+      updatedAt: updatedAt != null ? updatedAt() : DateTime.now(),
+      syncStatus: syncStatus != null ? syncStatus() : SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt != null ? lastSyncedAt() : this.lastSyncedAt,
+      deleted: deleted != null ? deleted() : this.deleted,
+      serverVersion: serverVersion != null ? serverVersion() : this.serverVersion,
+      name: name != null ? name() : this.name,
+      manufacturer: manufacturer != null ? manufacturer() : this.manufacturer,
+      material: material != null ? material() : this.material,
+      hasFrames: hasFrames != null ? hasFrames() : this.hasFrames,
+      broodFrameCount: broodFrameCount != null ? broodFrameCount() : this.broodFrameCount,
+      honeyFrameCount: honeyFrameCount != null ? honeyFrameCount() : this.honeyFrameCount,
+      frameStandard: frameStandard != null ? frameStandard() : this.frameStandard,
+      boxCount: boxCount != null ? boxCount() : this.boxCount,
+      superBoxCount: superBoxCount != null ? superBoxCount() : this.superBoxCount,
+      framesPerBox: framesPerBox != null ? framesPerBox() : this.framesPerBox,
+      maxBroodFrameCount: maxBroodFrameCount != null ? maxBroodFrameCount() : this.maxBroodFrameCount,
+      maxHoneyFrameCount: maxHoneyFrameCount != null ? maxHoneyFrameCount() : this.maxHoneyFrameCount,
+      maxBoxCount: maxBoxCount != null ? maxBoxCount() : this.maxBoxCount,
+      maxSuperBoxCount: maxSuperBoxCount != null ? maxSuperBoxCount() : this.maxSuperBoxCount,
+      accessories: accessories != null ? accessories() : this.accessories,
+      country: country != null ? country() : this.country,
+      isLocal: isLocal != null ? isLocal() : this.isLocal,
+      isStarred: isStarred != null ? isStarred() : this.isStarred,
+      cost: cost != null ? cost() : this.cost,
+      imageName: imageName != null ? imageName() : this.imageName,
+      iconType: iconType != null ? iconType() : this.iconType,
     );
   }
 

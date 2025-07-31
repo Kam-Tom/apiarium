@@ -73,7 +73,6 @@ class HistoryLog extends BaseModel {
     groupId,
   ];
 
-  @override
   Map<String, dynamic> toMap() {
     return {
       ...baseSyncFields,
@@ -89,53 +88,39 @@ class HistoryLog extends BaseModel {
   }
 
   HistoryLog copyWith({
-    String? Function()? entityId,
-    String? Function()? entityType,
-    String? Function()? entityName,
-    Map<String, dynamic>? Function()? changedFields,
-    Map<String, dynamic>? Function()? previousValues,
-    HistoryActionType? Function()? actionType,
-    DateTime? Function()? timestamp,
-    DateTime? Function()? updatedAt,
-    SyncStatus? Function()? syncStatus,
-    DateTime? Function()? lastSyncedAt,
-    bool? Function()? deleted,
-    int? Function()? serverVersion,
+    String Function()? entityId,
+    String Function()? entityType,
+    String Function()? entityName,
+    Map<String, dynamic> Function()? changedFields,
+    Map<String, dynamic> Function()? previousValues,
+    HistoryActionType Function()? actionType,
+    DateTime Function()? timestamp,
+    DateTime Function()? updatedAt,
+    SyncStatus Function()? syncStatus,
+    DateTime Function()? lastSyncedAt,
+    bool Function()? deleted,
+    int Function()? serverVersion,
     String? Function()? groupId,
   }) {
     return HistoryLog(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt?.call() ?? DateTime.now(),
-      syncStatus: syncStatus?.call() ?? this.syncStatus,
-      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
-      deleted: deleted?.call() ?? this.deleted,
-      serverVersion: serverVersion?.call() ?? this.serverVersion,
-      entityId: entityId?.call() ?? this.entityId,
-      entityType: entityType?.call() ?? this.entityType,
-      entityName: entityName?.call() ?? this.entityName,
-      changedFields: changedFields?.call() ?? this.changedFields,
-      previousValues: previousValues?.call() ?? this.previousValues,
-      actionType: actionType?.call() ?? this.actionType,
-      timestamp: timestamp?.call() ?? this.timestamp,
-      groupId: groupId?.call() ?? this.groupId,
+      updatedAt: updatedAt != null ? updatedAt() : DateTime.now(),
+      syncStatus: syncStatus != null ? syncStatus() : this.syncStatus,
+      lastSyncedAt: lastSyncedAt != null ? lastSyncedAt() : this.lastSyncedAt,
+      deleted: deleted != null ? deleted() : this.deleted,
+      serverVersion: serverVersion != null ? serverVersion() : this.serverVersion,
+      entityId: entityId != null ? entityId() : this.entityId,
+      entityType: entityType != null ? entityType() : this.entityType,
+      entityName: entityName != null ? entityName() : this.entityName,
+      changedFields: changedFields != null ? changedFields() : this.changedFields,
+      previousValues: previousValues != null ? previousValues() : this.previousValues,
+      actionType: actionType != null ? actionType() : this.actionType,
+      timestamp: timestamp != null ? timestamp() : this.timestamp,
+      groupId: groupId != null ? groupId() : this.groupId,
     );
   }
   
   bool get isGrouped => groupId != null;
   
-  String get actionTypeDisplay {
-    switch (actionType) {
-      case HistoryActionType.create:
-        return 'Created';
-      case HistoryActionType.update:
-        return 'Updated';
-      case HistoryActionType.delete:
-        return 'Deleted';
-    }
-  }
-
-  String get displayText {
-    return '$actionTypeDisplay $entityType: $entityName';
-  }
 }

@@ -8,3 +8,5 @@ export 'base_model.dart';
 export 'storage_item.dart';
 export 'storage_transaction.dart';
 export 'inspection.dart';
+export 'settings.dart';
+export 'user.dart';

@@ -21,7 +21,7 @@ class AuthService extends ChangeNotifier {
     try {
       return await _auth.signInAnonymously();
     } catch (e) {
-      Logger.e('Anonymous sign in failed', tag: 'AuthService', error: e);
+      Logger.e('Anonymous sign-in failed', tag: 'AuthService', error: e);
       rethrow;
     }
   }
@@ -30,7 +30,7 @@ class AuthService extends ChangeNotifier {
     try {
       return await _auth.signInWithEmailAndPassword(email: email, password: password);
     } catch (e) {
-      Logger.e('Sign in failed', tag: 'AuthService', error: e);
+      Logger.e('Email sign-in failed', tag: 'AuthService', error: e);
       rethrow;
     }
   }
@@ -39,7 +39,7 @@ class AuthService extends ChangeNotifier {
     try {
       return await _auth.createUserWithEmailAndPassword(email: email, password: password);
     } catch (e) {
-      Logger.e('Sign up failed', tag: 'AuthService', error: e);
+      Logger.e('Email sign-up failed', tag: 'AuthService', error: e);
       rethrow;
     }
   }
@@ -50,10 +50,10 @@ class AuthService extends ChangeNotifier {
         final credential = EmailAuthProvider.credential(email: email, password: password);
         return await _auth.currentUser!.linkWithCredential(credential);
       } else {
-        throw Exception('No anonymous user to link');
+        throw Exception('No anonymous user available for linking');
       }
     } catch (e) {
-      Logger.e('Link anonymous user failed', tag: 'AuthService', error: e);
+      Logger.e('Linking anonymous user failed', tag: 'AuthService', error: e);
       rethrow;
     }
   }
@@ -78,7 +78,7 @@ class AuthService extends ChangeNotifier {
         await _auth.currentUser!.delete();
       }
     } catch (e) {
-      Logger.e('Delete anonymous account failed', tag: 'AuthService', error: e);
+      Logger.e('Anonymous account deletion failed', tag: 'AuthService', error: e);
       rethrow;
     }
   }

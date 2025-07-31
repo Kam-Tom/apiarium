@@ -1,8 +1,4 @@
-import 'package:apiarium/features/auth/bloc/auth_bloc.dart';
-import 'package:apiarium/features/settings/bloc/preferences_bloc.dart';
-import 'package:apiarium/shared/repositories/transaction_repository.dart';
-import 'package:apiarium/shared/services/auth_service.dart';
-import 'package:apiarium/shared/services/settings_repository.dart';
+import 'package:apiarium/features/settings/settings.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../shared/shared.dart';
@@ -30,6 +26,7 @@ class DependencyInjection {
     getIt.registerLazySingleton(() => StorageRepository());
     getIt.registerLazySingleton(() => TransactionRepository());
     getIt.registerLazySingleton(() => HistoryLogRepository());
+    getIt.registerLazySingleton(() => InspectionRepository());
     
     // Initialize all repositories (this opens the Hive boxes)
     await getIt<QueenRepository>().initialize();
@@ -40,31 +37,20 @@ class DependencyInjection {
     await getIt<StorageRepository>().initialize();
     await getIt<TransactionRepository>().initialize();
     await getIt<HistoryLogRepository>().initialize();
+    await getIt<InspectionRepository>().initialize();
     // getIt.registerLazySingleton(() => ReportRepository());
     
     // Services - register and initialize them
     getIt.registerLazySingleton(() => NameGeneratorService(getIt<SettingsRepository>()));
     getIt<NameGeneratorService>().initialize();
-  //   getIt.registerLazySingleton(() => SyncService());
-  //   getIt.registerLazySingleton(() => TtsService());
-  //   getIt.registerLazySingleton(() => VoskService());
     
-  //   getIt.registerLazySingleton(() => VcService(
-  //     ttsService: getIt<TtsService>(),
-  //     voskService: getIt<VoskService>(),
-  //     userService: getIt<UserRepository>(),
-  //   ));
+    // Note: Initial data loading is handled by PreferencesBloc when language is set
     
-  //   getIt.registerLazySingleton(() => ReportService(
-  //     reportRepository: getIt<ReportRepository>(),
-  //     historyLogRepository: getIt<HistoryLogRepository>(),
-  //     syncService: getIt<SyncService>(),
-  //   ));
     getIt.registerLazySingleton(() => HistoryService(
       repository: getIt<HistoryLogRepository>(),
       userRepository: getIt<UserRepository>(),
     ));
-    
+
     getIt.registerLazySingleton(() => ApiaryService(
       apiaryRepository: getIt<ApiaryRepository>(),
       hiveRepository: getIt<HiveRepository>(),
@@ -90,12 +76,40 @@ class DependencyInjection {
       historyService: getIt<HistoryService>(),
     ));
 
+    getIt.registerLazySingleton(() => InspectionService(
+      inspectionRepository: getIt<InspectionRepository>(),
+      historyService: getIt<HistoryService>(),
+      userRepository: getIt<UserRepository>(),
+    ));
+
     getIt.registerLazySingleton(() => StorageService(
       storageRepository: getIt<StorageRepository>(),
       transactionRepository: getIt<TransactionRepository>(),
       historyService: getIt<HistoryService>(),
       userRepository: getIt<UserRepository>(),
     ));
+
+    // Register SyncService with all required services
+    getIt.registerLazySingleton(() => SyncService(
+      queenService: getIt<QueenService>(),
+      hiveService: getIt<HiveService>(),
+      apiaryService: getIt<ApiaryService>(),
+      historyService: getIt<HistoryService>(),
+      inspectionService: getIt<InspectionService>(),
+      storageService: getIt<StorageService>(),
+      userRepository: getIt<UserRepository>(),
+    ));
+
+    // Register DashboardService
+    getIt.registerLazySingleton<DashboardService>(
+      () => DashboardService(
+        apiaryRepository: getIt<ApiaryRepository>(),
+        hiveRepository: getIt<HiveRepository>(),
+        queenRepository: getIt<QueenRepository>(),
+        inspectionRepository: getIt<InspectionRepository>(),
+        historyRepository: getIt<HistoryLogRepository>(),
+      ),
+    );
   }
 
   //Root BlocProviders
@@ -107,5 +121,4 @@ class DependencyInjection {
       )..add(LoadPreferences()),
     ),
   ];
-
 }

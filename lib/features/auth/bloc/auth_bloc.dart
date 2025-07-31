@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:apiarium/shared/models/user.dart';
-import 'package:apiarium/shared/services/auth_service.dart';
-import 'package:apiarium/shared/services/user_repository.dart';
+import 'package:apiarium/shared/shared.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -78,6 +76,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           credential!.user!,
           event.country,
           displayName: event.displayName,
+          language: event.language,
         );
         emit(Authenticated(user: user));
       } else {
@@ -128,6 +127,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final user = await _userRepository.createAnonymousUser(
           credential!.user!,
           event.country,
+          language: event.language,
         );
         emit(Authenticated(user: user));
       } else {

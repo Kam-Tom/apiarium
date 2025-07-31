@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:apiarium/core/core.dart';
-import 'package:apiarium/core/di/dependency_injection.dart';
-import 'package:apiarium/shared/services/auth_service.dart';
-import 'package:apiarium/shared/services/user_repository.dart';
+import 'package:apiarium/shared/shared.dart';
 import '../bloc/auth_bloc.dart';
 import 'sign_in_view.dart';
 

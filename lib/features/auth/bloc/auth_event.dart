@@ -14,19 +14,21 @@ class SignUp extends AuthEvent {
   final String email;
   final String password;
   final String country;
-  final bool consentAccepted;
+  final String? language;
   final String? displayName;
+  final bool consentAccepted;
 
   const SignUp({
     required this.email,
     required this.password,
     required this.country,
-    required this.consentAccepted,
+    this.language,
     this.displayName,
+    this.consentAccepted = false,
   });
 
   @override
-  List<Object?> get props => [email, password, country, consentAccepted, displayName];
+  List<Object?> get props => [email, password, country, language, displayName, consentAccepted];
 }
 
 class SignIn extends AuthEvent {
@@ -44,13 +46,15 @@ class SignIn extends AuthEvent {
 
 class SignInAnonymously extends AuthEvent {
   final String country;
+  final String? language;
 
   const SignInAnonymously({
     required this.country,
+    this.language,
   });
 
   @override
-  List<Object?> get props => [country];
+  List<Object?> get props => [country, language];
 }
 
 class ConvertAnonymousUser extends AuthEvent {

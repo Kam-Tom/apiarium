@@ -92,13 +92,13 @@ class QueenService {
         breedName: breed.name,
         breedScientificName: breed.scientificName,
         breedOrigin: breed.origin,
-        hiveId: hiveId,
       );
 
       // Update hive if queen is assigned to one
       if (hiveId != null) {
         final hive = await _updateHive(hiveId, queen);
         queen = queen.copyWith(
+          hiveId: () => hive?.id,
           hiveName: () => hive?.name,
           apiaryId: () => hive?.apiaryId,
           apiaryName: () => hive?.apiaryName,
@@ -147,6 +147,7 @@ class QueenService {
       if (updatedQueen.hiveId != null) {
         final hive = await _updateHive(updatedQueen.hiveId!, updatedQueen); 
         updatedQueen = updatedQueen.copyWith(
+          hiveId: () => hive?.id,
           hiveName: () => hive?.name,
           apiaryId: () => hive?.apiaryId,
           apiaryName: () => hive?.apiaryName,
@@ -253,11 +254,13 @@ class QueenService {
     String? country,
     bool isStarred = true,
     bool isLocal = true,
-    int? temperamentRating,
     int? honeyProductionRating,
+    int? springDevelopmentRating,
+    int? gentlenessRating,
+    int? swarmingTendencyRating,
     int? winterHardinessRating,
     int? diseaseResistanceRating,
-    int? popularityRating,
+    int? heatToleranceRating,
     String? characteristics,
     String? imageName,
     double? cost,
@@ -274,11 +277,13 @@ class QueenService {
         country: country,
         isStarred: isStarred,
         isLocal: isLocal,
-        temperamentRating: temperamentRating,
         honeyProductionRating: honeyProductionRating,
+        springDevelopmentRating: springDevelopmentRating,
+        gentlenessRating: gentlenessRating,
+        swarmingTendencyRating: swarmingTendencyRating,
         winterHardinessRating: winterHardinessRating,
         diseaseResistanceRating: diseaseResistanceRating,
-        popularityRating: popularityRating,
+        heatToleranceRating: heatToleranceRating,
         characteristics: characteristics,
         imageName: imageName,
         cost: cost,
@@ -382,12 +387,10 @@ class QueenService {
   }
   Future<void> _syncQueen(Queen queen) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _queenRepository.syncToFirestore(queen, userId);
-      } catch (e) {
+      // Fire and forget - don't await
+      _queenRepository.syncToFirestore(queen, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync queen to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping queen sync - not premium or not logged in', tag: _tag);
     }
@@ -395,12 +398,10 @@ class QueenService {
 
   Future<void> _syncHive(Hive hive) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _hiveRepository.syncToFirestore(hive, userId);
-      } catch (e) {
+      // Fire and forget - don't await
+      _hiveRepository.syncToFirestore(hive, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync hive to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping hive sync - not premium or not logged in', tag: _tag);
     }
@@ -408,12 +409,10 @@ class QueenService {
 
   Future<void> _syncBreed(QueenBreed breed) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _breedRepository.syncToFirestore(breed, userId);
-      } catch (e) {
+      // Fire and forget - don't await
+      _breedRepository.syncToFirestore(breed, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync breed to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping breed sync - not premium or not logged in', tag: _tag);
     }
@@ -438,6 +437,7 @@ class QueenService {
             final hive = await _hiveRepository.getHiveById(queen.hiveId!);
             if (hive != null) {
               final updatedHive = hive.copyWith(
+                queenId: () => queen.id,
                 queenName: () => queen.name,
                 queenMarked: () => queen.marked,
                 queenMarkColor: () => queen.markColor,
@@ -509,6 +509,24 @@ class QueenService {
     } catch (e) {
       Logger.e('Failed to update queen breeds batch', tag: _tag, error: e);
       rethrow;
+    }
+  }
+
+  Future<void> syncPendingToFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) return;
+    
+    final userId = _userRepository.currentUser!.id;
+    
+    final queens = await getAllQueens();
+    final pendingQueens = queens.where((q) => q.syncStatus == SyncStatus.pending).toList();
+    for (final queen in pendingQueens) {
+      await _queenRepository.syncToFirestore(queen, userId);
+    }
+    
+    final breeds = await getAllQueenBreeds();
+    final pendingBreeds = breeds.where((b) => b.syncStatus == SyncStatus.pending).toList();
+    for (final breed in pendingBreeds) {
+      await _breedRepository.syncToFirestore(breed, userId);
     }
   }
 }

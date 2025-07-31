@@ -4,29 +4,29 @@ import '../shared.dart';
 class HistoryService {
   static const String _tag = 'HistoryService';
   static const Uuid _uuid = Uuid();
-  
+
   final HistoryLogRepository _repository;
   final UserRepository _userRepository;
-  
+
   HistoryService({
     required HistoryLogRepository repository,
     required UserRepository userRepository,
   }) : _repository = repository,
        _userRepository = userRepository;
-  
+
   Future<void> initialize() async {
     await _repository.initialize();
     Logger.i('History service initialized', tag: _tag);
   }
-  
+
   Future<List<HistoryLog>> getAllHistoryLogs({int limit = 100}) async {
     return await _repository.getAllHistoryLogs(limit: limit);
   }
-  
+
   Future<List<HistoryLog>> getHistoryLogsByEntityId(String entityId, {int limit = 50}) async {
     return await _repository.getHistoryLogsByEntityId(entityId, limit: limit);
   }
-  
+
   Future<List<HistoryLog>> getHistoryLogsByType(String entityType, {int limit = 50}) async {
     return await _repository.getHistoryLogsByType(entityType, limit: limit);
   }
@@ -34,12 +34,11 @@ class HistoryService {
   Future<List<HistoryLog>> getGroupedHistoryLogs({int limit = 100}) async {
     return await _repository.getGroupedHistoryLogs(limit: limit);
   }
-  
+
   Future<List<HistoryLog>> getHistoryLogsByGroupId(String groupId) async {
     return await _repository.getHistoryLogsByGroupId(groupId);
   }
 
-  // Generic method to log entity creation
   Future<void> logEntityCreate({
     required String entityId,
     required String entityType,
@@ -49,13 +48,9 @@ class HistoryService {
   }) async {
     try {
       final now = DateTime.now();
-      
-      // For create, store complete entity data
-      // Remove sync metadata fields that aren't relevant for history
-      final Map<String, dynamic> cleanedData = Map.from(entityData);
-      cleanedData.removeWhere((key, value) => 
-        ['syncStatus', 'lastSyncedAt', 'serverVersion'].contains(key));
-      
+      final Map<String, dynamic> cleanedData = Map.from(entityData)
+        ..removeWhere((key, value) => ['syncStatus', 'lastSyncedAt', 'serverVersion'].contains(key));
+
       final log = HistoryLog(
         id: _uuid.v4(),
         createdAt: now,
@@ -64,22 +59,21 @@ class HistoryService {
         entityType: entityType,
         entityName: entityName,
         changedFields: cleanedData,
-        previousValues: {}, // Empty for creation - everything is "new"
+        previousValues: {},
         actionType: HistoryActionType.create,
         timestamp: now,
         groupId: groupId,
       );
-      
+
       await _repository.saveHistoryLog(log);
       await _syncLog(log);
-      
+
       Logger.i('Logged create for $entityType: $entityName', tag: _tag);
     } catch (e) {
       Logger.e('Failed to log create for $entityType: $entityName', tag: _tag, error: e);
     }
   }
-  
-  // Generic method to log entity updates using map diff
+
   Future<void> logEntityUpdate({
     required String entityId,
     required String entityType,
@@ -90,15 +84,10 @@ class HistoryService {
   }) async {
     try {
       final now = DateTime.now();
-      
-      // Use the map diff extension to get changes
       final diff = oldData.differenceWith(newData);
-      
-      // Skip if nothing significant changed
-      if (!diff.hasChanges) {
-        return;
-      }
-      
+
+      if (!diff.hasChanges) return;
+
       final log = HistoryLog(
         id: _uuid.v4(),
         createdAt: now,
@@ -112,17 +101,16 @@ class HistoryService {
         timestamp: now,
         groupId: groupId,
       );
-      
+
       await _repository.saveHistoryLog(log);
       await _syncLog(log);
-      
+
       Logger.i('Logged update for $entityType: $entityName (${diff.changedFields.length} fields changed)', tag: _tag);
     } catch (e) {
       Logger.e('Failed to log update for $entityType: $entityName', tag: _tag, error: e);
     }
   }
-  
-  // Generic method to log entity deletion
+
   Future<void> logEntityDelete({
     required String entityId,
     required String entityType,
@@ -131,7 +119,7 @@ class HistoryService {
   }) async {
     try {
       final now = DateTime.now();
-      
+
       final log = HistoryLog(
         id: _uuid.v4(),
         createdAt: now,
@@ -145,17 +133,16 @@ class HistoryService {
         timestamp: now,
         groupId: groupId,
       );
-      
+
       await _repository.saveHistoryLog(log);
       await _syncLog(log);
-      
+
       Logger.i('Logged delete for $entityType: $entityName', tag: _tag);
     } catch (e) {
       Logger.e('Failed to log delete for $entityType: $entityName', tag: _tag, error: e);
     }
   }
-  
-  // Method for logging apiary reports (grouped updates)
+
   Future<void> logApiaryReport({
     required String apiaryId,
     required String apiaryName,
@@ -166,8 +153,7 @@ class HistoryService {
     try {
       final groupId = _uuid.v4();
       final now = DateTime.now();
-      
-      // Create a report group entry
+
       final reportLog = HistoryLog(
         id: _uuid.v4(),
         createdAt: now,
@@ -186,10 +172,9 @@ class HistoryService {
         timestamp: now,
         groupId: groupId,
       );
-      
+
       await _repository.saveHistoryLog(reportLog);
-      
-      // Log individual hive changes with the same groupId
+
       for (int i = 0; i < newHivesData.length; i++) {
         await logEntityUpdate(
           entityId: newHivesData[i]['id'],
@@ -200,33 +185,29 @@ class HistoryService {
           groupId: groupId,
         );
       }
-      
+
       await _syncLog(reportLog);
-      
+
       Logger.i('Logged apiary report: $reportTitle (${newHivesData.length} hives)', tag: _tag);
     } catch (e) {
       Logger.e('Failed to log apiary report: $reportTitle', tag: _tag, error: e);
     }
   }
-  
-  
+
   Future<void> cleanupOldLogs({int keepDays = 30}) async {
     await _repository.cleanupOldLogs(keepDays: keepDays);
   }
-  
+
   Future<void> _syncLog(HistoryLog log) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _repository.syncToFirestore(log, userId);
-      } catch (e) {
+      _repository.syncToFirestore(log, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync history log to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping history log sync - not premium or not logged in', tag: _tag);
     }
   }
-  
+
   Future<void> syncFromFirestore() async {
     if (!_userRepository.isPremium || _userRepository.currentUser == null) {
       Logger.w('Firestore sync skipped - not premium or not logged in', tag: _tag);
@@ -236,15 +217,26 @@ class HistoryService {
     try {
       final userId = _userRepository.currentUser!.id;
       final lastSync = await _userRepository.getLastSyncTime();
-      
+
       await _repository.syncFromFirestore(userId, lastSyncTime: lastSync);
-      
+
       Logger.i('Synced history logs from Firestore', tag: _tag);
     } catch (e) {
       Logger.e('Failed to sync history logs from Firestore', tag: _tag, error: e);
     }
   }
-  
+
+  Future<void> syncPendingToFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) return;
+    
+    final logs = await getAllHistoryLogs();
+    final pending = logs.where((h) => h.syncStatus == SyncStatus.pending).toList();
+    
+    for (final log in pending) {
+      await _repository.syncToFirestore(log, _userRepository.currentUser!.id);
+    }
+  }
+
   Future<void> dispose() async {
     await _repository.dispose();
     Logger.i('History service disposed', tag: _tag);

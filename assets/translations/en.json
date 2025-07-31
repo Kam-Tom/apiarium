@@ -26,6 +26,7 @@
         "edit": "Edit",
         "delete": "Delete",
         "cancel": "Cancel",
+        "dont": "Don't",
         "yes": "Yes",
         "no": "No",
         "add": "Add",
@@ -33,7 +34,26 @@
         "save": "Save",
         "saved_success": "Saved successfully!",
         "validation_error": "Please check the form for errors",
-        "required_field": "This field is required"
+        "required_field": "This field is required",
+        "date": "Date",
+        "feeder": "Feeder",
+        "queen_excluder": "Queen Excluder",
+        "pollen_trap": "Pollen Trap",
+        "entrance_reducer": "Entrance Reducer",
+        "mouse_guard": "Mouse Guard",
+        "hive_stand": "Hive Stand",
+        "insulation": "Insulation",
+        "name": "Name",
+        "description": "Description",
+        "status": "Status",
+        "migratory": "Migratory",
+        "hive": "Hive",
+        "queen": "Queen",
+        "loading": "Loading...",
+        "error": "Error",
+        "months": "months",
+        "days": "days",
+        "advanced": "Advanced"
     },
     "auth": {
         "common": {
@@ -41,7 +61,11 @@
             "password": "Password",
             "or": "OR",
             "cancel": "Cancel",
-            "close": "Close"
+            "close": "Close",
+            "country": "Country",
+            "country_required": "Please select a country",
+            "select_country": "Select Country",
+            "search_countries": "Search countries..."
         },
         "sign_up": {
             "create_account": "Create Account",
@@ -86,7 +110,7 @@
     },
     "apiary": {
         "filter": {
-            "all": "All Apiaries",
+            "all": "All",
             "none": "No Apiary",
             "select": "Select Apiary"
         },
@@ -153,8 +177,8 @@
             "fifteenth": "fifteenth",
             "sixteenth": "sixteenth",
             "seventeenth": "seventeenth",
-            "eighteenth": "eighteenth",
-            "nineteenth": "nineteenth",
+            "eighteenth": "eighteen",
+            "nineteenth": "nineteen",
             "twentieth": "twentieth"
         },
         "ordinal_hive": {
@@ -175,8 +199,8 @@
             "fifteenth": "fifteenth",
             "sixteenth": "sixteenth",
             "seventeenth": "seventeenth",
-            "eighteenth": "eighteenth",
-            "nineteenth": "nineteenth",
+            "eighteenth": "eighteen",
+            "nineteenth": "nineteen",
             "twentieth": "twentieth"
         },
         "select_ordinal_hive": "{0} hive",
@@ -214,38 +238,6 @@
             "selected": "selected"
         }
     },
-    "management": {
-        "queens": {
-            "title": "Queens",
-            "singular": "queen",
-            "plural": "queens",
-            "count": "{count} {type} found",
-            "no_matches": "No queens found matching your filters.",
-            "empty": "No queens yet. Add your first queen!",
-            "deleted": "{name} deleted",
-            "marked": "Marked",
-            "apiary": "Apiary",
-            "hive": "Hive",
-            "unassigned": "Unassigned",
-            "no_hive": "No Hive",
-            "unknown": "Unknown",
-            "delete_title": "Delete Queen",
-            "delete_confirm": "Are you sure you want to delete \"{name}\"?\n\nThis action cannot be undone.",
-            "filter": {
-                "any_status": "Any Status",
-                "any_breed": "Any Breed"
-            },
-            "status": {
-                "active": "Active",
-                "dead": "Dead",
-                "replaced": "Replaced",
-                "lost": "Lost",
-                "superseded": "Superseded",
-                "missing": "Missing",
-                "quarantined": "Quarantined"
-            }
-        }
-    },
     "enums": {
         "QueenStatus": {
             "any": "Any Status",
@@ -274,12 +266,54 @@
             "polystyrene": "Polystyrene",
             "metal": "Metal",
             "other": "Other"
+        },
+        "history_action": {
+            "create": "Created",
+            "update": "Updated",
+            "delete": "Deleted"
         }
     },
     "details": {
+        "apiary": {
+            "title": "Apiary Details",
+            "basicInfo": "Basic Information",
+            "hives": "Hives",
+            "history": "History",
+            "no_hives": "No hives found in this apiary.",
+            "no_history": "No history records found for this apiary.",
+            "timestamp": "Date & Time:",
+            "changes": "Changes:",
+            "statistics": "Statistics",
+            "unknown_type": "Unknown Type"
+        },
+        "hive": {
+            "title": "Hive Details",
+            "basicInfo": "Basic Information",
+            "history": "History",
+            "inspections": "Inspections",
+            "no_history": "No history records found for this hive.",
+            "no_inspections": "No inspections found for this hive.",
+            "timestamp": "Date & Time:",
+            "changes": "Changes:",
+            "inspection_details": "Inspection Details",
+            "unknown_apiary": "Unknown Apiary",
+            "inspection_data": "Inspection Data:"
+        },
         "queen": {
+            "title": "Queen Details",
             "local": "Local",
             "basicInfo": "Basic Information",
+            "history": "History",
+            "inspections": "Inspections",
+            "no_history": "No history records found for this queen.",
+            "no_inspections": "No inspections found for this queen.",
+            "timestamp": "Date & Time:",
+            "changes": "Changes:",
+            "fields_changed": "{0} fields changed",
+            "inspection_details": "Inspection Details",
+            "unknown_apiary": "Unknown Apiary",
+            "inspection_data": "Inspection Data:",
+            "data_points": "{0} data points recorded",
             "origin": "Origin",
             "country": "Country",
             "characteristics": "Characteristics",
@@ -311,7 +345,7 @@
             "veryPopular": "Very Popular",
             "birthDate": "Birth Date",
             "age": "Age",
-            "yearsOld": "{} years old",
+            "yearsOld": "{0} years old",
             "marked": "Marked",
             "markColor": "Mark Color",
             "source": "Source",
@@ -322,7 +356,13 @@
             "white": "White",
             "orange": "Orange",
             "purple": "Purple",
-            "pink": "Pink"
+            "pink": "Pink",
+            "custom_color": "Custom Color",
+            "breed": "Breed",
+            "scientificName": "Scientific Name",
+            "hive": "Hive",
+            "no_hive": "No Hive",
+            "apiary": "Apiary"
         }
     },
     "edit_queen": {
@@ -387,7 +427,12 @@
         "queen_birth_date": "Birth Date",
         "queen_status": "Status",
         "save": "Save Hive",
-        "saved_success": "Hive saved successfully!"
+        "saved_success": "Hive saved successfully!",
+        "hive_type_search_hint": "Search hive types...",
+        "accessories": "Accessories",
+        "select_physical_accessories": "Select physical accessories...",
+        "select_iot_accessories": "Select IoT devices...",
+        "frames_capacity": "frames capacity"
     },
     "edit_apiary": {
         "basic_information": "Basic Information",
@@ -415,7 +460,26 @@
         "search_location": "Search location...",
         "new_apiary": "New Apiary",
         "use_location_as_name": "Use location as name",
-        "name_updated": "Apiary name updated successfully!"
+        "name_updated": "Apiary name updated successfully!",
+        "add_queens_with_hives": "Add queens with hives",
+        "add_existing_hives": "Add existing hives:",
+        "new_hive": "New Hive",
+        "no_hives_added": "No hives added yet",
+        "create_hive_with_queen": "Create hive with queen",
+        "create_new_hive": "Create new hive",
+        "current_hives": "Current hives (drag to reorder):",
+        "hives_in_this_apiary": "Hives in this apiary: {0}",
+        "location": "Location",
+        "location_required": "Location is required",
+        "location_address": "Location/Address",
+        "location_hint": "e.g. 123 Bee Street, Honey Valley",
+        "show_map": "Show Map",
+        "hide_map": "Hide Map",
+        "map_info": "Tap on the map to select location or use search to find a place",
+        "apiary_status": "Apiary Status",
+        "status_active": "Active",
+        "status_inactive": "Inactive",
+        "status_archived": "Archived"
     },
     "hives": "Hives",
     "hive_type": "Hive Type",
@@ -485,7 +549,7 @@
     "edit_hive_type": {
         "title": "Hive Type",
         "create": "Create Hive Type",
-        "edit": "Edit Hive Type", 
+        "edit_hive_type": "Edit Hive Type",
         "save": "Save Hive Type",
         "saved_success": "Hive type saved successfully!",
         "basic_information": "Basic Information",
@@ -518,19 +582,36 @@
         "camera": "Camera",
         "failed_pick_image": "Failed to pick image: {0}",
         "icon": "Icon",
-        "validation_errors": "Please fill in all required fields"
+        "validation_errors": "Please fill in all required fields",
+        "accessories": "Accessories",
+        "select_iot_accessories": "Select IoT devices..."
     },
-    "hive_types": {
-        "title": "Hive Types",
-        "count": "{count} {type} found",
-        "singular": "type",
-        "plural": "types",
-        "no_matches": "No hive types found matching your filters.",
-        "empty": "No hive types yet. Add your first hive type!",
-        "clear_filters": "Clear Filters",
-        "filtered": "Filtered",
-        "delete_title": "Delete Hive Type",
-        "cancel": "Cancel"
+    "accessories": {
+        "physical": "Physical Accessories",
+        "iot_devices": "IoT Devices",
+        "feeder": "Feeder",
+        "queen_excluder": "Queen Excluder",
+        "pollen_trap": "Pollen Trap",
+        "entrance_reducer": "Entrance Reducer",
+        "mouse_guard": "Mouse Guard",
+        "hive_stand": "Hive Stand",
+        "insulation_wrap": "Insulation Wrap",
+        "screened_bottom_board": "Screened Bottom Board",
+        "escape_board": "Escape Board",
+        "propolis_trap": "Propolis Trap",
+        "ventilation_box": "Ventilation Box",
+        "robbing_screen": "Robbing Screen",
+        "top_cover": "Top Cover",
+        "inner_cover": "Inner Cover",
+        "hive_scale": "Hive Scale",
+        "temperature_sensor": "Temperature Sensor",
+        "humidity_sensor": "Humidity Sensor",
+        "sound_sensor": "Sound Sensor",
+        "co2_sensor": "CO₂ Sensor",
+        "gps_tracker": "GPS Tracker",
+        "camera_monitor": "Camera Monitor",
+        "bee_counter": "Bee Counter",
+        "vibration_sensor": "Vibration Sensor"
     },
     "edit_queen_breed": {
         "title": "Queen Breed",
@@ -552,26 +633,34 @@
         "camera": "Camera",
         "failed_pick_image": "Failed to pick image: {0}",
         "breed_characteristics": "Breed Characteristics",
-        "temperament": "Temperament",
-        "temperament_help": "How aggressive are they?",
         "honey_production": "Honey Production",
         "honey_production_help": "How much honey do they produce?",
+        "spring_development": "Spring Development",
+        "spring_development_help": "How fast do they develop in spring?",
+        "gentleness": "Gentleness",
+        "gentleness_help": "How gentle are they?",
+        "swarming_tendency": "Swarming Tendency",
+        "swarming_tendency_help": "How likely are they to swarm?",
         "winter_hardiness": "Winter Hardiness",
         "winter_hardiness_help": "How well do they survive harsh winters?",
         "disease_resistance": "Disease Resistance",
         "disease_resistance_help": "How resistant are they to diseases?",
-        "popularity": "Popularity",
-        "popularity_help": "How popular is this breed among beekeepers?",
+        "heat_tolerance": "Heat Tolerance",
+        "heat_tolerance_help": "How well do they tolerate heat?",
+        "very_slow": "Very Slow",
+        "slow": "Slow",
+        "moderate": "Moderate",
+        "fast": "Fast",
+        "very_fast": "Very Fast",
         "very_aggressive": "Very Aggressive",
         "aggressive": "Aggressive",
-        "moderate": "Moderate",
         "gentle": "Gentle",
         "very_gentle": "Very Gentle",
-        "very_low": "Very Low",
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
         "very_high": "Very High",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "very_low": "Very Low",
         "very_poor": "Very Poor",
         "poor": "Poor",
         "average": "Average",
@@ -591,6 +680,178 @@
         "country_help": "Auto-filled from profile",
         "cost": "Cost ($)",
         "cost_help": "Typical cost for this breed",
-        "not_rated": "Not rated"
+        "not_rated": "Not rated",
+        "select_country": "Select Country"
+    },
+    "queen_breeds": {
+        "title": "Queen Breeds",
+        "delete_title": "Delete Queen Breed",
+        "cancel": "Cancel",
+        "filter": {
+            "title": "Filter Queen Breeds",
+            "starred_only": "Show only starred",
+            "local_only": "Show only local"
+        }
+    },
+    "storage": {
+        "add_expense": "Add Expense",
+        "amount": "Amount",
+        "camera": "Camera",
+        "gallery": "Gallery",
+        "notes": "Notes",
+        "notes_hint": "Optional notes about this expense...",
+        "receipt_image": "Receipt Image",
+        "failed_pick_image": "Failed to pick image: {error}"
+    },
+    "spending": {
+        "add_title": "Add {type}",
+        "unit_price": "Unit Price",
+        "notes": "Notes",
+        "add_attachment": "Add Attachment"
+    },
+    "modals": {
+        "history_log": {
+            "changes": "Changes",
+            "no_meaningful_changes": "No meaningful field changes recorded",
+            "close": "Close"
+        }
+    },
+    "apiary_details": {
+        "total_hives": "Total Hives",
+        "active_hives": "Active Hives",
+        "inactive_hives": "Inactive Hives",
+        "archived_hives": "Archived Hives",
+        "hive_type": "Hive Type",
+        "queen": "Queen",
+        "status": "Status",
+        "no_location_data": "No apiaries with location data"
+    },
+    "hive_type_detail": {
+        "not_found": "Hive type not found",
+        "starred": "Starred",
+        "local": "Local",
+        "basic_info": "Basic Information",
+        "frame_config": "Frame Configuration",
+        "capacity_info": "Capacity Information"
+    },
+    "hive_types": {
+        "local": "Local",
+        "cost_label": "Cost: ${0}",
+        "delete_confirm": "Are you sure you want to delete \"{0}\"?"
+    },
+    "queen_breed_detail": {
+        "not_found": "Queen breed not found",
+        "starred": "Starred",
+        "local": "Local",
+        "origin": "Origin",
+        "country": "Country",
+        "cost": "Cost",
+        "characteristics": "Characteristics",
+        "basic_info": "Basic Information",
+        "origin_info": "Origin Information"
+    },
+    "dashboard": {
+        "overview": "Overview",
+        "apiaries": "Apiaries",
+        "hives": "Hives",
+        "unassigned": "Unassigned",
+        "recent_inspections": "Recent Inspections",
+        "need_attention": "Need Attention",
+        "title": "Management",
+        "queens": {
+            "title": "Queens",
+            "singular": "queen",
+            "plural": "queens",
+            "count": "{count} {type} found",
+            "no_matches": "No queens found matching your filters.",
+            "empty": "No queens yet. Add your first queen!",
+            "deleted": "{name} deleted",
+            "marked": "Marked",
+            "apiary": "Apiary",
+            "hive": "Hive",
+            "unassigned": "Unassigned",
+            "no_hive": "No Hive",
+            "unknown": "Unknown",
+            "delete_title": "Delete Queen",
+            "delete_confirm": "Are you sure you want to delete \"{name}\"?\n\nThis action cannot be undone.",
+            "filter": {
+                "any_status": "Any Status",
+                "any_breed": "Any Breed"
+            },
+            "status": {
+                "active": "Active",
+                "unactive": "Inactive",
+                "dead": "Dead",
+                "replaced": "Replaced",
+                "lost": "Lost",
+                "superseded": "Superseded",
+                "missing": "Missing",
+                "quarantined": "Quarantined"
+            }
+        },
+        "apiary_locations": "Apiary Locations",
+        "full_map": "Full Map",
+        "error_loading_data": "Error loading data",
+        "retry": "Retry"
+    },
+    "management": {
+        "overview": "Overview",
+        "apiaries": "Apiaries",
+        "hives": "Hives",
+        "unassigned": "Unassigned",
+        "recent_inspections": "Recent Inspections",
+        "need_attention": "Need Attention",
+        "title": "Management",
+        "queens": {
+            "title": "Queens",
+            "singular": "queen",
+            "plural": "queens",
+            "count": "{count} {type} found",
+            "no_matches": "No queens found matching your filters.",
+            "empty": "No queens yet. Add your first queen!",
+            "deleted": "{name} deleted",
+            "marked": "Marked",
+            "apiary": "Apiary",
+            "hive": "Hive",
+            "unassigned": "Unassigned",
+            "no_hive": "No Hive",
+            "unknown": "Unknown",
+            "delete_title": "Delete Queen",
+            "delete_confirm": "Are you sure you want to delete \"{name}\"?\n\nThis action cannot be undone.",
+            "filter": {
+                "any_status": "Any Status",
+                "any_breed": "Any Breed"
+            },
+            "status": {
+                "active": "Active",
+                "unactive": "Inactive",
+                "dead": "Dead",
+                "replaced": "Replaced",
+                "lost": "Lost",
+                "superseded": "Superseded",
+                "missing": "Missing",
+                "quarantined": "Quarantined"
+            }
+        },
+        "apiary_locations": "Apiary Locations",
+        "full_map": "Full Map",
+        "error_loading_data": "Error loading data",
+        "retry": "Retry"
+    },
+    "navigation": {
+        "management": "Management",
+        "apiaries": "Apiaries",
+        "hives": "Hives",
+        "queens": "Queens",
+        "breeds": "Breeds",
+        "types": "Types"
+    },
+    "recent_activity": {
+        "title": "Recent Activity",
+        "empty": "No recent activity",
+        "timestamp": "Timestamp",
+        "details": "Details",
+        "additional_info": "Additional Information",
+        "close": "Close"
     }
 }

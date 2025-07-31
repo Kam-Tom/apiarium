@@ -1,5 +1,7 @@
 import 'package:apiarium/core/core.dart';
+import 'package:apiarium/features/auth/widgets/country_dropdown.dart';
 import 'package:apiarium/features/auth/widgets/widgets.dart';
+import 'package:apiarium/shared/utils/countries.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +22,24 @@ class _SignUpViewState extends State<SignUpView> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _acceptTerms = false;
+  String? _selectedCountry;
+  bool _hasInitializedCountry = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Remove the _getDeviceCountry() call from here
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize country only once after dependencies are available
+    if (!_hasInitializedCountry) {
+      _selectedCountry = _getDeviceCountry();
+      _hasInitializedCountry = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -29,26 +49,36 @@ class _SignUpViewState extends State<SignUpView> {
   }
 
   String _getDeviceCountry() {
-    final locale = context.locale;
-    return locale.countryCode ?? Platform.localeName.split('_').last.substring(0, 2).toUpperCase();
+    try {
+      final locale = context.locale;
+      final countryCode = locale.countryCode ?? 
+          Platform.localeName.split('_').last.substring(0, 2).toUpperCase();
+      return Countries.list.any((c) => c.code == countryCode) ? countryCode : 'US';
+    } catch (e) {
+      // Fallback if locale is not available yet
+      return 'US';
+    }
   }
 
   void _handleSignUp() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _selectedCountry != null) {
       context.read<AuthBloc>().add(SignUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        country: _getDeviceCountry(),
+        country: _selectedCountry!,
+        language: context.locale.languageCode,
         consentAccepted: _acceptTerms,
       ));
     }
   }
 
   void _handleAnonymousSignUp() {
-    // No form validation needed for anonymous sign-up
-    context.read<AuthBloc>().add(SignInAnonymously(
-      country: _getDeviceCountry(),
-    ));
+    if (_selectedCountry != null) {
+      context.read<AuthBloc>().add(SignInAnonymously(
+        country: _selectedCountry!,
+        language: context.locale.languageCode,
+      ));
+    }
   }
 
   void _showError(String message) {
@@ -189,6 +219,24 @@ class _SignUpViewState extends State<SignUpView> {
                               controller: _passwordController,
                               labelText: 'auth.common.password'.tr(),
                               hintText: 'auth.sign_up.password_hint'.tr(),
+                            ),
+                            
+                            SizedBox(height: isSmallScreen ? 12 : 16),
+                            
+                            // Country selection
+                            Text(
+                              'auth.common.country'.tr(),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            CountryDropdown(
+                              value: _selectedCountry,
+                              onChanged: (value) => setState(() => _selectedCountry = value),
+                              hasError: _selectedCountry == null,
+                              errorText: _selectedCountry == null ? 'auth.common.country_required'.tr() : null,
                             ),
                             
                             SizedBox(height: isSmallScreen ? 8 : 12),

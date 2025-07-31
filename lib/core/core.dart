@@ -11,3 +11,6 @@ export 'router/router.dart';
 
 // Utils
 export 'utils/utils.dart';
+
+// Dependency injection
+export 'di/dependency_injection.dart';

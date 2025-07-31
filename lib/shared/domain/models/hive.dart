@@ -1,5 +1,4 @@
 import 'dart:core';
-
 import 'package:apiarium/shared/shared.dart';
 import 'package:flutter/material.dart';
 
@@ -46,7 +45,8 @@ class Hive extends BaseModel {
   final int? familyStrength;
   final DateTime? lastInspection;
   final DateTime? lastTimeQueenSeen;
-  
+  final HiveIconType iconType;
+
   const Hive({
     required super.id,
     required super.createdAt,
@@ -94,6 +94,7 @@ class Hive extends BaseModel {
     this.familyStrength,
     this.lastInspection,
     this.lastTimeQueenSeen,
+    this.iconType = HiveIconType.beehive1,
   });
   
   factory Hive.fromMap(Map<String, dynamic> map) {
@@ -150,6 +151,9 @@ class Hive extends BaseModel {
       familyStrength: map['familyStrength'] as int?,
       lastInspection: map['lastInspection'] != null ? DateTime.parse(map['lastInspection']) : null,
       lastTimeQueenSeen: map['lastTimeQueenSeen'] != null ? DateTime.parse(map['lastTimeQueenSeen']) : null,
+      iconType: map['iconType'] != null
+        ? HiveIconTypeExtension.fromString(map['iconType'])
+        : HiveIconType.beehive1,
     );
   }
 
@@ -162,7 +166,7 @@ class Hive extends BaseModel {
     hiveTypeId, hiveType, manufacturer, material, hasFrames, broodFrameCount, honeyFrameCount, frameStandard,
     boxCount, superBoxCount, framesPerBox, maxBroodFrameCount, maxHoneyFrameCount, maxBoxCount, maxSuperBoxCount,    accessories, cost, currentBroodFrameCount, currentHoneyFrameCount, currentBoxCount, currentSuperBoxCount,
     queenId, queenName, queenMarked, queenMarkColor, breed, queenBirthDate,
-    familyStrength, lastInspection, lastTimeQueenSeen,
+    familyStrength, lastInspection, lastTimeQueenSeen, iconType,
   ];
 
   Map<String, dynamic> toMap() {
@@ -207,23 +211,24 @@ class Hive extends BaseModel {
       'familyStrength': familyStrength,
       'lastInspection': lastInspection?.toIso8601String(),
       'lastTimeQueenSeen': lastTimeQueenSeen?.toIso8601String(),
+      'iconType': iconType.name,
     };
   }
   Hive copyWith({    
-    String? Function()? name,
+    String Function()? name,
     String? Function()? apiaryId,
     String? Function()? apiaryName,
     String? Function()? apiaryLocation,
-    HiveStatus? Function()? status,
-    DateTime? Function()? acquisitionDate,
+    HiveStatus Function()? status,
+    DateTime Function()? acquisitionDate,
     String? Function()? imageUrl,
-    int? Function()? order,
+    int Function()? order,
     Color? Function()? color,
-    String? Function()? hiveTypeId,
-    String? Function()? hiveType,
+    String Function()? hiveTypeId,
+    String Function()? hiveType,
     String? Function()? manufacturer,
-    HiveMaterial? Function()? material,
-    bool? Function()? hasFrames,
+    HiveMaterial Function()? material,
+    bool Function()? hasFrames,
     int? Function()? broodFrameCount,
     int? Function()? honeyFrameCount,
     String? Function()? frameStandard,
@@ -248,60 +253,62 @@ class Hive extends BaseModel {
     DateTime? Function()? queenBirthDate,
     int? Function()? familyStrength,
     DateTime? Function()? lastInspection,
-    DateTime? Function()? updatedAt,
-    SyncStatus? Function()? syncStatus,
+    DateTime Function()? updatedAt,
+    SyncStatus Function()? syncStatus,
     DateTime? Function()? lastSyncedAt,
-    bool? Function()? deleted,
-    int? Function()? serverVersion,
+    bool Function()? deleted,
+    int Function()? serverVersion,
     DateTime? Function()? lastTimeQueenSeen,
+    HiveIconType Function()? iconType,
   }) {
     return Hive(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt?.call() ?? DateTime.now(),
-      syncStatus: syncStatus?.call() ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
-      deleted: deleted?.call() ?? this.deleted,
-      serverVersion: serverVersion?.call() ?? this.serverVersion,
-      name: name?.call() ?? this.name,
-      apiaryId: apiaryId?.call() ?? this.apiaryId,
-      apiaryName: apiaryName?.call() ?? this.apiaryName,
-      apiaryLocation: apiaryLocation?.call() ?? this.apiaryLocation,
-      status: status?.call() ?? this.status,
-      acquisitionDate: acquisitionDate?.call() ?? this.acquisitionDate,
-      imageUrl: imageUrl?.call() ?? this.imageUrl,
-      order: order?.call() ?? this.order,
-      color: color?.call() ?? this.color,
-      hiveTypeId: hiveTypeId?.call() ?? this.hiveTypeId,
-      hiveType: hiveType?.call() ?? this.hiveType,
-      manufacturer: manufacturer?.call() ?? this.manufacturer,
-      material: material?.call() ?? this.material,
-      hasFrames: hasFrames?.call() ?? this.hasFrames,
-      broodFrameCount: broodFrameCount?.call() ?? this.broodFrameCount,
-      honeyFrameCount: honeyFrameCount?.call() ?? this.honeyFrameCount,
-      frameStandard: frameStandard?.call() ?? this.frameStandard,
-      boxCount: boxCount?.call() ?? this.boxCount,
-      superBoxCount: superBoxCount?.call() ?? this.superBoxCount,
-      framesPerBox: framesPerBox?.call() ?? this.framesPerBox,
-      maxBroodFrameCount: maxBroodFrameCount?.call() ?? this.maxBroodFrameCount,
-      maxHoneyFrameCount: maxHoneyFrameCount?.call() ?? this.maxHoneyFrameCount,
-      maxBoxCount: maxBoxCount?.call() ?? this.maxBoxCount,
-      maxSuperBoxCount: maxSuperBoxCount?.call() ?? this.maxSuperBoxCount,
-      accessories: accessories?.call() ?? this.accessories,
-      cost: cost?.call() ?? this.cost,
-      currentBroodFrameCount: currentBroodFrameCount?.call() ?? this.currentBroodFrameCount,
-      currentHoneyFrameCount: currentHoneyFrameCount?.call() ?? this.currentHoneyFrameCount,
-      currentBoxCount: currentBoxCount?.call() ?? this.currentBoxCount,
-      currentSuperBoxCount: currentSuperBoxCount?.call() ?? this.currentSuperBoxCount,
-      queenId: queenId?.call() ?? this.queenId,
-      queenName: queenName?.call() ?? this.queenName,
-      queenMarked: queenMarked?.call() ?? this.queenMarked,
-      queenMarkColor: queenMarkColor?.call() ?? this.queenMarkColor,
-      breed: breed?.call() ?? this.breed,
-      queenBirthDate: queenBirthDate?.call() ?? this.queenBirthDate,
-      familyStrength: familyStrength?.call() ?? this.familyStrength,
-      lastInspection: lastInspection?.call() ?? this.lastInspection,
-      lastTimeQueenSeen: lastTimeQueenSeen?.call() ?? this.lastTimeQueenSeen,
+      updatedAt: updatedAt != null ? updatedAt() : DateTime.now(),
+      syncStatus: syncStatus != null ? syncStatus() : SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt != null ? lastSyncedAt() : this.lastSyncedAt,
+      deleted: deleted != null ? deleted() : this.deleted,
+      serverVersion: serverVersion != null ? serverVersion() : this.serverVersion,
+      name: name != null ? name() : this.name,
+      apiaryId: apiaryId != null ? apiaryId() : this.apiaryId,
+      apiaryName: apiaryName != null ? apiaryName() : this.apiaryName,
+      apiaryLocation: apiaryLocation != null ? apiaryLocation() : this.apiaryLocation,
+      status: status != null ? status() : this.status,
+      acquisitionDate: acquisitionDate != null ? acquisitionDate() : this.acquisitionDate,
+      imageUrl: imageUrl != null ? imageUrl() : this.imageUrl,
+      order: order != null ? order() : this.order,
+      color: color != null ? color() : this.color,
+      hiveTypeId: hiveTypeId != null ? hiveTypeId() : this.hiveTypeId,
+      hiveType: hiveType != null ? hiveType() : this.hiveType,
+      manufacturer: manufacturer != null ? manufacturer() : this.manufacturer,
+      material: material != null ? material() : this.material,
+      hasFrames: hasFrames != null ? hasFrames() : this.hasFrames,
+      broodFrameCount: broodFrameCount != null ? broodFrameCount() : this.broodFrameCount,
+      honeyFrameCount: honeyFrameCount != null ? honeyFrameCount() : this.honeyFrameCount,
+      frameStandard: frameStandard != null ? frameStandard() : this.frameStandard,
+      boxCount: boxCount != null ? boxCount() : this.boxCount,
+      superBoxCount: superBoxCount != null ? superBoxCount() : this.superBoxCount,
+      framesPerBox: framesPerBox != null ? framesPerBox() : this.framesPerBox,
+      maxBroodFrameCount: maxBroodFrameCount != null ? maxBroodFrameCount() : this.maxBroodFrameCount,
+      maxHoneyFrameCount: maxHoneyFrameCount != null ? maxHoneyFrameCount() : this.maxHoneyFrameCount,
+      maxBoxCount: maxBoxCount != null ? maxBoxCount() : this.maxBoxCount,
+      maxSuperBoxCount: maxSuperBoxCount != null ? maxSuperBoxCount() : this.maxSuperBoxCount,
+      accessories: accessories != null ? accessories() : this.accessories,
+      cost: cost != null ? cost() : this.cost,
+      currentBroodFrameCount: currentBroodFrameCount != null ? currentBroodFrameCount() : this.currentBroodFrameCount,
+      currentHoneyFrameCount: currentHoneyFrameCount != null ? currentHoneyFrameCount() : this.currentHoneyFrameCount,
+      currentBoxCount: currentBoxCount != null ? currentBoxCount() : this.currentBoxCount,
+      currentSuperBoxCount: currentSuperBoxCount != null ? currentSuperBoxCount() : this.currentSuperBoxCount,
+      queenId: queenId != null ? queenId() : this.queenId,
+      queenName: queenName != null ? queenName() : this.queenName,
+      queenMarked: queenMarked != null ? queenMarked() : this.queenMarked,
+      queenMarkColor: queenMarkColor != null ? queenMarkColor() : this.queenMarkColor,
+      breed: breed != null ? breed() : this.breed,
+      queenBirthDate: queenBirthDate != null ? queenBirthDate() : this.queenBirthDate,
+      familyStrength: familyStrength != null ? familyStrength() : this.familyStrength,
+      lastInspection: lastInspection != null ? lastInspection() : this.lastInspection,
+      lastTimeQueenSeen: lastTimeQueenSeen != null ? lastTimeQueenSeen() : this.lastTimeQueenSeen,
+      iconType: iconType != null ? iconType() : this.iconType,
     );
   }
 

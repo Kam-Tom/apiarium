@@ -1,6 +1,4 @@
-import 'package:apiarium/shared/domain/domain.dart';
-import 'package:apiarium/shared/services/services.dart';
-import 'package:apiarium/shared/utils/logger.dart';
+import 'package:apiarium/shared/shared.dart';
 
 class SyncService {
   static const String _tag = 'SyncService';
@@ -8,48 +6,109 @@ class SyncService {
   final QueenService _queenService;
   final HiveService _hiveService;
   final ApiaryService _apiaryService;
+  final HistoryService _historyService;
+  final InspectionService _inspectionService;
+  final StorageService _storageService;
   final UserRepository _userRepository;
+  
+  bool _isSyncing = false;
+  DateTime? _lastUploadSync;
   
   SyncService({
     required QueenService queenService,
     required HiveService hiveService,
     required ApiaryService apiaryService,
+    required HistoryService historyService,
+    required InspectionService inspectionService,
+    required StorageService storageService,
     required UserRepository userRepository,
   }) : _queenService = queenService,
        _hiveService = hiveService,
        _apiaryService = apiaryService,
+       _historyService = historyService,
+       _inspectionService = inspectionService,
+       _storageService = storageService,
        _userRepository = userRepository;
   
+  bool get isSyncing => _isSyncing;
+  
   Future<void> syncAll() async {
-    if (!_userRepository.isPremium || _userRepository.currentUser == null) {
-      Logger.w('Sync skipped - not premium or not logged in', tag: _tag);
-      return;
-    }
+    if (_isSyncing || _userRepository.currentUser == null) return;
+    
+    _isSyncing = true;
     
     try {
-      // 1. First sync from Firestore to get latest data
-      await _apiaryService.syncFromFirestore();
-      await _hiveService.syncFromFirestore();
-      await _queenService.syncFromFirestore();
+      final lastSync = await _userRepository.getLastSyncTime();
+      final now = DateTime.now();
+
+      if (lastSync != null && now.difference(lastSync).inMinutes < 5) {
+        return;
+      }
       
-      // 2. Validate references to fix any integrity issues
-      await validateAllReferences();
+      await _userRepository.syncUserProfile();
       
-      // 3. Sync local changes back to Firestore
-      // (This would need implementation in services to sync pending items)
+      if (_userRepository.isPremium) {
+        // Order matters: sync parent entities before children
+        await _apiaryService.syncFromFirestore();    // 1. Apiaries first
+        await _queenService.syncFromFirestore();     // 2. Queens (breeds come with this)  
+        await _hiveService.syncFromFirestore();      // 3. Hives (reference apiaries + queens)
+        await _inspectionService.syncFromFirestore(); // 4. Inspections (reference hives)
+        await _storageService.syncFromFirestore();   // 5. Storage (independent)
+        await _historyService.syncFromFirestore();   // 6. History (references everything)
+        
+        await validateAllReferences();
+      }
       
-      // 4. Update last sync time
       await _userRepository.setLastSyncTime();
-      
-      Logger.i('Full sync completed successfully', tag: _tag);
     } catch (e) {
-      Logger.e('Failed to complete full sync', tag: _tag, error: e);
+      Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
+    } finally {
+      _isSyncing = false;
     }
   }
   
+  Future<void> syncToFirestore() async {
+    if (_isSyncing || _userRepository.currentUser == null || !_userRepository.isPremium) return;
+    
+    final now = DateTime.now();
+    if (_lastUploadSync != null && now.difference(_lastUploadSync!).inMinutes < 5) {
+      Logger.d('Upload sync skipped - synced recently', tag: _tag);
+      return;
+    }
+    
+    _isSyncing = true;
+    
+    try {
+      // Order matters: sync parent entities before children
+      await _apiaryService.syncPendingToFirestore();    // 1. Apiaries first
+      await _queenService.syncPendingToFirestore();     // 2. Queens + breeds
+      await _hiveService.syncPendingToFirestore();      // 3. Hives (reference apiaries + queens)
+      await _inspectionService.syncPendingToFirestore(); // 4. Inspections (reference hives)  
+      await _storageService.syncPendingToFirestore();   // 5. Storage (independent)
+      await _historyService.syncPendingToFirestore();   // 6. History (references everything)
+      
+      _lastUploadSync = now;
+      Logger.i('Upload sync completed', tag: _tag);
+    } catch (e) {
+      Logger.e('Failed to sync to Firestore', tag: _tag, error: e);
+    } finally {
+      _isSyncing = false;
+    }
+  }
+  
+  Future<void> syncBidirectional() async {
+    if (_isSyncing || _userRepository.currentUser == null || !_userRepository.isPremium) return;
+    
+    try {
+      await syncToFirestore();
+      await syncAll();
+    } catch (e) {
+      Logger.e('Failed bidirectional sync', tag: _tag, error: e);
+    }
+  }
+
   Future<void> validateAllReferences() async {
     try {
-      // Collect all valid IDs
       final apiaryIds = (await _apiaryService.getAllApiaries())
         .where((a) => !a.deleted)
         .map((a) => a.id)
@@ -60,7 +119,6 @@ class SyncService {
         .map((h) => h.id)
         .toSet();
       
-      // Validate queens
       final queens = await _queenService.getAllQueens();
       int fixedQueenCount = 0;
       
@@ -91,7 +149,6 @@ class SyncService {
         }
       }
       
-      // Validate hives
       final hives = await _hiveService.getAllHives();
       int fixedHiveCount = 0;
       

@@ -1,9 +1,7 @@
+import 'package:apiarium/core/core.dart';
+import 'package:apiarium/shared/shared.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
-import '../../../shared/services/user_repository.dart';
-import '../../../shared/services/settings_repository.dart';
-import '../../../shared/models/settings.dart';
 
 part 'preferences_event.dart';
 part 'preferences_state.dart';
@@ -57,6 +55,7 @@ class PreferencesBloc extends Bloc<PreferencesEvent, PreferencesState> {
     
     await _settingsRepository.updateSettings(newSettings);
     emit(state.copyWith(language: event.language));
+  
   }
 
   Future<void> _onUpdateTheme(
@@ -90,5 +89,14 @@ class PreferencesBloc extends Bloc<PreferencesEvent, PreferencesState> {
     
     await _settingsRepository.updateSettings(newSettings);
     emit(state.copyWith(isFirstTime: false));
+
+    // Load initial data if this is first time - use current state language
+    try {
+      await getIt<QueenBreedRepository>().loadInitialData(state.language);
+      await getIt<HiveTypeRepository>().loadInitialData(state.language);
+      Logger.i('Initial data loaded for language: ${state.language}', tag: 'MyApp');
+    } catch (e) {
+      Logger.e('Failed to load initial data', tag: 'MyApp', error: e);
+    }
   }
 }

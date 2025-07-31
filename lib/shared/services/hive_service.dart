@@ -1,3 +1,4 @@
+import 'package:apiarium/shared/domain/enums/custom_icons.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import '../shared.dart';
@@ -97,6 +98,7 @@ class HiveService {
           queenMarked: () => queen?.marked,
           queenMarkColor: () => queen?.markColor,
           lastTimeQueenSeen: () => queen?.lastTimeSeen,
+          queenId: () => queen?.id,
         );
       }
       
@@ -205,6 +207,7 @@ class HiveService {
           queenMarked: () => queen?.marked,
           queenMarkColor: () => queen?.markColor,
           lastTimeQueenSeen: () => queen?.lastTimeSeen,
+          queenId: () => queen?.id,
         );
       }
 
@@ -361,7 +364,7 @@ class HiveService {
     bool isLocal = true,
     double? cost,
     String? imageName,
-    IconData? icon,
+    HiveIconType iconType = HiveIconType.beehive1,
   }) async {
     try {
       final now = DateTime.now();
@@ -389,22 +392,21 @@ class HiveService {
         isLocal: isLocal,
         cost: cost,
         imageName: imageName,
-        icon: icon ?? Icons.home,
+        iconType: iconType,
       );
 
       await _hiveTypeRepository.saveHiveType(hiveType);
       Logger.i('Created hive type: ${hiveType.name}', tag: _tag);
-      
-      // Log the creation with entity name
+
       await _historyService.logEntityCreate(
         entityId: hiveType.id,
         entityType: 'hiveType',
         entityName: hiveType.name,
         entityData: hiveType.toMap(),
       );
-      
+
       await _syncHiveType(hiveType);
-      
+
       return hiveType;
     } catch (e) {
       Logger.e('Failed to create hive type: $name', tag: _tag, error: e);
@@ -422,8 +424,7 @@ class HiveService {
       final updatedHiveType = hiveType.copyWith(updatedAt: () => DateTime.now());
       await _hiveTypeRepository.saveHiveType(updatedHiveType);
       Logger.i('Updated hive type: ${updatedHiveType.name}', tag: _tag);
-      
-      // Log the update with entity name
+
       await _historyService.logEntityUpdate(
         entityId: updatedHiveType.id,
         entityType: 'hiveType',
@@ -431,9 +432,9 @@ class HiveService {
         oldData: oldHiveType.toMap(),
         newData: updatedHiveType.toMap(),
       );
-      
+
       await _syncHiveType(updatedHiveType);
-      
+
       return updatedHiveType;
     } catch (e) {
       Logger.e('Failed to update hive type: ${hiveType.id}', tag: _tag, error: e);
@@ -451,14 +452,13 @@ class HiveService {
         );
         await _hiveTypeRepository.saveHiveType(deletedHiveType);
         Logger.i('Deleted hive type: $id', tag: _tag);
-        
-        // Log the deletion with entity name
+
         await _historyService.logEntityDelete(
           entityId: hiveType.id,
           entityType: 'hiveType',
           entityName: hiveType.name,
         );
-        
+
         await _syncHiveType(deletedHiveType);
       }
     } catch (e) {
@@ -493,10 +493,10 @@ class HiveService {
     try {
       final userId = _userRepository.currentUser!.id;
       final lastSync = await _userRepository.getLastSyncTime();
-      
+
       await _hiveRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
       await _hiveTypeRepository.syncFromFirestore(userId, lastSyncTime: lastSync);
-      
+
       Logger.i('Synced hives and hive types from Firestore', tag: _tag);
     } catch (e) {
       Logger.e('Failed to sync from Firestore', tag: _tag, error: e);
@@ -505,12 +505,9 @@ class HiveService {
 
   Future<void> _syncHive(Hive hive) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _hiveRepository.syncToFirestore(hive, userId);
-      } catch (e) {
+      _hiveRepository.syncToFirestore(hive, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync hive to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping hive sync - not premium or not logged in', tag: _tag);
     }
@@ -518,12 +515,9 @@ class HiveService {
 
   Future<void> _syncHiveType(HiveType hiveType) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _hiveTypeRepository.syncToFirestore(hiveType, userId);
-      } catch (e) {
+      _hiveTypeRepository.syncToFirestore(hiveType, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync hive type to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping hive type sync - not premium or not logged in', tag: _tag);
     }
@@ -531,12 +525,9 @@ class HiveService {
 
   Future<void> _syncQueen(Queen queen) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _queenRepository.syncToFirestore(queen, userId);
-      } catch (e) {
+      _queenRepository.syncToFirestore(queen, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync queen to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping queen sync - not premium or not logged in', tag: _tag);
     }
@@ -544,12 +535,9 @@ class HiveService {
 
   Future<void> _syncApiary(Apiary apiary) async {
     if (_userRepository.isPremium && _userRepository.currentUser != null) {
-      try {
-        final userId = _userRepository.currentUser!.id;
-        await _apiaryRepository.syncToFirestore(apiary, userId);
-      } catch (e) {
+      _apiaryRepository.syncToFirestore(apiary, _userRepository.currentUser!.id).catchError((e) {
         Logger.e('Failed to sync apiary to Firestore', tag: _tag, error: e);
-      }
+      });
     } else {
       Logger.d('Skipping apiary sync - not premium or not logged in', tag: _tag);
     }
@@ -575,6 +563,7 @@ class HiveService {
             final queen = await _queenRepository.getQueenById(hive.queenId!);
             if (queen != null) {
               final updatedQueen = queen.copyWith(
+                hiveId: () => hive.id,
                 hiveName: () => hive.name,
                 apiaryId: () => hive.apiaryId,
                 apiaryName: () => hive.apiaryName,
@@ -668,6 +657,24 @@ class HiveService {
     } catch (e) {
       Logger.e('Failed to update hive types batch', tag: _tag, error: e);
       rethrow;
+    }
+  }
+
+  Future<void> syncPendingToFirestore() async {
+    if (!_userRepository.isPremium || _userRepository.currentUser == null) return;
+    
+    final userId = _userRepository.currentUser!.id;
+    
+    final hives = await getAllHives();
+    final pendingHives = hives.where((h) => h.syncStatus == SyncStatus.pending).toList();
+    for (final hive in pendingHives) {
+      await _hiveRepository.syncToFirestore(hive, userId);
+    }
+    
+    final hiveTypes = await getAllHiveTypes();
+    final pendingTypes = hiveTypes.where((ht) => ht.syncStatus == SyncStatus.pending).toList();
+    for (final hiveType in pendingTypes) {
+      await _hiveTypeRepository.syncToFirestore(hiveType, userId);
     }
   }
 }

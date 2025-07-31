@@ -8,7 +8,7 @@ class Apiary extends BaseModel {
   final String name;
   final String? description;
   final String? location;
-  final int position;
+  final int order;
   final String? imageName;
   final double? latitude;
   final double? longitude;
@@ -28,7 +28,7 @@ class Apiary extends BaseModel {
     required this.name,
     this.description,
     this.location,
-    required this.position,
+    required this.order,
     this.imageName,
     this.latitude,
     this.longitude,
@@ -63,7 +63,7 @@ class Apiary extends BaseModel {
       name: data['name'],
       description: data['description'],
       location: data['location'],
-      position: data['position'],
+      order: data['order'],
       imageName: data['imageName'],
       latitude: data['latitude']?.toDouble(),
       longitude: data['longitude']?.toDouble(),
@@ -81,7 +81,7 @@ class Apiary extends BaseModel {
   @override
   List<Object?> get props => [
     ...baseSyncProps,
-    name, description, location, position, imageName, latitude, longitude,
+    name, description, location, order, imageName, latitude, longitude,
     isMigratory, color, status, hiveCount, activeHiveCount,
   ];
   
@@ -91,7 +91,7 @@ class Apiary extends BaseModel {
       'name': name,
       'description': description,
       'location': location,
-      'position': position,
+      'order': order,
       'imageName': imageName,
       'latitude': latitude,
       'longitude': longitude,
@@ -104,44 +104,44 @@ class Apiary extends BaseModel {
   }
 
   Apiary copyWith({
-    String? Function()? name,
+    String Function()? name,
     String? Function()? description,
     String? Function()? location,
-    int? Function()? position,
+    int Function()? order,
     String? Function()? imageName,
     double? Function()? latitude,
     double? Function()? longitude,
-    bool? Function()? isMigratory,
+    bool Function()? isMigratory,
     Color? Function()? color,
-    ApiaryStatus? Function()? status,
-    int? Function()? hiveCount,
-    int? Function()? activeHiveCount,
-    DateTime? Function()? updatedAt,
-    SyncStatus? Function()? syncStatus,
+    ApiaryStatus Function()? status,
+    int Function()? hiveCount,
+    int Function()? activeHiveCount,
+    DateTime Function()? updatedAt,
+    SyncStatus Function()? syncStatus,
     DateTime? Function()? lastSyncedAt,
-    bool? Function()? deleted,
-    int? Function()? serverVersion,
+    bool Function()? deleted,
+    int Function()? serverVersion,
   }) {
     return Apiary(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt?.call() ?? DateTime.now(),
-      syncStatus: syncStatus?.call() ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
-      deleted: deleted?.call() ?? this.deleted,
-      serverVersion: serverVersion?.call() ?? this.serverVersion,
-      name: name?.call() ?? this.name,
-      description: description?.call() ?? this.description,
-      location: location?.call() ?? this.location,
-      position: position?.call() ?? this.position,
-      imageName: imageName?.call() ?? this.imageName,
-      latitude: latitude?.call() ?? this.latitude,
-      longitude: longitude?.call() ?? this.longitude,
-      isMigratory: isMigratory?.call() ?? this.isMigratory,
-      color: color?.call() ?? this.color,
-      status: status?.call() ?? this.status,
-      hiveCount: hiveCount?.call() ?? this.hiveCount,
-      activeHiveCount: activeHiveCount?.call() ?? this.activeHiveCount,
+      updatedAt: updatedAt != null ? updatedAt() : DateTime.now(),
+      syncStatus: syncStatus != null ? syncStatus() : SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt != null ? lastSyncedAt() : this.lastSyncedAt,
+      deleted: deleted != null ? deleted() : this.deleted,
+      serverVersion: serverVersion != null ? serverVersion() : this.serverVersion,
+      name: name != null ? name() : this.name,
+      description: description != null ? description() : this.description,
+      location: location != null ? location() : this.location,
+      order: order != null ? order() : this.order,
+      imageName: imageName != null ? imageName() : this.imageName,
+      latitude: latitude != null ? latitude() : this.latitude,
+      longitude: longitude != null ? longitude() : this.longitude,
+      isMigratory: isMigratory != null ? isMigratory() : this.isMigratory,
+      color: color != null ? color() : this.color,
+      status: status != null ? status() : this.status,
+      hiveCount: hiveCount != null ? hiveCount() : this.hiveCount,
+      activeHiveCount: activeHiveCount != null ? activeHiveCount() : this.activeHiveCount,
     );
   }
 

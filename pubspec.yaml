@@ -27,7 +27,9 @@ dependencies:
   fluttertoast: ^8.2.12
   get_it: ^8.0.3
   path_provider: ^2.1.5
-  
+
+  #SVG Icons
+  flutter_svg: ^2.2.0
   
   # Firebase
   firebase_core: ^3.14.0
@@ -73,5 +75,8 @@ flutter:
   assets:
     - assets/translations/
     - assets/images/
+    - assets/initial/
     - assets/text_data/name_generator.json
     - assets/text_data/voice_grammar.json
+    - assets/icons/hive/
+    - assets/icons/common/

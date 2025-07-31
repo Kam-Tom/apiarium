@@ -9,11 +9,13 @@ class QueenBreed extends BaseModel {
   final String? country;
   final bool isStarred;
   final bool isLocal;
-  final int? temperamentRating; // 1-5 stars (1=very aggressive, 5=very gentle)
-  final int? honeyProductionRating; // 1-5 stars (1=low, 5=high)
-  final int? winterHardinessRating; // 1-5 stars (1=poor, 5=excellent)
-  final int? diseaseResistanceRating; // 1-5 stars (1=poor, 5=excellent)
-  final int? popularityRating; // 1-5 stars (1=very rare, 5=very popular)
+  final int? honeyProductionRating;      // 1-5 (low-high)
+  final int? springDevelopmentRating;    // 1-5 (slow-fast)
+  final int? gentlenessRating;           // 1-5 (aggressive-gentle)
+  final int? swarmingTendencyRating;     // 1-5 (high-low)
+  final int? winterHardinessRating;      // 1-5 (poor-excellent)
+  final int? diseaseResistanceRating;    // 1-5 (poor-excellent)
+  final int? heatToleranceRating;        // 1-5 (poor-excellent)  
   final String? characteristics;
   final String? imageName;
   final double? cost;
@@ -32,11 +34,13 @@ class QueenBreed extends BaseModel {
     this.country,
     this.isStarred = false,
     this.isLocal = false,
-    this.temperamentRating,
     this.honeyProductionRating,
+    this.springDevelopmentRating,
+    this.gentlenessRating,
+    this.swarmingTendencyRating,
     this.winterHardinessRating,
     this.diseaseResistanceRating,
-    this.popularityRating,
+    this.heatToleranceRating,
     this.characteristics,
     this.imageName,
     this.cost,
@@ -71,14 +75,17 @@ class QueenBreed extends BaseModel {
       serverVersion: data['serverVersion'] ?? 0,
       name: data['name'],
       scientificName: data['scientificName'],
-      origin: data['origin'],      country: data['country'],
+      origin: data['origin'],
+      country: data['country'],
       isStarred: data['isStarred'] ?? false,
       isLocal: data['isLocal'] ?? false,
-      temperamentRating: data['temperamentRating'],
       honeyProductionRating: data['honeyProductionRating'],
+      springDevelopmentRating: data['springDevelopmentRating'],
+      gentlenessRating: data['gentlenessRating'],
+      swarmingTendencyRating: data['swarmingTendencyRating'],
       winterHardinessRating: data['winterHardinessRating'],
       diseaseResistanceRating: data['diseaseResistanceRating'],
-      popularityRating: data['popularityRating'],
+      heatToleranceRating: data['heatToleranceRating'],
       characteristics: data['characteristics'],
       imageName: data['imageName'],
       cost: data['cost']?.toDouble(),
@@ -87,14 +94,17 @@ class QueenBreed extends BaseModel {
 
   String get displayName => scientificName != null 
     ? '$name ($scientificName)'
-    : name;  @override
+    : name;
 
+  @override
   List<Object?> get props => [
     ...baseSyncProps,
     name, scientificName, origin, country, isStarred, isLocal, 
-    temperamentRating, honeyProductionRating, winterHardinessRating, 
-    diseaseResistanceRating, popularityRating, characteristics, imageName, cost
+    honeyProductionRating, springDevelopmentRating, gentlenessRating, 
+    swarmingTendencyRating, winterHardinessRating, diseaseResistanceRating, 
+    heatToleranceRating, characteristics, imageName, cost
   ];
+
   Map<String, dynamic> toMap() {
     return {
       ...baseSyncFields,
@@ -104,58 +114,66 @@ class QueenBreed extends BaseModel {
       'country': country,
       'isStarred': isStarred,
       'isLocal': isLocal,
-      'temperamentRating': temperamentRating,
       'honeyProductionRating': honeyProductionRating,
+      'springDevelopmentRating': springDevelopmentRating,
+      'gentlenessRating': gentlenessRating,
+      'swarmingTendencyRating': swarmingTendencyRating,
       'winterHardinessRating': winterHardinessRating,
       'diseaseResistanceRating': diseaseResistanceRating,
-      'popularityRating': popularityRating,
+      'heatToleranceRating': heatToleranceRating,
       'characteristics': characteristics,
       'imageName': imageName,
       'cost': cost,
     };
-  }    QueenBreed copyWith({
-    String? Function()? name,
+  }
+
+  QueenBreed copyWith({
+    String Function()? name,
     String? Function()? scientificName,
     String? Function()? origin,
     String? Function()? country,
-    bool? Function()? isStarred,
-    bool? Function()? isLocal,
-    int? Function()? temperamentRating,
+    bool Function()? isStarred,
+    bool Function()? isLocal,
     int? Function()? honeyProductionRating,
+    int? Function()? springDevelopmentRating,
+    int? Function()? gentlenessRating,
+    int? Function()? swarmingTendencyRating,
     int? Function()? winterHardinessRating,
     int? Function()? diseaseResistanceRating,
-    int? Function()? popularityRating,
+    int? Function()? heatToleranceRating,
     String? Function()? characteristics,
     String? Function()? imageName,
     double? Function()? cost,
-    DateTime? Function()? updatedAt,
-    SyncStatus? Function()? syncStatus,
+    DateTime Function()? updatedAt,
+    SyncStatus Function()? syncStatus,
     DateTime? Function()? lastSyncedAt,
-    bool? Function()? deleted,
-    int? Function()? serverVersion,
+    bool Function()? deleted,
+    int Function()? serverVersion,
   }) {
     return QueenBreed(
       id: id,
       createdAt: createdAt,
-      updatedAt: updatedAt?.call() ?? DateTime.now(),
-      syncStatus: syncStatus?.call() ?? SyncStatus.pending,
-      lastSyncedAt: lastSyncedAt?.call() ?? this.lastSyncedAt,
-      deleted: deleted?.call() ?? this.deleted,
-      serverVersion: serverVersion?.call() ?? this.serverVersion,
-      name: name?.call() ?? this.name,
-      scientificName: scientificName?.call() ?? this.scientificName,
-      origin: origin?.call() ?? this.origin,
-      country: country?.call() ?? this.country,
-      isStarred: isStarred?.call() ?? this.isStarred,
-      isLocal: isLocal?.call() ?? this.isLocal,
-      temperamentRating: temperamentRating?.call() ?? this.temperamentRating,
-      honeyProductionRating: honeyProductionRating?.call() ?? this.honeyProductionRating,
-      winterHardinessRating: winterHardinessRating?.call() ?? this.winterHardinessRating,
-      diseaseResistanceRating: diseaseResistanceRating?.call() ?? this.diseaseResistanceRating,
-      popularityRating: popularityRating?.call() ?? this.popularityRating,
-      characteristics: characteristics?.call() ?? this.characteristics,
-      imageName: imageName?.call() ?? this.imageName,
-      cost: cost?.call() ?? this.cost,
+      updatedAt: updatedAt != null ? updatedAt() : DateTime.now(),
+      syncStatus: syncStatus != null ? syncStatus() : SyncStatus.pending,
+      lastSyncedAt: lastSyncedAt != null ? lastSyncedAt() : this.lastSyncedAt,
+      deleted: deleted != null ? deleted() : this.deleted,
+      serverVersion: serverVersion != null ? serverVersion() : this.serverVersion,
+      name: name != null ? name() : this.name,
+      scientificName: scientificName != null ? scientificName() : this.scientificName,
+      origin: origin != null ? origin() : this.origin,
+      country: country != null ? country() : this.country,
+      isStarred: isStarred != null ? isStarred() : this.isStarred,
+      isLocal: isLocal != null ? isLocal() : this.isLocal,
+      honeyProductionRating: honeyProductionRating != null ? honeyProductionRating() : this.honeyProductionRating,
+      springDevelopmentRating: springDevelopmentRating != null ? springDevelopmentRating() : this.springDevelopmentRating,
+      gentlenessRating: gentlenessRating != null ? gentlenessRating() : this.gentlenessRating,
+      swarmingTendencyRating: swarmingTendencyRating != null ? swarmingTendencyRating() : this.swarmingTendencyRating,
+      winterHardinessRating: winterHardinessRating != null ? winterHardinessRating() : this.winterHardinessRating,
+      diseaseResistanceRating: diseaseResistanceRating != null ? diseaseResistanceRating() : this.diseaseResistanceRating,
+      heatToleranceRating: heatToleranceRating != null ? heatToleranceRating() : this.heatToleranceRating,
+      characteristics: characteristics != null ? characteristics() : this.characteristics,
+      imageName: imageName != null ? imageName() : this.imageName,
+      cost: cost != null ? cost() : this.cost,
     );
   }
 }

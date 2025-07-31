@@ -12,11 +12,12 @@ class TransactionRepository {
   static const String _sourcesKey = 'sources';
   static const String _targetsKey = 'targets';
   static const String _tag = 'TransactionRepository';
-  
+
   late hive_ce.Box<Map<dynamic, dynamic>> _box;
   late hive_ce.Box<List<dynamic>> _autocompleteBox;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Initializes the local Hive boxes for transactions and autocomplete.
   Future<void> initialize() async {
     try {
       _box = await hive_ce.Hive.openBox<Map<dynamic, dynamic>>(_boxName);
@@ -37,7 +38,7 @@ class TransactionRepository {
     }
   }
 
-  // Autocomplete methods
+  /// Returns all sources for autocomplete.
   Future<List<String>> getSources() async {
     try {
       final sources = _autocompleteBox.get(_sourcesKey, defaultValue: <String>[]);
@@ -48,6 +49,7 @@ class TransactionRepository {
     }
   }
 
+  /// Returns all targets for autocomplete.
   Future<List<String>> getTargets() async {
     try {
       final targets = _autocompleteBox.get(_targetsKey, defaultValue: <String>[]);
@@ -58,6 +60,7 @@ class TransactionRepository {
     }
   }
 
+  /// Searches sources by query.
   Future<List<String>> searchSources(String query) async {
     try {
       final sources = await getSources();
@@ -73,6 +76,7 @@ class TransactionRepository {
     }
   }
 
+  /// Searches targets by query.
   Future<List<String>> searchTargets(String query) async {
     try {
       final targets = await getTargets();
@@ -124,6 +128,7 @@ class TransactionRepository {
     }
   }
 
+  /// Returns all non-deleted transactions, sorted by date (most recent first).
   Future<List<StorageTransaction>> getAllTransactions({int limit = 100}) async {
     try {
       final transactions = <StorageTransaction>[];
@@ -151,6 +156,7 @@ class TransactionRepository {
     }
   }
 
+  /// Returns all non-deleted transactions for a given apiary, sorted by date.
   Future<List<StorageTransaction>> getTransactionsByApiary(String apiaryId) async {
     try {
       final transactions = <StorageTransaction>[];
@@ -170,6 +176,7 @@ class TransactionRepository {
     }
   }
 
+  /// Gets a transaction by its ID.
   Future<StorageTransaction?> getTransaction(String id) async {
     try {
       final data = _box.get(id);
@@ -184,6 +191,7 @@ class TransactionRepository {
     }
   }
 
+  /// Saves a transaction locally, handling receipt image storage and autocomplete.
   Future<void> saveTransaction(StorageTransaction transaction) async {
     try {
       String? receiptImageName = transaction.receiptImageName;
@@ -226,6 +234,7 @@ class TransactionRepository {
             break;
           case TransactionType.income:
           case TransactionType.use:
+          case TransactionType.remove:
             await _addTarget(transaction.sourceOrTarget!);
             break;
         }
@@ -238,14 +247,15 @@ class TransactionRepository {
     }
   }
 
+  /// Marks a transaction as deleted.
   Future<void> deleteTransaction(String id) async {
     try {
       final existing = await getTransaction(id);
       if (existing != null) {
         final deletedTransaction = existing.copyWith(
-          deleted: true,
-          updatedAt: DateTime.now(),
-          syncStatus: SyncStatus.pending,
+          deleted: () => true,
+          updatedAt: () => DateTime.now(),
+          syncStatus: () => SyncStatus.pending,
         );
         await saveTransaction(deletedTransaction);
         Logger.i('Deleted transaction: ${existing.item}', tag: _tag);
@@ -256,6 +266,7 @@ class TransactionRepository {
     }
   }
 
+  /// Syncs a transaction to Firestore and Firebase Storage.
   Future<void> syncToFirestore(StorageTransaction transaction, String userId) async {
     try {
       final storageRef = FirebaseStorage.instance
@@ -286,8 +297,8 @@ class TransactionRepository {
 
       // Update sync metadata BEFORE sending to Firestore
       final transactionToSync = transaction.copyWith(
-        syncStatus: SyncStatus.synced,
-        lastSyncedAt: DateTime.now(),
+        syncStatus: () => SyncStatus.synced,
+        lastSyncedAt: () => DateTime.now(),
       );
 
       final docRef = _firestore
@@ -304,7 +315,7 @@ class TransactionRepository {
       Logger.i('Synced transaction to Firestore: ${transaction.id}', tag: _tag);
     } catch (e) {
       // Update sync status to failed
-      final failedTransaction = transaction.copyWith(syncStatus: SyncStatus.failed);
+      final failedTransaction = transaction.copyWith(syncStatus: () => SyncStatus.failed);
       await saveTransaction(failedTransaction);
 
       Logger.e('Failed to sync transaction to Firestore: ${transaction.id}', tag: _tag, error: e);
@@ -312,6 +323,7 @@ class TransactionRepository {
     }
   }
 
+  /// Syncs transactions from Firestore to local storage.
   Future<void> syncFromFirestore(String userId, {DateTime? lastSyncTime}) async {
     try {
       Query<Map<String, dynamic>> query = _firestore
@@ -351,8 +363,8 @@ class TransactionRepository {
         }
         
         final syncedTransaction = firestoreTransaction.copyWith(
-          syncStatus: SyncStatus.synced,
-          lastSyncedAt: DateTime.now(),
+          syncStatus: () => SyncStatus.synced,
+          lastSyncedAt: () => DateTime.now(),
         );
         
         await saveTransaction(syncedTransaction);
@@ -365,6 +377,7 @@ class TransactionRepository {
     }
   }
 
+  /// Disposes the repository and closes the Hive boxes.
   Future<void> dispose() async {
     try {
       await _box.close();

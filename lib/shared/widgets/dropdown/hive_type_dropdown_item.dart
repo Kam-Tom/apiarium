@@ -15,10 +15,18 @@ class HiveTypeDropdownItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyLarge?.copyWith(
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    var defaultStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
       color: isSelected && colorizeSelected ? Theme.of(context).colorScheme.primary : null,
       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
     );
+    if(hiveType.name.length > 15 && screenWidth < 600) {
+      defaultStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: isSelected && colorizeSelected ? Theme.of(context).colorScheme.primary : null,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      );
+    }
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 44, maxHeight: 56),
@@ -38,7 +46,7 @@ class HiveTypeDropdownItem extends StatelessWidget {
               children: [
                 Text(
                   hiveType.name,
-                  style: style,
+                  style: defaultStyle,
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),

@@ -1,4 +1,11 @@
-import 'package:apiarium/shared/shared.dart';
+enum FieldType {
+  string,
+  number,
+  boolean,
+  categorical,
+  multipleChoice,
+  date,
+}
 
 enum Attribute {
   // Essential colony attributes

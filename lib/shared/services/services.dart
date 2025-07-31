@@ -1,4 +1,3 @@
-export 'report_service.dart';
 export 'sync_service.dart';
 export 'apiary_service.dart';
 export 'hive_service.dart';
@@ -7,6 +6,8 @@ export 'vosk_service.dart';
 export 'tts_service.dart';
 export 'name_generator_service.dart';
 export 'vc_service.dart';
-export 'user_repository.dart';
 export 'history_service.dart';
 export 'storage_service.dart';
+export 'inspection_service.dart';
+export 'auth_service.dart';
+export 'dashboard_service.dart';
