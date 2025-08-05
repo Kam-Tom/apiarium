@@ -1,17 +1,15 @@
 package com.example.apiarium
 
 import io.flutter.embedding.android.FlutterActivity
-import android.os.Bundle
-import android.view.WindowManager
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+class MainActivity: FlutterActivity() {
+    
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
         
-        // Enable edge-to-edge display
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "custom_ui_mode")
+            .setMethodCallHandler(UIHandler(this))
     }
 }
