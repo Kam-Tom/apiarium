@@ -825,7 +825,12 @@
         "hives": "Ule",
         "queens": "Matki",
         "breeds": "Rasy",
-        "types": "Typy"
+        "types": "Typy",
+        "home": "Dom",
+        "social": "Społeczność",
+        "shop": "Sklep",
+        "more": "Więcej",
+        "inspection": "Inspekcja"
     },
     "recent_activity": {
         "title": "Ostatnia aktywność",

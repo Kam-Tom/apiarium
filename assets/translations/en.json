@@ -844,7 +844,12 @@
         "hives": "Hives",
         "queens": "Queens",
         "breeds": "Breeds",
-        "types": "Types"
+        "types": "Types",
+        "home": "Home",
+        "social": "Social",
+        "shop": "Shop",
+        "more": "More",
+        "inspection": "Inspection"
     },
     "recent_activity": {
         "title": "Recent Activity",

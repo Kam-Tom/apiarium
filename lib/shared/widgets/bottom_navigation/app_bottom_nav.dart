@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
+/// Custom bottom navigation bar with floating design and center action button
 class AppBottomNav extends StatelessWidget {
+  /// Currently selected navigation index
   final int currentIndex;
-  final Function(int) onItemTapped;
+  
+  /// Callback function when navigation item is tapped
+  final ValueChanged<int> onItemTapped;
   
   const AppBottomNav({
     super.key, 
@@ -10,48 +15,68 @@ class AppBottomNav extends StatelessWidget {
     required this.onItemTapped,
   });
 
-  static const List<_NavItem> _navItems = [
-    _NavItem(Icons.home, 'Home'),
-    _NavItem(Icons.people, 'Social'),
-    _NavItem(Icons.shopping_bag, 'Shop'),
-    _NavItem(Icons.more_horiz, 'More'),
+  static const List<_NavItem> _navigationItems = [
+    _NavItem(Icons.home, 'navigation.home'),
+    _NavItem(Icons.people, 'navigation.social'),
+    _NavItem(Icons.shopping_bag, 'navigation.shop'),
+    _NavItem(Icons.more_horiz, 'navigation.more'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isSmall = screenHeight < 700;
+    final isSmallScreen = MediaQuery.of(context).size.height < 700;
     
     return Positioned(
-      bottom: isSmall ? 15 : 20,
-      left: isSmall ? 15 : 20,
-      right: isSmall ? 15 : 20,
+      bottom: isSmallScreen ? 10 : 16,
+      left: isSmallScreen ? 10 : 16,
+      right: isSmallScreen ? 10 : 16,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          _buildNavigationBar(isSmall),
+          _NavigationBar(
+            currentIndex: currentIndex,
+            onItemTapped: onItemTapped,
+            isSmallScreen: isSmallScreen,
+          ),
           Positioned(
-            top: isSmall ? -20 : -25,
-            child: _buildAddButton(isSmall),
+            top: isSmallScreen ? -18 : -22,
+            child: _CenterActionButton(
+              onTap: () => onItemTapped(4),
+              isSmallScreen: isSmallScreen,
+            ),
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildNavigationBar(bool isSmall) {
+}
+
+/// Main navigation bar container with navigation items
+class _NavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onItemTapped;
+  final bool isSmallScreen;
+
+  const _NavigationBar({
+    required this.currentIndex,
+    required this.onItemTapped,
+    required this.isSmallScreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      height: isSmall ? 60 : 70,
+      height: isSmallScreen ? 56 : 64,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isSmall ? 20 : 25),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-            spreadRadius: 2,
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 7,
+            offset: const Offset(0, 2),
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -61,18 +86,42 @@ class AppBottomNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavItem(0, _navItems[0], isSmall),
-                _buildNavItem(1, _navItems[1], isSmall),
+                _NavigationItem(
+                  item: AppBottomNav._navigationItems[0],
+                  index: 0,
+                  isSelected: currentIndex == 0,
+                  onTap: onItemTapped,
+                  isSmallScreen: isSmallScreen,
+                ),
+                _NavigationItem(
+                  item: AppBottomNav._navigationItems[1],
+                  index: 1,
+                  isSelected: currentIndex == 1,
+                  onTap: onItemTapped,
+                  isSmallScreen: isSmallScreen,
+                ),
               ],
             ),
           ),
-          SizedBox(width: isSmall ? 50 : 60),
+          SizedBox(width: isSmallScreen ? 46 : 52),
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavItem(2, _navItems[2], isSmall),
-                _buildNavItem(3, _navItems[3], isSmall),
+                _NavigationItem(
+                  item: AppBottomNav._navigationItems[2],
+                  index: 2,
+                  isSelected: currentIndex == 2,
+                  onTap: onItemTapped,
+                  isSmallScreen: isSmallScreen,
+                ),
+                _NavigationItem(
+                  item: AppBottomNav._navigationItems[3],
+                  index: 3,
+                  isSelected: currentIndex == 3,
+                  onTap: onItemTapped,
+                  isSmallScreen: isSmallScreen,
+                ),
               ],
             ),
           ),
@@ -80,26 +129,45 @@ class AppBottomNav extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildNavItem(int index, _NavItem item, bool isSmall) {
-    final isSelected = currentIndex == index;
+/// Individual navigation item widget
+class _NavigationItem extends StatelessWidget {
+  final _NavItem item;
+  final int index;
+  final bool isSelected;
+  final ValueChanged<int> onTap;
+  final bool isSmallScreen;
+
+  const _NavigationItem({
+    required this.item,
+    required this.index,
+    required this.isSelected,
+    required this.onTap,
+    required this.isSmallScreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const selectedColor = Colors.amber;
+    const unselectedColor = Colors.grey;
     
     return InkWell(
-      onTap: () => onItemTapped(index),
+      onTap: () => onTap(index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             item.icon,
-            color: isSelected ? Colors.amber : Colors.grey,
-            size: isSmall ? 22 : 26,
+            color: isSelected ? selectedColor : unselectedColor,
+            size: isSmallScreen ? 22 : 26,
           ),
-          SizedBox(height: isSmall ? 2 : 4),
+          SizedBox(height: isSmallScreen ? 2 : 3),
           Text(
-            item.label,
+            item.label.tr(),
             style: TextStyle(
-              color: isSelected ? Colors.amber : Colors.grey,
-              fontSize: 12,
+              color: isSelected ? selectedColor : unselectedColor,
+              fontSize: isSmallScreen ? 11 : 12,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -107,25 +175,39 @@ class AppBottomNav extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildAddButton(bool isSmall) {
+/// Center floating action button for primary actions
+class _CenterActionButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final bool isSmallScreen;
+
+  const _CenterActionButton({
+    required this.onTap,
+    required this.isSmallScreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonSize = isSmallScreen ? 46.0 : 52.0;
+    
     return InkWell(
-      onTap: () => onItemTapped(4),
+      onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: isSmall ? 50 : 60,
-            height: isSmall ? 50 : 60,
+            width: buttonSize,
+            height: buttonSize,
             decoration: BoxDecoration(
               color: Colors.amber,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 2,
+                  color: Colors.amber.withOpacity(0.25),
+                  blurRadius: 7,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 1,
                 ),
               ],
             ),
@@ -135,12 +217,12 @@ class AppBottomNav extends StatelessWidget {
                   child: Icon(
                     Icons.add,
                     color: Colors.white,
-                    size: isSmall ? 28 : 32,
+                    size: isSmallScreen ? 24 : 28,
                   ),
                 ),
                 Positioned(
-                  right: isSmall ? 2 : 4,
-                  bottom: isSmall ? 2 : 4,
+                  right: isSmallScreen ? 2 : 3,
+                  bottom: isSmallScreen ? 2 : 3,
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: const BoxDecoration(
@@ -150,20 +232,20 @@ class AppBottomNav extends StatelessWidget {
                     child: Icon(
                       Icons.edit,
                       color: Colors.amber,
-                      size: isSmall ? 12 : 14,
+                      size: isSmallScreen ? 11 : 12,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: isSmall ? 6 : 10),
+          SizedBox(height: isSmallScreen ? 5 : 7),
           Text(
-            'Report',
+            'navigation.inspection'.tr(),
             style: TextStyle(
               color: Colors.amber,
               fontWeight: FontWeight.bold,
-              fontSize: isSmall ? 11 : 12,
+              fontSize: isSmallScreen ? 11 : 12,
             ),
           ),
         ],
@@ -172,6 +254,7 @@ class AppBottomNav extends StatelessWidget {
   }
 }
 
+/// Data class for navigation item configuration
 class _NavItem {
   final IconData icon;
   final String label;
